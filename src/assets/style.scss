@@ -1,0 +1,50 @@
+html, body, #container, .app, .renderer {
+  height: 100%;
+}
+
+body {
+  background: black;
+  color: white;
+}
+
+.renderer {
+  position: relative;
+
+  #canvas {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    position: absolute;
+  }
+
+  .loading {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    color: black;
+    text-shadow: 0 0 2px #fff;
+  }
+}
+
+@mixin background-2x($path, $ext: "png", $w: auto, $h: auto, $pos: left top, $repeat: no-repeat) {
+
+  $at1x_path: "#{$path}.#{$ext}";
+  $at2x_path: "#{$path}@2x.#{$ext}";
+
+  background-image: url("#{$at1x_path}");
+  background-size: $w $h;
+  background-position: $pos;
+  background-repeat: $repeat;
+
+  @media all and (-webkit-min-device-pixel-ratio : 1.5),
+  all and (-o-min-device-pixel-ratio: 3/2),
+  all and (min--moz-device-pixel-ratio: 1.5),
+  all and (min-device-pixel-ratio: 1.5) {
+    background-image: url("#{$at2x_path}");
+  }
+}
+
+.renderer {
+  @include background-2x( './images/transparent-bg-light', 'png', 32px, 32px, top left, repeat );
+}
