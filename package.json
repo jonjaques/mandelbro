@@ -23,7 +23,7 @@
   },
   "scripts": {
     "start": "parcel index.html",
-    "build": "parcel build index.html",
+    "build": "parcel build --public-url '.' index.html",
     "clean": "rm -rf dist",
     "prep": "yarn clean && yarn build",
     "deploy": "git subtree push --prefix dist origin gh-pages"
