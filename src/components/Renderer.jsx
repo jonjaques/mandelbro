@@ -77,7 +77,7 @@ export default class Renderer extends Component {
   startRender() {
     this.setState({ rendering: true })
     this.worker.postMessage([
-      'noiseGenerator',
+      'mandelbrotGenerator',
       this.scaledWidth,
       this.scaledHeight
     ])
