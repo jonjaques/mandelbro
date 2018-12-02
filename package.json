@@ -25,6 +25,6 @@
     "start": "parcel index.html",
     "build": "parcel build index.html",
     "clean": "rm -rf dist",
-    "publish": "yarn clean && yarn build && git subtree push --prefix dist origin gh-pages"
+    "deploy": "yarn clean && yarn build && git subtree push --prefix dist origin gh-pages"
   }
 }
