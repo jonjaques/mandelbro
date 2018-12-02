@@ -1,6 +1,5 @@
-
-import colormap from 'colormap'
 import * as d3 from 'd3'
+import {range} from 'lodash'
 import Image from './image'
 
 export function* noiseGenerator(width, height, blockSize = 128) {
@@ -22,26 +21,20 @@ export function* noiseGenerator(width, height, blockSize = 128) {
   }
 }
 
-export function* mandelbrotGenerator(width, height, blockSize = 128, maxIterations = 16) {
+export function* mandelbrotGenerator(width, height, blockSize = 128, maxIterations = 32) {
   const blocksHoriz = width / blockSize
   const blocksVert = height / blockSize
 
-  const palette = colormap({
-    colormap: 'magma',
-    nshades: maxIterations,
-    format: 'hex'
-  })
+  const palette = range(0, maxIterations).map(x => d3.interpolateSpectral(x / maxIterations))
 
   const xScalar = d3.scaleLinear()
-  .domain([0, width])
-  .range([-2.5, 1])
+    .domain([0, width])
+    .range([-2.5, 1])
 
   const yScalar = d3.scaleLinear()
-  .domain([0, height])
-  .range([-1, 1])
+    .domain([0, height])
+    .range([-1, 1])
 
-  console.log(xScalar(0), xScalar(1000))
-  console.log(yScalar(0), yScalar(1000))
   for (let blockX = 0; blockX < blocksHoriz; blockX++) {
     for (let blockY = 0; blockY < blocksVert; blockY++) {
       const image = new Image(blockSize, blockSize)
