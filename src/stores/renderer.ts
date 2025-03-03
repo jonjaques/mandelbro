@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-export interface RenderOptions {}
+export interface RenderOptions {
+  test?: boolean;
+}
 
 export interface RendererState {
   rendering: boolean;
@@ -18,7 +20,7 @@ export const useRendererStore = create<RendererState>((set) => ({
   ...initialState,
   render: (options: RenderOptions) => {
     console.log("rendering", options);
-    set({ rendering: true });
+    set({ rendering: true, done: false });
     setTimeout(() => {
       set({ rendering: false, done: true });
     }, 1000);

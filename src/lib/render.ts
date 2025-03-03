@@ -1,3 +1,1 @@
-export function renderNoise() {
-    
-}
+export function renderNoise() {}
