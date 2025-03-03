@@ -1,2 +1,3 @@
 # mandelbro
+
 JavaScript Mandelbrot Renderer
