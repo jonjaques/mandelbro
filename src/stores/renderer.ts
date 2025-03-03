@@ -7,24 +7,30 @@ export interface RenderOptions {
 export interface RendererState {
   rendering: boolean;
   done: boolean;
+}
+
+export interface RendererActions {
   render: (options: RenderOptions) => void;
+  renderDone: () => void;
 }
 
 export const initialState: RendererState = {
   rendering: false,
   done: false,
-  render: () => {},
 };
 
-export const useRendererStore = create<RendererState>((set) => ({
-  ...initialState,
-  render: (options: RenderOptions) => {
-    console.log("rendering", options);
-    set({ rendering: true, done: false });
-    setTimeout(() => {
+export const useRendererStore = create<RendererState & RendererActions>(
+  (set) => ({
+    ...initialState,
+    render: (options: RenderOptions) => {
+      console.log("render", options);
+      set({ rendering: true, done: false });
+    },
+    renderDone: () => {
+      console.log("render done");
       set({ rendering: false, done: true });
-    }, 1000);
-  },
-}));
+    },
+  })
+);
 
 export default useRendererStore;
