@@ -1,3 +1,11 @@
+import useRendererStore from "../stores/renderer";
+
 export default function Controls() {
-  return <div>controls</div>;
+  const render = useRendererStore((state) => state.render);
+  return (
+    <div id="controls">
+      controls
+      <button onClick={render}>Render</button>
+    </div>
+  );
 }
