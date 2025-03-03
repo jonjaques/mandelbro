@@ -1,22 +1,21 @@
 import { useState, useLayoutEffect } from "react";
 
-export default function useWindowSize() {
-  const [size, setSize] = useState({
-    width: window.innerWidth || 0,
-    height: window.innerHeight || 0,
-  });
+export default function useWindowSize(pixelRatio = window.devicePixelRatio) {
+  const ratio = Math.round(pixelRatio) || 1;
+  const [size, setSize] = useState([
+    window.innerWidth * ratio,
+    window.innerHeight * ratio,
+  ]);
 
   useLayoutEffect(() => {
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    window.addEventListener("resize", updateSize);
+    updateSize();
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  return size;
-
-  function handleResize() {
-    setSize({ width: window.innerWidth, height: window.innerHeight });
+  function updateSize() {
+    setSize([window.innerWidth * ratio, window.innerHeight * ratio]);
   }
+
+  return size;
 }
