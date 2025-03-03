@@ -9,7 +9,8 @@
     "astro": "astro",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "static-analysis": "npm run format:check && npm run lint && npm run build"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.1",
