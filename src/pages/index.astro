@@ -1,10 +1,12 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Canvas from "../components/Canvas";
+import Renderer from "../components/Renderer";
 import Controls from "../components/Controls";
+import Status from "../components/Status";
 ---
 
 <Layout>
-  <Canvas />
-  <Controls />
+  <Renderer client:only />
+  <Controls client:only />
+  <Status client:only />
 </Layout>
