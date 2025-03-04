@@ -1,10 +1,11 @@
 import { create } from "zustand";
 
 export interface RenderOptions {
-  test?: boolean;
+  algorithm: string;
 }
 
 export interface RendererState {
+  algorithm: string;
   rendering: boolean;
   done: boolean;
 }
@@ -15,6 +16,7 @@ export interface RendererActions {
 }
 
 export const initialState: RendererState = {
+  algorithm: "naive",
   rendering: false,
   done: false,
 };
