@@ -30,7 +30,7 @@ export const useRendererStore = create<RendererState & RendererActions>(
       console.log("render done");
       set({ rendering: false, done: true });
     },
-  })
+  }),
 );
 
 export default useRendererStore;
