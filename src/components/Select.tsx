@@ -11,7 +11,7 @@ export default function Select<T extends FieldValues>(
     label?: string;
     size?: "sm" | "lg";
     options: Record<string, string>;
-  }
+  },
 ) {
   const { field } = useController(props);
   const id = useId();

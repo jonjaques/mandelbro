@@ -11,7 +11,7 @@ export default function Input<T extends FieldValues>(
     label?: string;
     size?: "sm" | "lg";
     valueAsNumber?: boolean;
-  }
+  },
 ) {
   const { field } = useController({ ...props });
   const id = useId();

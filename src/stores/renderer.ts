@@ -6,6 +6,7 @@ import {
   INITIAL_ZOOM,
   MAX_LEVELS,
 } from "../lib/constants";
+import { type ColorScheme } from "../lib/colors";
 
 export interface RenderOptions {
   algorithm: Algorithm;
@@ -13,6 +14,7 @@ export interface RenderOptions {
   cy?: number;
   zoom?: number;
   iterations?: number;
+  colorScheme?: ColorScheme;
 }
 
 export interface RendererState {
@@ -21,6 +23,7 @@ export interface RendererState {
   cy?: number;
   zoom?: number;
   iterations?: number;
+  colorScheme?: ColorScheme;
   rendering: boolean;
   done: boolean;
 }
@@ -36,6 +39,7 @@ export const initialState: RendererState = {
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
   iterations: MAX_LEVELS,
+  colorScheme: "monochrome",
   rendering: false,
   done: false,
 };
@@ -51,7 +55,7 @@ export const useRendererStore = create<RendererState & RendererActions>(
       console.log("render done");
       set({ rendering: false, done: true });
     },
-  })
+  }),
 );
 
 export default useRendererStore;

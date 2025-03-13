@@ -11,6 +11,7 @@ import {
   MAX_LEVELS,
 } from "../lib/constants";
 import Select from "./Select";
+import { colors } from "../lib/colors";
 
 const algoOptions = {
   [Algorithm.Noise]: "Noise",
@@ -31,6 +32,7 @@ export default function Controls() {
       cy: INITIAL_ORIGIN_Y,
       zoom: INITIAL_ZOOM,
       iterations: MAX_LEVELS,
+      colorScheme: "turbo",
     },
   });
 
@@ -43,6 +45,13 @@ export default function Controls() {
           label="Algorithm"
           size="sm"
           options={algoOptions}
+        />
+        <Select
+          name="colorScheme"
+          control={control}
+          label="Color Scheme"
+          size="sm"
+          options={colors}
         />
         <Input name="cx" control={control} label="X" size="sm" valueAsNumber />
         <Input name="cy" control={control} label="Y" size="sm" valueAsNumber />
