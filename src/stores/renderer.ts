@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import hashStorage from "./storage";
 import {
   Algorithm,
   INITIAL_ORIGIN_X,
@@ -8,6 +10,7 @@ import {
 } from "../lib/constants";
 import { getComplexRanges } from "../lib/render";
 import { type ColorScheme } from "../lib/colors";
+import { pick } from "../lib/util";
 
 export interface RenderOptions {
   algorithm: Algorithm;
@@ -34,9 +37,11 @@ export interface RendererActions {
   renderDone: () => void;
   clickZoom: (
     event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
-    options: Partial<RenderOptions>,
+    options: Partial<RenderOptions>
   ) => void;
 }
+
+export type RendererInterface = RendererState & RendererActions;
 
 export const initialState: RendererState = {
   algorithm: Algorithm.Naive,
@@ -49,38 +54,58 @@ export const initialState: RendererState = {
   done: false,
 };
 
-export const useRendererStore = create<RendererState & RendererActions>(
-  (set) => ({
-    ...initialState,
-    render: (options: RenderOptions) => {
-      console.log("render", options);
-      set({ ...options, rendering: true, done: false });
-    },
-    renderDone: () => {
-      console.log("render done");
-      set({ rendering: false, done: true });
-    },
-    clickZoom: (
-      event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
-      options: Partial<RenderOptions>,
-    ) => {
-      console.log("zoom", event);
-      const ranges = getComplexRanges(
-        event.currentTarget.width,
-        event.currentTarget.height,
-        options.cx,
-        options.cy,
-        options.zoom,
-      );
+export const useRendererStore = create<RendererInterface>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      render: (options: RenderOptions) => {
+        console.log("render", options);
+        set({ ...options, rendering: true, done: false });
+      },
+      renderDone: () => {
+        console.log("render done");
+        set({ rendering: false, done: true });
+      },
+      clickZoom: (
+        event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
+        options: Partial<RenderOptions>
+      ) => {
+        console.log("zoom", event);
+        const ranges = getComplexRanges(
+          event.currentTarget.width,
+          event.currentTarget.height,
+          options.cx,
+          options.cy,
+          options.zoom
+        );
 
-      const { x, y } = ranges.screenToComplex(
-        event.clientX * 2,
-        event.clientY * 2,
-      );
-      const zoom = (options.zoom || 1) * 2;
-      set({ cx: x, cy: y, zoom: zoom, iterations: calculateIterations(zoom) });
-    },
-  }),
+        const { x, y } = ranges.screenToComplex(
+          event.clientX * window.devicePixelRatio,
+          event.clientY * window.devicePixelRatio
+        );
+        const zoom = (options.zoom || 1) * 2;
+        set({
+          cx: x,
+          cy: y,
+          zoom: zoom,
+          iterations: calculateIterations(zoom),
+        });
+      },
+    }),
+    {
+      name: "renderer",
+      storage: createJSONStorage(() => hashStorage),
+      partialize: (state) =>
+        pick(state, [
+          "algorithm",
+          "cx",
+          "cy",
+          "zoom",
+          "iterations",
+          "colorScheme",
+        ]),
+    }
+  )
 );
 
 export default useRendererStore;
