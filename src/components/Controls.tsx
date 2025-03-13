@@ -9,6 +9,7 @@ import {
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
   INITIAL_ZOOM,
+  MAX_LEVELS,
 } from "../lib/constants";
 import Select from "./Select";
 
@@ -30,6 +31,7 @@ export default function Controls() {
       cx: INITIAL_ORIGIN_X,
       cy: INITIAL_ORIGIN_Y,
       zoom: INITIAL_ZOOM,
+      iterations: MAX_LEVELS,
     },
   });
 
@@ -49,6 +51,13 @@ export default function Controls() {
           name="zoom"
           control={control}
           label="Zoom"
+          size="sm"
+          valueAsNumber
+        />
+        <Input
+          name="iterations"
+          control={control}
+          label="Iterations"
           size="sm"
           valueAsNumber
         />

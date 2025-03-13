@@ -6,7 +6,7 @@ export const MANDELBROT_Y_MIN = -2;
 
 export const MANDELBROT_Y_MAX = 2;
 
-export const MAX_LEVELS = 255;
+export const MAX_LEVELS = 255 / 4;
 
 export const INITIAL_ORIGIN_X = -0.6;
 

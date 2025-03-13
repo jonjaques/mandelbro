@@ -2,15 +2,11 @@ import { scaleLinear } from "d3-scale";
 
 import useRendererStore from "../stores/renderer";
 import {
-  MANDELBROT_X_MAX,
-  MANDELBROT_X_MIN,
-  MANDELBROT_Y_MAX,
-  MANDELBROT_Y_MIN,
+  INITIAL_ORIGIN_X,
+  INITIAL_ORIGIN_Y,
+  INITIAL_ZOOM,
   MAX_LEVELS,
 } from "./constants";
-
-// @ts-expect-error Hack for debugging on browser console
-window.xScaleLinear = scaleLinear;
 
 // This function is the naive implementation of the Mandelbrot set rendering.
 // Pseudocode from wikipedia: https://en.wikipedia.org/wiki/Mandelbrot_set#Computer_drawings
@@ -23,25 +19,22 @@ export function renderNaiveMandelbrot(
 
   const state = useRendererStore.getState();
   const imageData = ctx.createImageData(canvas.width, canvas.height);
-
-  const xRange: [number, number] = [MANDELBROT_X_MIN, MANDELBROT_X_MAX];
-
-  const yRange: [number, number] = [MANDELBROT_Y_MIN, MANDELBROT_Y_MAX];
-  // Modify the xRange and yRange to match the aspect ratio of the canvas
-  // Yuck! Will fix this later
-  adjustAspectRatio(xRange, yRange, canvas);
-
-  const xScale = scaleLinear().domain([0, canvas.width]).range(xRange);
-  const yScale = scaleLinear().domain([0, canvas.height]).range(yRange);
+  const range = getComplexRanges(
+    canvas.width,
+    canvas.height,
+    state.cx,
+    state.cy,
+    state.zoom
+  );
 
   for (let px = 0; px < canvas.width; px++) {
     for (let py = 0; py < canvas.height; py++) {
-      const x0 = xScale(px);
-      const y0 = yScale(py);
+      const { x: x0, y: y0 } = range.screenToComplex(px, py);
+      const maxIteration = state.iterations || MAX_LEVELS;
+
       let x = 0;
       let y = 0;
       let iteration = 0;
-      const maxIteration = MAX_LEVELS / 4;
       while (x * x + y * y <= 4 && iteration < maxIteration) {
         const xTemp = x * x - y * y + x0;
         y = 2 * x * y + y0;
@@ -51,12 +44,12 @@ export function renderNaiveMandelbrot(
       const color =
         iteration >= maxIteration
           ? 0
-          : Math.floor((iteration / maxIteration) * MAX_LEVELS);
+          : Math.floor((iteration / maxIteration) * 255);
       const i = (py * canvas.width + px) * 4;
       imageData.data[i + 0] = color;
       imageData.data[i + 1] = color;
       imageData.data[i + 2] = color;
-      imageData.data[i + 3] = MAX_LEVELS;
+      imageData.data[i + 3] = 255;
     }
   }
 
@@ -64,26 +57,6 @@ export function renderNaiveMandelbrot(
 
   console.timeEnd("renderNaiveMandelbrot");
   state.renderDone();
-}
-
-// Borrowed from https://github.com/cslarsen/mandelbrot-js/blob/master/mandelbrot.js#L264
-function adjustAspectRatio(
-  xRange: [number, number],
-  yRange: [number, number],
-  canvas: HTMLCanvasElement
-) {
-  const ratio =
-    Math.abs(xRange[1] - xRange[0]) / Math.abs(yRange[1] - yRange[0]);
-  const sRatio = canvas.width / canvas.height;
-  if (sRatio > ratio) {
-    const xf = sRatio / ratio;
-    xRange[0] *= xf;
-    xRange[1] *= xf;
-  } else {
-    const yf = ratio / sRatio;
-    yRange[0] *= yf;
-    yRange[1] *= yf;
-  }
 }
 
 export function renderNoise(
@@ -124,9 +97,9 @@ export function renderNoise(
 function getComplexRanges(
   screenWidth: number,
   screenHeight: number,
-  cx: number,
-  cy: number,
-  zoom: number
+  cx: number = INITIAL_ORIGIN_X,
+  cy: number = INITIAL_ORIGIN_Y,
+  zoom: number = INITIAL_ZOOM
 ) {
   // Define the aspect ratio of our view into the complex plane
   // Standard view of the Mandelbrot set: x: [-2.5, 1], y: [-2, 2]

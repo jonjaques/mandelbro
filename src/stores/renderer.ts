@@ -4,6 +4,7 @@ import {
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
   INITIAL_ZOOM,
+  MAX_LEVELS,
 } from "../lib/constants";
 
 export interface RenderOptions {
@@ -11,6 +12,7 @@ export interface RenderOptions {
   cx?: number;
   cy?: number;
   zoom?: number;
+  iterations?: number;
 }
 
 export interface RendererState {
@@ -18,6 +20,7 @@ export interface RendererState {
   cx?: number;
   cy?: number;
   zoom?: number;
+  iterations?: number;
   rendering: boolean;
   done: boolean;
 }
@@ -32,6 +35,7 @@ export const initialState: RendererState = {
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
+  iterations: MAX_LEVELS,
   rendering: false,
   done: false,
 };
@@ -47,7 +51,7 @@ export const useRendererStore = create<RendererState & RendererActions>(
       console.log("render done");
       set({ rendering: false, done: true });
     },
-  }),
+  })
 );
 
 export default useRendererStore;
