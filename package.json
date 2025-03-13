@@ -17,7 +17,9 @@
     "astro": "^5.4.1",
     "d3-scale": "^4.0.2",
     "react": "^19.0.0",
+    "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

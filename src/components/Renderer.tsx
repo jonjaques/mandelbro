@@ -7,9 +7,21 @@ import { renderNoise, renderNaiveMandelbrot } from "../lib/render.ts";
 export default function Renderer() {
   const [width, height] = useWindowSize();
   const [canvasRef, setTracer] = useCanvas();
+  const algorithm = useRendererStore((state) => state.algorithm);
   const rendering = useRendererStore((state) => state.rendering);
 
-  const draw = setTracer(renderNaiveMandelbrot);
+  const draw = setTracer((ctx, canvas) => {
+    switch (algorithm) {
+      case "naive":
+        renderNaiveMandelbrot(ctx, canvas);
+        break;
+
+      case "noise":
+      default:
+        renderNoise(ctx, canvas);
+        break;
+    }
+  });
 
   useEffect(() => {
     if (rendering) {
