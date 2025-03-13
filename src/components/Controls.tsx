@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button, Form } from "react-bootstrap";
 import Input from "./Input";
 import useRendererStore from "../stores/renderer";
 import type { RenderOptions } from "../stores/renderer";
