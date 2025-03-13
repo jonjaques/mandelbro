@@ -6,6 +6,7 @@ import {
   INITIAL_ZOOM,
   MAX_LEVELS,
 } from "../lib/constants";
+import { getComplexRanges } from "../lib/render";
 import { type ColorScheme } from "../lib/colors";
 
 export interface RenderOptions {
@@ -31,6 +32,10 @@ export interface RendererState {
 export interface RendererActions {
   render: (options: RenderOptions) => void;
   renderDone: () => void;
+  clickZoom: (
+    event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
+    options: Partial<RenderOptions>,
+  ) => void;
 }
 
 export const initialState: RendererState = {
@@ -55,7 +60,32 @@ export const useRendererStore = create<RendererState & RendererActions>(
       console.log("render done");
       set({ rendering: false, done: true });
     },
+    clickZoom: (
+      event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
+      options: Partial<RenderOptions>,
+    ) => {
+      console.log("zoom", event);
+      const ranges = getComplexRanges(
+        event.currentTarget.width,
+        event.currentTarget.height,
+        options.cx,
+        options.cy,
+        options.zoom,
+      );
+
+      const { x, y } = ranges.screenToComplex(
+        event.clientX * 2,
+        event.clientY * 2,
+      );
+      const zoom = (options.zoom || 1) * 2;
+      set({ cx: x, cy: y, zoom: zoom, iterations: calculateIterations(zoom) });
+    },
   }),
 );
 
 export default useRendererStore;
+
+// calculate iterations for given zoom level
+function calculateIterations(zoom: number) {
+  return Math.floor(100 * Math.log2(zoom));
+}

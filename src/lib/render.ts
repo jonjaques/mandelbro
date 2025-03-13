@@ -98,7 +98,7 @@ export function renderNoise(
  * @param {number} zoom - Zoom level (higher values = more zoomed in)
  * @returns {Object} - Contains the complex plane ranges and scaling functions
  */
-function getComplexRanges(
+export function getComplexRanges(
   screenWidth: number,
   screenHeight: number,
   cx: number = INITIAL_ORIGIN_X,

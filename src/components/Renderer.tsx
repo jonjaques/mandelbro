@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/shallow";
 import useWindowSize from "../hooks/useWindowSize.ts";
 import useRendererStore from "../stores/renderer.ts";
 import useCanvas from "../hooks/useCanvas.ts";
@@ -9,6 +10,14 @@ export default function Renderer() {
   const [canvasRef, setTracer] = useCanvas();
   const algorithm = useRendererStore((state) => state.algorithm);
   const rendering = useRendererStore((state) => state.rendering);
+  const clickZoom = useRendererStore((state) => state.clickZoom);
+  const { cx, cy, zoom } = useRendererStore(
+    useShallow((state) => ({
+      cx: state.cx,
+      cy: state.cy,
+      zoom: state.zoom,
+    })),
+  );
 
   const draw = setTracer((ctx, canvas) => {
     switch (algorithm) {
@@ -31,7 +40,15 @@ export default function Renderer() {
 
   return (
     <div id="renderer">
-      <canvas ref={canvasRef} width={width} height={height}></canvas>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        onClick={(e) => {
+          clickZoom(e, { cx, cy, zoom });
+          draw();
+        }}
+      ></canvas>
     </div>
   );
 }

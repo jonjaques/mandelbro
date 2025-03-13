@@ -16,7 +16,7 @@ export default function Input<T extends FieldValues>(
   const { field } = useController({ ...props });
   const id = useId();
   const numberChange = (event: ChangeEvent<HTMLInputElement>) => {
-    field.onChange(parseInt(event.target.value));
+    field.onChange(parseFloat(event.target.value));
   };
 
   return (
