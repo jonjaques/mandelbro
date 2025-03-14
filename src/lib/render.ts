@@ -1,7 +1,6 @@
 import { scaleLinear } from "d3-scale";
-import { color } from "d3-color";
 import useRendererStore from "../stores/renderer";
-import { interpolators } from "./colors";
+import { getColorForIteration } from "./colors";
 import {
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
@@ -13,7 +12,7 @@ import {
 // Pseudocode from wikipedia: https://en.wikipedia.org/wiki/Mandelbrot_set#Computer_drawings
 export function renderNaiveMandelbrot(
   ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement
 ) {
   console.log("renderNaiveMandelbrot");
   console.time("renderNaiveMandelbrot");
@@ -25,13 +24,11 @@ export function renderNaiveMandelbrot(
     canvas.height,
     state.cx,
     state.cy,
-    state.zoom,
+    state.zoom
   );
 
-  const colorInterpolator = interpolators[state.colorScheme || "monochrome"];
-
-  for (let px = 0; px < canvas.width; px++) {
-    for (let py = 0; py < canvas.height; py++) {
+  for (let py = 0; py < canvas.height; py++) {
+    for (let px = 0; px < canvas.width; px++) {
       const { x: x0, y: y0 } = range.screenToComplex(px, py);
       const maxIteration = state.iterations || MAX_LEVELS;
 
@@ -45,14 +42,16 @@ export function renderNaiveMandelbrot(
         iteration++;
       }
 
-      const colorFloat =
-        iteration >= maxIteration ? 0 : iteration / maxIteration;
-      const colorVal = color(colorInterpolator(colorFloat))?.rgb();
       const i = (py * canvas.width + px) * 4;
+      const color = getColorForIteration(
+        iteration,
+        maxIteration,
+        state.colorScheme!
+      );
 
-      imageData.data[i + 0] = colorVal!.r;
-      imageData.data[i + 1] = colorVal!.g;
-      imageData.data[i + 2] = colorVal!.b;
+      imageData.data[i + 0] = color.r;
+      imageData.data[i + 1] = color.g;
+      imageData.data[i + 2] = color.b;
       imageData.data[i + 3] = 255;
     }
   }
@@ -65,7 +64,7 @@ export function renderNaiveMandelbrot(
 
 export function renderNoise(
   ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement
 ) {
   console.log("renderNoise");
   console.time("renderNoise");
@@ -103,7 +102,7 @@ export function getComplexRanges(
   screenHeight: number,
   cx: number = INITIAL_ORIGIN_X,
   cy: number = INITIAL_ORIGIN_Y,
-  zoom: number = INITIAL_ZOOM,
+  zoom: number = INITIAL_ZOOM
 ) {
   // Define the aspect ratio of our view into the complex plane
   // Standard view of the Mandelbrot set: x: [-2.5, 1], y: [-2, 2]

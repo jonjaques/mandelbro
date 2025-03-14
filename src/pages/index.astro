@@ -1,12 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Renderer from "../components/Renderer";
-import Controls from "../components/Controls";
-import Status from "../components/Status";
+import App from "../components/App";
 ---
 
 <Layout>
-  <Renderer client:only />
-  <Controls client:load />
-  <Status client:load />
+  <App client:only />
 </Layout>

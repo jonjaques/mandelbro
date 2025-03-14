@@ -18,3 +18,5 @@ export const enum Algorithm {
   Noise = "noise",
   Naive = "naive",
 }
+
+export const COLOR_LEVELS = 256;
