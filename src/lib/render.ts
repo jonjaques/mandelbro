@@ -18,8 +18,7 @@ export function renderNaiveMandelbrot(
   console.time("renderNaiveMandelbrot");
 
   const state = useRendererStore.getState();
-  const imageData = ctx.createImageData(canvas.width, canvas.height);
-  const range = getComplexRanges(
+    const range = getComplexRanges(
     canvas.width,
     canvas.height,
     state.cx,
@@ -28,6 +27,7 @@ export function renderNaiveMandelbrot(
   );
 
   for (let py = 0; py < canvas.height; py++) {
+const imageData = ctx.createImageData(canvas.width, 1);
     for (let px = 0; px < canvas.width; px++) {
       const { x: x0, y: y0 } = range.screenToComplex(px, py);
       const maxIteration = state.iterations || MAX_LEVELS;
@@ -42,7 +42,10 @@ export function renderNaiveMandelbrot(
         iteration++;
       }
 
-      const i = (py * canvas.width + px) * 4;
+// We're only painting one row at a time, so no need to multiply by py
+      // const i = (py * canvas.width + px) * 4;
+const i = px * 4;
+
       const color = getColorForIteration(
         iteration,
         maxIteration,
@@ -54,9 +57,8 @@ export function renderNaiveMandelbrot(
       imageData.data[i + 2] = color.b;
       imageData.data[i + 3] = 255;
     }
+ctx.putImageData(imageData, 0, py);
   }
-
-  ctx.putImageData(imageData, 0, 0);
 
   console.timeEnd("renderNaiveMandelbrot");
   state.renderDone();
