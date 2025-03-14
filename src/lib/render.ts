@@ -10,15 +10,16 @@ import {
 
 // This function is the naive implementation of the Mandelbrot set rendering.
 // Pseudocode from wikipedia: https://en.wikipedia.org/wiki/Mandelbrot_set#Computer_drawings
-export function renderNaiveMandelbrot(
+export async function renderNaiveMandelbrot(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement
 ) {
   console.log("renderNaiveMandelbrot");
   console.time("renderNaiveMandelbrot");
 
+  const frameGen = animationFrameGenerator();
   const state = useRendererStore.getState();
-    const range = getComplexRanges(
+  const range = getComplexRanges(
     canvas.width,
     canvas.height,
     state.cx,
@@ -27,7 +28,8 @@ export function renderNaiveMandelbrot(
   );
 
   for (let py = 0; py < canvas.height; py++) {
-const imageData = ctx.createImageData(canvas.width, 1);
+    await frameGen.next();
+    const imageData = ctx.createImageData(canvas.width, 1);
     for (let px = 0; px < canvas.width; px++) {
       const { x: x0, y: y0 } = range.screenToComplex(px, py);
       const maxIteration = state.iterations || MAX_LEVELS;
@@ -42,9 +44,9 @@ const imageData = ctx.createImageData(canvas.width, 1);
         iteration++;
       }
 
-// We're only painting one row at a time, so no need to multiply by py
+      // We're only painting one row at a time, so no need to multiply by py
       // const i = (py * canvas.width + px) * 4;
-const i = px * 4;
+      const i = px * 4;
 
       const color = getColorForIteration(
         iteration,
@@ -57,7 +59,7 @@ const i = px * 4;
       imageData.data[i + 2] = color.b;
       imageData.data[i + 3] = 255;
     }
-ctx.putImageData(imageData, 0, py);
+    ctx.putImageData(imageData, 0, py);
   }
 
   console.timeEnd("renderNaiveMandelbrot");
@@ -173,4 +175,19 @@ export function getComplexRanges(
     xScaleInverse,
     yScaleInverse,
   };
+}
+
+function requestAnimationFramePromise() {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame((timestamp) => {
+      resolve(timestamp);
+    });
+  });
+}
+
+async function* animationFrameGenerator() {
+  while (true) {
+    const timestamp = await requestAnimationFramePromise();
+    yield timestamp;
+  }
 }
