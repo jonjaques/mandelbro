@@ -33,13 +33,13 @@ export const colorLuts = Object.keys(colors).reduce(
     acc[k] = generateLUT(k, COLOR_LEVELS);
     return acc;
   },
-  {} as { [key in ColorScheme]: Uint8Array }
+  {} as { [key in ColorScheme]: Uint8Array },
 );
 
 export function getColorForIteration(
   iteration: number,
   maxIterations: number,
-  colorScheme: ColorScheme
+  colorScheme: ColorScheme,
 ) {
   const colorFloat = iteration >= maxIterations ? 0 : iteration / maxIterations;
   // map float to color LUT

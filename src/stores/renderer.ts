@@ -8,7 +8,7 @@ import {
   INITIAL_ZOOM,
   MAX_LEVELS,
 } from "../lib/constants";
-import { getComplexRanges } from "../lib/render";
+import { getComplexRanges } from "../lib/util";
 import { type ColorScheme } from "../lib/colors";
 import { pick } from "../lib/util";
 
@@ -23,11 +23,11 @@ export interface RenderOptions {
 
 export interface RendererState {
   algorithm: Algorithm;
-  cx?: number;
-  cy?: number;
-  zoom?: number;
-  iterations?: number;
-  colorScheme?: ColorScheme;
+  cx: number;
+  cy: number;
+  zoom: number;
+  iterations: number;
+  colorScheme: ColorScheme;
   rendering: boolean;
   done: boolean;
 }
@@ -37,7 +37,7 @@ export interface RendererActions {
   renderDone: () => void;
   clickZoom: (
     event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
-    options: Partial<RenderOptions>
+    options: Partial<RenderOptions>,
   ) => void;
 }
 
@@ -54,6 +54,13 @@ export const initialState: RendererState = {
   done: false,
 };
 
+const persistanceOptions = {
+  name: "renderer",
+  storage: createJSONStorage(() => hashStorage),
+  partialize: (state: RendererInterface) =>
+    pick(state, ["algorithm", "cx", "cy", "zoom", "iterations", "colorScheme"]),
+};
+
 export const useRendererStore = create<RendererInterface>()(
   persist(
     (set) => ({
@@ -68,44 +75,37 @@ export const useRendererStore = create<RendererInterface>()(
       },
       clickZoom: (
         event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
-        options: Partial<RenderOptions>
+        options: Partial<RenderOptions>,
       ) => {
-        console.log("zoom", event);
-        const ranges = getComplexRanges(
-          event.currentTarget.width,
-          event.currentTarget.height,
-          options.cx,
-          options.cy,
-          options.zoom
-        );
+        const { cx, cy, zoom } = options;
+        const { width, height } = event.currentTarget;
+        const ranges = getComplexRanges(width, height, cx, cy, zoom);
 
+        // Need to remember to multiply by devicePixelRatio
+        // Our canvas is scaled up by this factor, but the event coordinates are not
         const { x, y } = ranges.screenToComplex(
           event.clientX * window.devicePixelRatio,
-          event.clientY * window.devicePixelRatio
+          event.clientY * window.devicePixelRatio,
         );
-        const zoom = (options.zoom || 1) * 2;
+
+        // Zoom in by a factor of 2, we may want to make this smarter
+        // based on current zoom level in the future
+        const newZoom = (options.zoom || 1) * 2;
+
         set({
           cx: x,
           cy: y,
-          zoom: zoom,
-          iterations: calculateIterations(zoom),
+          zoom: newZoom,
+          iterations: calculateIterations(newZoom),
+
+          // kicks off a render
+          rendering: true,
+          done: false,
         });
       },
     }),
-    {
-      name: "renderer",
-      storage: createJSONStorage(() => hashStorage),
-      partialize: (state) =>
-        pick(state, [
-          "algorithm",
-          "cx",
-          "cy",
-          "zoom",
-          "iterations",
-          "colorScheme",
-        ]),
-    }
-  )
+    persistanceOptions,
+  ),
 );
 
 export default useRendererStore;

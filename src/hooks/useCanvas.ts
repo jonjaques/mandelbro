@@ -35,6 +35,8 @@ export function useCanvas() {
     }
   }
 
+  // Kicks off initial render, we don't like this because
+  // it takes place outside of store context
   React.useEffect(() => {
     updateContext();
     return () => cancelAnimationFrame(animationFrameId);

@@ -4,28 +4,31 @@ import useWindowSize from "../hooks/useWindowSize.ts";
 import useRendererStore from "../stores/renderer.ts";
 import useCanvas from "../hooks/useCanvas.ts";
 import { renderNoise, renderNaiveMandelbrot } from "../lib/render.ts";
+import { Algorithm } from "../lib/constants.ts";
 
 export default function Renderer() {
   const [width, height] = useWindowSize();
   const [canvasRef, setTracer] = useCanvas();
-  const algorithm = useRendererStore((state) => state.algorithm);
-  const rendering = useRendererStore((state) => state.rendering);
-  const clickZoom = useRendererStore((state) => state.clickZoom);
-  const { cx, cy, zoom } = useRendererStore(
-    useShallow((state) => ({
-      cx: state.cx,
-      cy: state.cy,
-      zoom: state.zoom,
-    })),
-  );
+  const { cx, cy, zoom, algorithm, rendering, done, clickZoom } =
+    useRendererStore(
+      useShallow((state) => ({
+        cx: state.cx,
+        cy: state.cy,
+        zoom: state.zoom,
+        algorithm: state.algorithm,
+        rendering: state.rendering,
+        done: state.done,
+        clickZoom: state.clickZoom,
+      })),
+    );
 
   const draw = setTracer((ctx, canvas) => {
     switch (algorithm) {
-      case "naive":
+      case Algorithm.Naive:
         renderNaiveMandelbrot(ctx, canvas);
         break;
 
-      case "noise":
+      case Algorithm.Noise:
       default:
         renderNoise(ctx, canvas);
         break;
@@ -33,10 +36,8 @@ export default function Renderer() {
   });
 
   useEffect(() => {
-    if (rendering) {
-      draw();
-    }
-  }, [rendering]);
+    if (rendering && !done) draw();
+  }, [rendering, done]);
 
   return (
     <div id="renderer">
@@ -44,10 +45,7 @@ export default function Renderer() {
         ref={canvasRef}
         width={width}
         height={height}
-        onClick={(e) => {
-          clickZoom(e, { cx, cy, zoom });
-          draw();
-        }}
+        onClick={(e) => clickZoom(e, { cx, cy, zoom })}
       ></canvas>
     </div>
   );
