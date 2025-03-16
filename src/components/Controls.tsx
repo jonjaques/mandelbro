@@ -1,17 +1,13 @@
+import { useShallow } from "zustand/react/shallow";
 import { useForm } from "react-hook-form";
 import { Button, Form } from "react-bootstrap";
 import Input from "./Input";
 import useRendererStore from "../stores/renderer";
 import type { RenderOptions } from "../stores/renderer";
-import {
-  Algorithm,
-  INITIAL_ORIGIN_X,
-  INITIAL_ORIGIN_Y,
-  INITIAL_ZOOM,
-  MAX_LEVELS,
-} from "../lib/constants";
+import { Algorithm } from "../lib/constants";
 import Select from "./Select";
 import { colors } from "../lib/colors";
+import { useEffect } from "react";
 
 const algoOptions = {
   [Algorithm.Noise]: "Noise",
@@ -20,21 +16,38 @@ const algoOptions = {
 
 export default function Controls() {
   const render = useRendererStore((state) => state.render);
-  const rendering = useRendererStore((state) => state.rendering);
+  const { rendering, cx, cy, zoom, iterations } = useRendererStore(
+    useShallow((state) => ({
+      cx: state.cx,
+      cy: state.cy,
+      zoom: state.zoom,
+      iterations: state.iterations,
+      rendering: state.rendering,
+    })),
+  );
+
   const {
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<RenderOptions>({
     defaultValues: {
       algorithm: Algorithm.Naive,
-      cx: INITIAL_ORIGIN_X,
-      cy: INITIAL_ORIGIN_Y,
-      zoom: INITIAL_ZOOM,
-      iterations: MAX_LEVELS,
       colorScheme: "turbo",
+      cx,
+      cy,
+      zoom,
+      iterations,
     },
   });
+
+  useEffect(() => {
+    setValue("cx", cx);
+    setValue("cy", cy);
+    setValue("zoom", zoom);
+    setValue("iterations", iterations);
+  }, [cx, cy, zoom, iterations]);
 
   return (
     <div id="controls">

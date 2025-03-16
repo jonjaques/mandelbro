@@ -96,3 +96,8 @@ export function getComplexRanges(
     yScaleInverse,
   };
 }
+
+// calculate iterations for given zoom level
+export function getMaxIterationsForZoom(zoom: number) {
+  return Math.floor(100 * Math.log2(zoom));
+}

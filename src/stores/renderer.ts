@@ -6,9 +6,8 @@ import {
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
   INITIAL_ZOOM,
-  MAX_LEVELS,
 } from "../lib/constants";
-import { getComplexRanges } from "../lib/util";
+import { getComplexRanges, getMaxIterationsForZoom } from "../lib/util";
 import { type ColorScheme } from "../lib/colors";
 import { pick } from "../lib/util";
 
@@ -48,8 +47,8 @@ export const initialState: RendererState = {
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
-  iterations: MAX_LEVELS,
-  colorScheme: "monochrome",
+  iterations: getMaxIterationsForZoom(INITIAL_ZOOM),
+  colorScheme: "turbo",
   rendering: false,
   done: false,
 };
@@ -96,7 +95,7 @@ export const useRendererStore = create<RendererInterface>()(
           cx: x,
           cy: y,
           zoom: newZoom,
-          iterations: calculateIterations(newZoom),
+          iterations: getMaxIterationsForZoom(newZoom),
 
           // kicks off a render
           rendering: true,
@@ -109,8 +108,3 @@ export const useRendererStore = create<RendererInterface>()(
 );
 
 export default useRendererStore;
-
-// calculate iterations for given zoom level
-function calculateIterations(zoom: number) {
-  return Math.floor(100 * Math.log2(zoom));
-}
