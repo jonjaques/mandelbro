@@ -47,7 +47,7 @@ export const initialState: RendererState = {
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
-  iterations: getMaxIterationsForZoom(INITIAL_ZOOM),
+  iterations: 50,
   colorScheme: "turbo",
   rendering: false,
   done: false,
