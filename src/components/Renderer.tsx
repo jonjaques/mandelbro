@@ -3,7 +3,11 @@ import { useShallow } from "zustand/shallow";
 import useWindowSize from "../hooks/useWindowSize.ts";
 import useRendererStore from "../stores/renderer.ts";
 import useCanvas from "../hooks/useCanvas.ts";
-import { renderNoise, renderNaiveMandelbrot } from "../lib/render.ts";
+import {
+  renderNoise,
+  renderNaiveMandelbrot,
+  renderRevisedMandelbrot,
+} from "../lib/render.ts";
 import { Algorithm } from "../lib/constants.ts";
 
 export default function Renderer() {
@@ -24,10 +28,12 @@ export default function Renderer() {
 
   const draw = setTracer((ctx, canvas) => {
     switch (algorithm) {
+      case Algorithm.Revised:
+        renderRevisedMandelbrot(ctx, canvas);
+        break;
       case Algorithm.Naive:
         renderNaiveMandelbrot(ctx, canvas);
         break;
-
       case Algorithm.Noise:
       default:
         renderNoise(ctx, canvas);

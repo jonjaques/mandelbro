@@ -29,11 +29,14 @@ export interface RendererState {
   colorScheme: ColorScheme;
   rendering: boolean;
   done: boolean;
+  renderStopFn: () => void;
 }
 
 export interface RendererActions {
   render: (options: RenderOptions) => void;
   renderDone: () => void;
+  setRenderStop: (fn: () => void) => void;
+  renderStop: () => void;
   clickZoom: (
     event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
     options: Partial<RenderOptions>,
@@ -43,7 +46,7 @@ export interface RendererActions {
 export type RendererInterface = RendererState & RendererActions;
 
 export const initialState: RendererState = {
-  algorithm: Algorithm.Naive,
+  algorithm: Algorithm.Revised,
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
@@ -51,7 +54,9 @@ export const initialState: RendererState = {
   colorScheme: "turbo",
   rendering: false,
   done: false,
+  renderStopFn: () => {},
 };
+console.log("initialState", initialState);
 
 const persistanceOptions = {
   name: "renderer",
@@ -62,7 +67,7 @@ const persistanceOptions = {
 
 export const useRendererStore = create<RendererInterface>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
       render: (options: RenderOptions) => {
         console.log("render", options);
@@ -71,6 +76,13 @@ export const useRendererStore = create<RendererInterface>()(
       renderDone: () => {
         console.log("render done");
         set({ rendering: false, done: true });
+      },
+      setRenderStop(fn: () => void) {
+        set({ renderStopFn: fn });
+      },
+      renderStop() {
+        set({ rendering: false });
+        get().renderStopFn();
       },
       clickZoom: (
         event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,

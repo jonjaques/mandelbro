@@ -15,6 +15,7 @@ export const INITIAL_ZOOM = 1;
 export const enum Algorithm {
   Noise = "noise",
   Naive = "naive",
+  Revised = "revised",
 }
 
 export const COLOR_LEVELS = 256;
