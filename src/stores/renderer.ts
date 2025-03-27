@@ -56,6 +56,7 @@ export const initialState: RendererState = {
   done: false,
   renderStopFn: () => {},
 };
+
 console.log("initialState", initialState);
 
 const persistanceOptions = {

@@ -4,7 +4,7 @@ import { Button, Form } from "react-bootstrap";
 import Input from "./Input";
 import useRendererStore from "../stores/renderer";
 import type { RenderOptions } from "../stores/renderer";
-import { Algorithm } from "../lib/constants";
+import { Algorithm, INITIAL_COLOR_SCHEME } from "../lib/constants";
 import Select from "./Select";
 import { colors } from "../lib/colors";
 import { useEffect } from "react";
@@ -37,7 +37,7 @@ export default function Controls() {
   } = useForm<RenderOptions>({
     defaultValues: {
       algorithm,
-      colorScheme: "turbo",
+      colorScheme: INITIAL_COLOR_SCHEME,
       cx,
       cy,
       zoom,

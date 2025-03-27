@@ -1,6 +1,7 @@
 import useRendererStore from "../stores/renderer";
 import { limitLoop } from "./animate";
 import { getColorForIteration } from "./colors";
+import { TARGET_FPS } from "./constants";
 import { getComplexRanges } from "./util";
 
 export function renderRevisedMandelbrot(
@@ -12,17 +13,15 @@ export function renderRevisedMandelbrot(
   const { cx, cy, zoom, iterations, colorScheme, renderDone, setRenderStop } =
     useRendererStore.getState();
 
-  const width = canvas.width;
-  const height = canvas.height;
-  console.time("getComplexRanges");
-  const ranges = getComplexRanges(width, height, cx, cy, zoom);
-  console.timeEnd("getComplexRanges");
+  const screenWidth = canvas.width;
+  const screenHeight = canvas.height;
+  const ranges = getComplexRanges(screenWidth, screenHeight, cx, cy, zoom);
 
   const stop = limitLoop(
     (py) => {
-      const imageData = ctx.createImageData(width, 1);
+      const imageData = ctx.createImageData(screenWidth, 1);
 
-      for (let px = 0; px < width; px++) {
+      for (let px = 0; px < screenWidth; px++) {
         const { x: x0, y: y0 } = ranges.screenToComplex(px, py);
         const maxIteration = iterations;
 
@@ -52,8 +51,8 @@ export function renderRevisedMandelbrot(
       }
       ctx.putImageData(imageData, 0, py);
     },
-    height,
-    24,
+    screenHeight,
+    TARGET_FPS,
     () => {
       console.timeEnd("renderRevisedMandelbrot");
       renderDone();
