@@ -2,7 +2,7 @@ import useRendererStore from "../stores/renderer";
 import { limitLoop } from "./animate";
 import { getColorForIteration } from "./colors";
 import { TARGET_FPS } from "./constants";
-import { getComplexRanges } from "./util";
+import { getComplexRanges, iterateMandelbrotEquation } from "./util";
 
 export function renderRevisedMandelbrot(
   ctx: CanvasRenderingContext2D,
@@ -24,16 +24,13 @@ export function renderRevisedMandelbrot(
       for (let px = 0; px < screenWidth; px++) {
         const { x: x0, y: y0 } = ranges.screenToComplex(px, py);
         const maxIteration = iterations;
-
-        let x = 0;
-        let y = 0;
-        let iteration = 0;
-        while (x * x + y * y <= 4 && iteration < maxIteration) {
-          const xTemp = x * x - y * y + x0;
-          y = 2 * x * y + y0;
-          x = xTemp;
-          iteration++;
-        }
+        const escapeRadius = 4;
+        const [iteration, tr, ti] = iterateMandelbrotEquation(
+          x0,
+          y0,
+          escapeRadius,
+          maxIteration,
+        );
 
         // We're only painting one row at a time, so no need to multiply by py
         // const i = (py * width + px) * 4;
@@ -42,6 +39,8 @@ export function renderRevisedMandelbrot(
           iteration,
           maxIteration,
           colorScheme,
+          tr,
+          ti,
         );
 
         imageData.data[i + 0] = r;

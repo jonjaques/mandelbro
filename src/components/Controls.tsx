@@ -52,9 +52,25 @@ export default function Controls() {
     setValue("iterations", iterations);
   }, [cx, cy, zoom, iterations]);
 
+  const onSubmit = (data: RenderOptions) => {
+    if (typeof data.cx !== "undefined") {
+      data.cx = parseFloat(data.cx + "");
+    }
+    if (typeof data.cy !== "undefined") {
+      data.cy = parseFloat(data.cy + "");
+    }
+    if (typeof data.zoom !== "undefined") {
+      data.zoom = parseFloat(data.zoom + "");
+    }
+    if (typeof data.iterations !== "undefined") {
+      data.iterations = parseInt(data.iterations + "", 10);
+    }
+    render(data);
+  };
+
   return (
     <div id="controls">
-      <Form aria-disabled={rendering} onSubmit={handleSubmit(render)}>
+      <Form aria-disabled={rendering} onSubmit={handleSubmit(onSubmit)}>
         <Select
           name="algorithm"
           control={control}
@@ -69,21 +85,14 @@ export default function Controls() {
           size="sm"
           options={colors}
         />
-        <Input name="cx" control={control} label="X" size="sm" valueAsNumber />
-        <Input name="cy" control={control} label="Y" size="sm" valueAsNumber />
-        <Input
-          name="zoom"
-          control={control}
-          label="Zoom"
-          size="sm"
-          valueAsNumber
-        />
+        <Input name="cx" control={control} label="X" size="sm" />
+        <Input name="cy" control={control} label="Y" size="sm" />
+        <Input name="zoom" control={control} label="Zoom" size="sm" />
         <Input
           name="iterations"
           control={control}
           label="Iterations"
           size="sm"
-          valueAsNumber
         />
         {/* errors will return when field validation fails  */}
         {/* {errors.exampleRequired && <span>This field is required</span>} */}

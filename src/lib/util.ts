@@ -1,5 +1,6 @@
 import { scaleLinear } from "d3-scale";
 import { INITIAL_ORIGIN_X, INITIAL_ORIGIN_Y, INITIAL_ZOOM } from "./constants";
+const { log2, pow, floor } = Math;
 
 export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   // type hijinks to make TypeScript happy
@@ -97,7 +98,73 @@ export function getComplexRanges(
   };
 }
 
+/*
+ * Borrowed from Christian Stigen Larsen's mandelbrot-js project:
+ * https://github.com/cslarsen/mandelbrot-js/blob/9b2ca5134a566bc5eb6e95dacb38e41ad408949d/mandelbrot.js#L82
+ * Copyright 2012, 2018 Christian Stigen Larsen
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.  You may obtain a copy
+ * of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Returns number of iterations and values of Z_{n}^2 = Tr + Ti at the time
+ * we either converged (n == iterations) or diverged.  We use these to
+ * determined the color at the current pixel.
+ *
+ * The Mandelbrot set is rendered taking
+ *
+ *     Z_{n+1} = Z_{n}^2 + C
+ *
+ * with C = x + iy, based on the "look at" coordinates.
+ *
+ * The Julia set can be rendered by taking
+ *
+ *     Z_{0} = C = x + iy
+ *     Z_{n+1} = Z_{n} + K
+ *
+ * for some arbitrary constant K.  The point C for Z_{0} must be the
+ * current pixel we're rendering, but K could be based on the "look at"
+ * coordinate, or by letting the user select a point on the screen.
+ */
+export function iterateMandelbrotEquation(
+  Cr: number,
+  Ci: number,
+  escapeRadius: number,
+  maxIterations: number,
+) {
+  let Zr = 0;
+  let Zi = 0;
+  let Tr = 0;
+  let Ti = 0;
+  let iterations = 0;
+
+  for (; iterations < maxIterations && Tr + Ti <= escapeRadius; iterations++) {
+    Zi = 2 * Zr * Zi + Ci;
+    Zr = Tr - Ti + Cr;
+    Tr = Zr * Zr;
+    Ti = Zi * Zi;
+  }
+
+  /*
+   * A few more iterations to decrease error term:
+   * http://linas.org/art-gallery/escape/escape.html
+   */
+  // This is not effective at the moment, because we don't consider
+  // the real/imaginary coords for color picking
+  // const ecIterations = 4;
+  // for (let e = 0; e < ecIterations; e++) {
+  //   Zi = 2 * Zr * Zi + Ci;
+  //   Zr = Tr - Ti + Cr;
+  //   Tr = Zr * Zr;
+  //   Ti = Zi * Zi;
+  // }
+
+  return [iterations, Tr, Ti] as const;
+}
+
 // calculate iterations for given zoom level
 export function getMaxIterationsForZoom(zoom: number) {
-  return Math.floor(100 * Math.log2(zoom));
+  return floor(50 * log2(zoom) + 10 * pow(log2(zoom), 2));
 }

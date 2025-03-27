@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import hashStorage from "./storage";
 import {
   Algorithm,
+  INITIAL_ITERATIONS,
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
   INITIAL_ZOOM,
@@ -50,7 +51,7 @@ export const initialState: RendererState = {
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
-  iterations: 50,
+  iterations: INITIAL_ITERATIONS,
   colorScheme: "turbo",
   rendering: false,
   done: false,
