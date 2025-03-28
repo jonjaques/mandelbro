@@ -4,15 +4,15 @@
 // to prevent the browser from locking up.
 export function limitLoop(
   fn: (py: number) => void,
-  height: number,
-  fps = 60,
+  maxHeight: number,
+  targetFps = 60,
   onDone?: () => void,
 ) {
   let py = 0;
   let done = false;
   let then = window.performance.now();
 
-  const interval = 1000 / fps;
+  const interval = 1000 / targetFps;
 
   loop(then);
 
@@ -39,16 +39,17 @@ export function limitLoop(
       // Update time
       then = now - (delta % interval);
 
-      // call the fn as many times as possible within the interval
+      // Call the fn as many times as possible within the interval
       let elapsed = 0;
-      while (elapsed < interval) {
+      // We need to call the fn at least once
+      do {
         fn(py);
         py++;
         elapsed = window.performance.now() - now;
-        if (py >= height) {
+        if (py >= maxHeight) {
           return stop();
         }
-      }
+      } while (elapsed < interval);
     }
   }
 }
