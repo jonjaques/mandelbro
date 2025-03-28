@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import hashStorage from "./storage";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { urlStorage } from "./storage";
 import {
   Algorithm,
+  ESCAPE_RADIUS,
   INITIAL_ITERATIONS,
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
@@ -18,6 +19,7 @@ export interface RenderOptions {
   cy?: number;
   zoom?: number;
   iterations?: number;
+  escapeRadius?: number;
   colorScheme?: ColorScheme;
 }
 
@@ -27,6 +29,7 @@ export interface RendererState {
   cy: number;
   zoom: number;
   iterations: number;
+  escapeRadius: number;
   colorScheme: ColorScheme;
   rendering: boolean;
   done: boolean;
@@ -52,6 +55,7 @@ export const initialState: RendererState = {
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,
   iterations: INITIAL_ITERATIONS,
+  escapeRadius: ESCAPE_RADIUS,
   colorScheme: "turbo",
   rendering: false,
   done: false,
@@ -59,18 +63,11 @@ export const initialState: RendererState = {
 };
 
 console.log("initialState", initialState);
-
-const persistanceOptions = {
-  name: "renderer",
-  storage: createJSONStorage(() => hashStorage),
-  partialize: (state: RendererInterface) =>
-    pick(state, ["algorithm", "cx", "cy", "zoom", "iterations", "colorScheme"]),
-};
-
 export const useRendererStore = create<RendererInterface>()(
   persist(
     (set, get) => ({
       ...initialState,
+      reset: () => set(initialState),
       render: (options: RenderOptions) => {
         console.log("render", options);
         set({ ...options, rendering: true, done: false });
@@ -83,13 +80,16 @@ export const useRendererStore = create<RendererInterface>()(
         set({ renderStopFn: fn });
       },
       renderStop() {
-        set({ rendering: false });
-        get().renderStopFn();
+        const state = get();
+        state.renderStopFn();
+        state.renderDone();
       },
       clickZoom: (
         event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
         options: Partial<RenderOptions>,
       ) => {
+        const state = get();
+        state.renderStop();
         const { cx, cy, zoom } = options;
         const { width, height } = event.currentTarget;
         const ranges = getComplexRanges(width, height, cx, cy, zoom);
@@ -110,15 +110,31 @@ export const useRendererStore = create<RendererInterface>()(
           cy: y,
           zoom: newZoom,
           iterations: getMaxIterationsForZoom(newZoom),
-
-          // kicks off a render
-          rendering: true,
-          done: false,
         });
+
+        state.render(get());
       },
     }),
-    persistanceOptions,
+    {
+      name: "renderer",
+      // @ts-expect-error We have a quick and dirty interface, no typecheck needed
+      storage: urlStorage,
+      // storage: createJSONStorage(() => hashStorage),
+      partialize: pickRendererState,
+    },
   ),
 );
 
 export default useRendererStore;
+
+export function pickRendererState(state: RendererInterface) {
+  return pick(state, [
+    "algorithm",
+    "cx",
+    "cy",
+    "zoom",
+    "escapeRadius",
+    "iterations",
+    "colorScheme",
+  ]);
+}

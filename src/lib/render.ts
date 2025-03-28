@@ -1,6 +1,6 @@
 import useRendererStore from "../stores/renderer";
 import { limitLoop } from "./animate";
-import { getColorForIteration } from "./colors";
+import { drawPreviewLine, getColorForIteration } from "./colors";
 import { TARGET_FPS } from "./constants";
 import { getComplexRanges, iterateMandelbrotEquation } from "./util";
 
@@ -19,8 +19,14 @@ export function renderRevisedMandelbrot(
 
   const stop = limitLoop(
     (py) => {
+      const previewColor = getColorForIteration(
+        // get the "hottest" color
+        iterations - 1,
+        iterations,
+        colorScheme,
+      );
+      drawPreviewLine(ctx, screenWidth, py + 1, previewColor);
       const imageData = ctx.createImageData(screenWidth, 1);
-
       for (let px = 0; px < screenWidth; px++) {
         const { x: x0, y: y0 } = ranges.screenToComplex(px, py);
         const maxIteration = iterations;

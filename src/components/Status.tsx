@@ -9,14 +9,13 @@ export default function Status() {
     })),
   );
 
-  return (
-    <div id="status">
-      <div>Rendering: {simpleLabel(status?.rendering)}</div>
-      <div>Done: {simpleLabel(status?.done)}</div>
-    </div>
-  );
-}
+  if (status.rendering) {
+    return (
+      <div id="status">
+        <div className="loader"></div>
+      </div>
+    );
+  }
 
-function simpleLabel(opt: boolean) {
-  return opt ? "true" : "false";
+  return null;
 }

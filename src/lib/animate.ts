@@ -14,7 +14,7 @@ export function limitLoop(
 
   const interval = 1000 / fps;
 
-  requestAnimationFrame(loop);
+  loop(then);
 
   return stop;
 
@@ -32,7 +32,7 @@ export function limitLoop(
 
     requestAnimationFrame(loop);
 
-    const now = window.performance.now();
+    const now = time;
     const delta = now - then;
 
     if (delta > interval) {
@@ -41,14 +41,14 @@ export function limitLoop(
 
       // call the fn as many times as possible within the interval
       let elapsed = 0;
-      do {
+      while (elapsed < interval) {
         fn(py);
         py++;
         elapsed = window.performance.now() - now;
         if (py >= height) {
           return stop();
         }
-      } while (elapsed < interval);
+      }
     }
   }
 }

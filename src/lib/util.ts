@@ -15,12 +15,11 @@ export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
  * Maps screen coordinates to complex plane coordinates while maintaining aspect ratio,
  * using scaleLinear for the transformations.
  *
- * @param {number} screenWidth - Width of the canvas in pixels
- * @param {number} screenHeight - Height of the canvas in pixels
- * @param {number} cx - Center x-coordinate in the complex plane
- * @param {number} cy - Center y-coordinate in the complex plane
+ * @param {number} screenWidth Width of the canvas in pixels
+ * @param {number} screenHeight Height of the canvas in pixels
+ * @param {number} cx Center x-coordinate in the complex plane
+ * @param {number} cy Center y-coordinate in the complex plane
  * @param {number} zoom - Zoom level (higher values = more zoomed in)
- * @returns {Object} - Contains the complex plane ranges and scaling functions
  */
 export function getComplexRanges(
   screenWidth: number,

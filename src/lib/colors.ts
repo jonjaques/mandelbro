@@ -57,7 +57,20 @@ export function getColorForIteration(
     r: colorLuts[colorScheme][offset],
     g: colorLuts[colorScheme][offset + 1],
     b: colorLuts[colorScheme][offset + 2],
-  };
+  } as const;
+}
+
+export function drawPreviewLine(
+  ctx: CanvasRenderingContext2D,
+  screenWidth: number,
+  py: number,
+  color: string | { r: number; g: number; b: number } = "white",
+) {
+  ctx.fillStyle =
+    typeof color === "string"
+      ? color
+      : `rgb(${color.r}, ${color.g}, ${color.b})`;
+  ctx.fillRect(0, py, screenWidth, 1);
 }
 
 function generateLUT(colorScheme: ColorScheme, levels: number): Uint8Array {
