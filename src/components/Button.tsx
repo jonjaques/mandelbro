@@ -40,7 +40,6 @@ export default function Button(props: ButtonProps) {
 
   return (
     <button
-      type="button"
       style={{
         backgroundImage: variant !== "primary" ? undefined : headerGradient,
       }}

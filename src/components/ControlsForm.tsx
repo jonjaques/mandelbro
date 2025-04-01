@@ -115,15 +115,20 @@ export default function ControlsForm() {
           full
           variant="secondary"
           disabled={!rendering}
-          onClick={renderCancel}
+          onClick={(e) => {
+            console.log("stop");
+            e.preventDefault();
+            renderCancel();
+          }}
         >
           Stop
         </Button>
         <Button
           full
           variant="secondary"
-          disabled={!rendering}
-          onClick={() => {
+          onClick={(e) => {
+            console.log("reset");
+            e.preventDefault();
             renderCancel();
             reset();
             render();
