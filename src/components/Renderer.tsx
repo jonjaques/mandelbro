@@ -11,9 +11,9 @@ import {
 import { Algorithm } from "../lib/constants.ts";
 
 export default function Renderer() {
-  const [width, height] = useWindowSize();
+  const [width, height] = useWindowSize(undefined, onResize);
   const [canvasRef, setTracer] = useCanvas();
-  const { cx, cy, zoom, algorithm, rendering, done, clickZoom } =
+  const { cx, cy, zoom, algorithm, rerender, rendering, done, clickZoom } =
     useRendererStore(
       useShallow((state) => ({
         cx: state.cx,
@@ -23,6 +23,7 @@ export default function Renderer() {
         rendering: state.rendering,
         done: state.done,
         clickZoom: state.clickZoom,
+        rerender: state.rerender,
       })),
     );
 
@@ -55,4 +56,10 @@ export default function Renderer() {
       ></canvas>
     </div>
   );
+
+  function onResize() {
+    if (canvasRef.current) {
+      rerender();
+    }
+  }
 }

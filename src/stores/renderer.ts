@@ -1,17 +1,18 @@
 import { flushSync } from "react-dom";
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { urlStorage } from "./storage";
 import {
   Algorithm,
   ESCAPE_RADIUS,
+  INITIAL_COLOR_SCHEME,
   INITIAL_ITERATIONS,
   INITIAL_ORIGIN_X,
   INITIAL_ORIGIN_Y,
   INITIAL_ZOOM,
 } from "../lib/constants";
 import { getComplexRanges, getMaxIterationsForZoom } from "../lib/util";
-import { type ColorScheme } from "../lib/colors";
+import type { ColorScheme } from "../lib/colors";
 import { pick } from "../lib/util";
 
 export interface RenderOptions {
@@ -42,6 +43,8 @@ export interface RendererActions {
   renderDone: () => void;
   setRenderStop: (fn: () => void) => void;
   renderCancel: () => void;
+  rerender: () => void;
+  reset: () => void;
   clickZoom: (
     event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
     options: Partial<RenderOptions>,
@@ -57,7 +60,7 @@ export const initialState: RendererState = {
   zoom: INITIAL_ZOOM,
   iterations: INITIAL_ITERATIONS,
   escapeRadius: ESCAPE_RADIUS,
-  colorScheme: "turbo",
+  colorScheme: INITIAL_COLOR_SCHEME,
   rendering: true,
   done: false,
   renderStopFn: () => {},
@@ -68,10 +71,16 @@ export const useRendererStore = create<RendererInterface>()(
   persist(
     (set, get) => ({
       ...initialState,
-      reset: () => set(initialState),
+      reset: () => set(() => initialState),
       render: (options?: RenderOptions) => {
         console.log("render", options);
         set(() => ({ ...options, rendering: true, done: false }));
+      },
+      rerender: () => {
+        const state = get();
+        console.log("rerender", state);
+        state.renderCancel();
+        state.render();
       },
       renderDone: () => {
         console.log("render done");
