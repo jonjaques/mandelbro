@@ -8,8 +8,6 @@ export function renderRevisedMandelbrot(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
 ) {
-  console.log("renderRevisedMandelbrot");
-  console.time("renderRevisedMandelbrot");
   const { cx, cy, zoom, iterations, colorScheme, renderDone, setRenderStop } =
     useRendererStore.getState();
 
@@ -58,13 +56,17 @@ export function renderRevisedMandelbrot(
     },
     screenHeight,
     TARGET_FPS,
-    () => {
-      console.timeEnd("renderRevisedMandelbrot");
-      renderDone();
-    },
+    onDone,
   );
 
-  setRenderStop(stop);
+  function onDone() {
+    renderDone();
+  }
+
+  setRenderStop(() => {
+    console.log("stopping draw");
+    stop();
+  });
 }
 
 // This function is the naive implementation of the Mandelbrot set rendering.

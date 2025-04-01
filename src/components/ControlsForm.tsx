@@ -10,17 +10,21 @@ import { colors } from "../lib/colors";
 import { useEffect } from "react";
 
 const algoOptions = {
-  [Algorithm.Noise]: "Noise",
-  [Algorithm.Naive]: "Naive",
+  // [Algorithm.Noise]: "Noise",
+  // [Algorithm.Naive]: "Naive",
   [Algorithm.Revised]: "Revised",
 };
 
 export default function ControlsForm() {
-  const render = useRendererStore((state) => state.render);
-  const rendering = useRendererStore((state) => state.rendering);
-  const renderStop = useRendererStore((state) => state.renderStop);
   const { algorithm, cx, cy, zoom, colorScheme, escapeRadius, iterations } =
     useRendererStore(useShallow(pickRendererState));
+  const { render, rendering, renderCancel } = useRendererStore(
+    useShallow((state) => ({
+      render: state.render,
+      rendering: state.rendering,
+      renderCancel: state.renderCancel,
+    })),
+  );
 
   const {
     handleSubmit,
@@ -70,13 +74,13 @@ export default function ControlsForm() {
 
   return (
     <Form aria-disabled={rendering} onSubmit={handleSubmit(onSubmit)}>
-      <Select
+      {/*<Select
         name="algorithm"
         control={control}
         label="Algorithm"
         size="sm"
         options={algoOptions}
-      />
+      />*/}
       <Select
         name="colorScheme"
         control={control}
@@ -98,7 +102,7 @@ export default function ControlsForm() {
       {/* errors will return when field validation fails  */}
       {/* {errors.exampleRequired && <span>This field is required</span>} */}
       <Button as="input" type="submit" disabled={rendering} value="Render" />
-      <Button variant="danger" disabled={!rendering} onClick={renderStop}>
+      <Button variant="danger" disabled={!rendering} onClick={renderCancel}>
         Stop
       </Button>
     </Form>

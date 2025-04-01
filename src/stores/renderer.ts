@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { urlStorage } from "./storage";
@@ -37,10 +38,10 @@ export interface RendererState {
 }
 
 export interface RendererActions {
-  render: (options: RenderOptions) => void;
+  render: (options?: RenderOptions) => void;
   renderDone: () => void;
   setRenderStop: (fn: () => void) => void;
-  renderStop: () => void;
+  renderCancel: () => void;
   clickZoom: (
     event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
     options: Partial<RenderOptions>,
@@ -57,7 +58,7 @@ export const initialState: RendererState = {
   iterations: INITIAL_ITERATIONS,
   escapeRadius: ESCAPE_RADIUS,
   colorScheme: "turbo",
-  rendering: false,
+  rendering: true,
   done: false,
   renderStopFn: () => {},
 };
@@ -68,28 +69,37 @@ export const useRendererStore = create<RendererInterface>()(
     (set, get) => ({
       ...initialState,
       reset: () => set(initialState),
-      render: (options: RenderOptions) => {
+      render: (options?: RenderOptions) => {
         console.log("render", options);
-        set({ ...options, rendering: true, done: false });
+        set(() => ({ ...options, rendering: true, done: false }));
       },
       renderDone: () => {
         console.log("render done");
-        set({ rendering: false, done: true });
+        set(() => ({ rendering: false, done: true }));
       },
       setRenderStop(fn: () => void) {
-        set({ renderStopFn: fn });
+        set(() => ({ renderStopFn: fn }));
       },
-      renderStop() {
-        const state = get();
-        state.renderStopFn();
-        state.renderDone();
+      renderCancel() {
+        console.log("render stop");
+        // We need this because the
+        // loop limiter (requestAnimationFrame)
+        // calls another action that sets rendering
+        // false and we need that to get flushed out
+        // to the useEffect which initiates rendering
+        flushSync(() => {
+          get().renderStopFn();
+        });
       },
       clickZoom: (
         event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
         options: Partial<RenderOptions>,
       ) => {
         const state = get();
-        state.renderStop();
+        if (state.rendering) {
+          console.log("rendering, canceling");
+          state.renderCancel();
+        }
         const { cx, cy, zoom } = options;
         const { width, height } = event.currentTarget;
         const ranges = getComplexRanges(width, height, cx, cy, zoom);
@@ -105,14 +115,14 @@ export const useRendererStore = create<RendererInterface>()(
         // based on current zoom level in the future
         const newZoom = (options.zoom || 1) * 2;
 
-        set({
+        set(() => ({
           cx: x,
           cy: y,
           zoom: newZoom,
           iterations: getMaxIterationsForZoom(newZoom),
-        });
+        }));
 
-        state.render(get());
+        state.render();
       },
     }),
     {

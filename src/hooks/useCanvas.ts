@@ -1,48 +1,41 @@
 import React from "react";
 
-export type TracerFn = (
+export type DrawFn = (
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
 ) => void;
-
-export const requestAnimationFrame = window.requestAnimationFrame;
-
-export const cancelAnimationFrame = window.cancelAnimationFrame;
 
 export function useCanvas() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   let canvas: HTMLCanvasElement | null,
     context: CanvasRenderingContext2D | null,
-    animationFrameId: number,
-    tracer: TracerFn;
+    drawFn: DrawFn;
+
+  // Sets up canvas context
+  React.useEffect(() => {
+    updateContext();
+  }, []);
+
+  return [canvasRef, setDraw] as const;
 
   function updateContext() {
     canvas = canvasRef.current;
     if (canvas) {
       context = canvas.getContext("2d");
-      animationFrameId = requestAnimationFrame(renderFrame);
     }
   }
 
-  function setTracer(tracerFn: TracerFn) {
-    tracer = tracerFn;
-    return updateContext;
-  }
-
-  function renderFrame() {
-    if (context && canvas) {
-      animationFrameId = requestAnimationFrame(() => tracer(context!, canvas!));
-    }
-  }
-
-  // Kicks off initial render, we don't like this because
-  // it takes place outside of store context
-  React.useEffect(() => {
+  function setDraw(userDrawFn: DrawFn) {
+    drawFn = userDrawFn;
     updateContext();
-    return () => cancelAnimationFrame(animationFrameId);
-  }, []);
+    return draw;
+  }
 
-  return [canvasRef, setTracer] as const;
+  function draw() {
+    if (context && canvas) {
+      drawFn(context, canvas);
+    }
+  }
 }
 
 export default useCanvas;
