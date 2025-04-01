@@ -8,22 +8,9 @@ export default function Controls() {
   const [open, setOpen] = useState(false);
   return (
     <div id="controls">
-      <div className="d-flex flex-row justify-content-between align-items-center">
-        <div>Mandelbro</div>
-        <Button
-          variant="outline-secondary"
-          onClick={() => setOpen(!open)}
-          aria-controls="Menu"
-          aria-expanded={open}
-        >
-          <FontAwesomeIcon icon={faBars} />
-        </Button>
+      <div className="bg-zinc-900/80 p-3 rounded-l-lg backdrop-blur-sm shadow-md py-3 z-50 transition-colors duration-300">
+        <ControlsForm />
       </div>
-      <Collapse in={open}>
-        <div>
-          <ControlsForm />
-        </div>
-      </Collapse>
     </div>
   );
 }

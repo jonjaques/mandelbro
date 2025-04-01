@@ -8,6 +8,7 @@ import {
   interpolateRainbow,
 } from "d3-scale-chromatic";
 import { COLOR_LEVELS } from "./constants";
+import type { RendererState } from "../stores/renderer";
 
 export const interpolators = {
   monochrome: interpolateGreys,
@@ -71,6 +72,15 @@ export function drawPreviewLine(
       ? color
       : `rgb(${color.r}, ${color.g}, ${color.b})`;
   ctx.fillRect(0, py, screenWidth, 1);
+}
+
+export function getHeaderGradient(state: RendererState) {
+  const { colorScheme } = state;
+  const interpolate = interpolators[colorScheme];
+  const colorStops = [0.4, 0.5, 0.67, 0.75]
+    .map((t) => interpolate(t))
+    .join(", ");
+  return `linear-gradient(135deg, ${colorStops})`;
 }
 
 function generateLUT(colorScheme: ColorScheme, levels: number): Uint8Array {

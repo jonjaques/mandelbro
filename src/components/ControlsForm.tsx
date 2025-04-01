@@ -1,27 +1,28 @@
+import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useForm } from "react-hook-form";
-import { Button, Form } from "react-bootstrap";
-import Input from "./Input";
 import useRendererStore, { pickRendererState } from "../stores/renderer";
-import type { RenderOptions } from "../stores/renderer";
-import { Algorithm } from "../lib/constants";
-import Select from "./Select";
 import { colors } from "../lib/colors";
-import { useEffect } from "react";
+import type { RenderOptions } from "../stores/renderer";
+import Button from "./Button";
+import Input from "./Input";
+import Select from "./Select";
+// import { Algorithm } from "../lib/constants";
 
-const algoOptions = {
-  // [Algorithm.Noise]: "Noise",
-  // [Algorithm.Naive]: "Naive",
-  [Algorithm.Revised]: "Revised",
-};
+// const algoOptions = {
+//   [Algorithm.Noise]: "Noise",
+//   [Algorithm.Naive]: "Naive",
+//   [Algorithm.Revised]: "Revised",
+// };
 
 export default function ControlsForm() {
   const { algorithm, cx, cy, zoom, colorScheme, escapeRadius, iterations } =
     useRendererStore(useShallow(pickRendererState));
-  const { render, rendering, renderCancel } = useRendererStore(
+  const { render, rendering, renderCancel, reset } = useRendererStore(
     useShallow((state) => ({
       render: state.render,
       rendering: state.rendering,
+      reset: state.reset,
       renderCancel: state.renderCancel,
     })),
   );
@@ -73,7 +74,11 @@ export default function ControlsForm() {
   };
 
   return (
-    <Form aria-disabled={rendering} onSubmit={handleSubmit(onSubmit)}>
+    <form
+      className="max-w-sm mx-auto"
+      aria-disabled={rendering}
+      onSubmit={handleSubmit(onSubmit)}
+    >
       {/*<Select
         name="algorithm"
         control={control}
@@ -101,10 +106,32 @@ export default function ControlsForm() {
       <Input name="iterations" control={control} label="Iterations" size="sm" />
       {/* errors will return when field validation fails  */}
       {/* {errors.exampleRequired && <span>This field is required</span>} */}
-      <Button as="input" type="submit" disabled={rendering} value="Render" />
-      <Button variant="danger" disabled={!rendering} onClick={renderCancel}>
-        Stop
-      </Button>
-    </Form>
+
+      <div className="pt-2">
+        <Button variant="primary" full type="submit" disabled={rendering}>
+          Render
+        </Button>
+        <Button
+          full
+          variant="secondary"
+          disabled={!rendering}
+          onClick={renderCancel}
+        >
+          Stop
+        </Button>
+        <Button
+          full
+          variant="secondary"
+          disabled={!rendering}
+          onClick={() => {
+            renderCancel();
+            reset();
+            render();
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+    </form>
   );
 }

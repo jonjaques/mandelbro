@@ -17,13 +17,14 @@ export function renderRevisedMandelbrot(
 
   const stop = limitLoop(
     (py) => {
-      const previewColor = getColorForIteration(
-        // get the "hottest" color
-        iterations - 1,
-        iterations,
-        colorScheme,
-      );
-      drawPreviewLine(ctx, screenWidth, py + 1, previewColor);
+      // const previewColor = getColorForIteration(
+      //   // get the "hottest" color
+      //   iterations - 1,
+      //   iterations,
+      //   colorScheme
+      // );
+      drawPreviewLine(ctx, screenWidth, py + 1, "#ffffff");
+      // drawPreviewLine(ctx, screenWidth, py + 1, previewColor);
       const imageData = ctx.createImageData(screenWidth, 1);
       for (let px = 0; px < screenWidth; px++) {
         const { x: x0, y: y0 } = ranges.screenToComplex(px, py);
