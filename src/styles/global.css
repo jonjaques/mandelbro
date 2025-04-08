@@ -6,9 +6,15 @@
 
 html,
 body {
-  background-color: black;
+  background-color: #000;
   color: white;
   overflow: hidden;
+}
+
+html,
+body,
+main {
+  height: 100%;
 }
 
 .logo-container {

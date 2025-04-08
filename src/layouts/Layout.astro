@@ -54,7 +54,6 @@ function gtag(){dataLayer.push(arguments)}
     <meta property="og:image" content={`${Astro.site}preview.jpg`} />
     <meta property="og:image:alt" content={description} />
 
-    <!-- Google tag (gtag.js) -->
     {
       prodMode && (
         <script
@@ -64,8 +63,7 @@ function gtag(){dataLayer.push(arguments)}
       )
     }
     {prodMode && <script is:inline set:html={gaScript} />}
-
-    <script src="/src/pwa.ts"></script>
+    {prodMode && <script src="/src/pwa.ts" />}
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
   </head>
   <body>

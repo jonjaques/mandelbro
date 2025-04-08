@@ -9,10 +9,11 @@ import {
   renderRevisedMandelbrot,
 } from "../lib/render.ts";
 import { Algorithm } from "../lib/constants.ts";
+import FancyRenderer from "./FancyRenderer.tsx";
 
 export default function Renderer() {
-  const [width, height] = useWindowSize(undefined, onResize);
   const [canvasRef, setTracer] = useCanvas();
+  const [width, height] = useWindowSize(undefined, onResize);
   const { cx, cy, zoom, algorithm, rerender, rendering, done, clickZoom } =
     useRendererStore(
       useShallow((state) => ({
@@ -45,6 +46,10 @@ export default function Renderer() {
   useEffect(() => {
     if (rendering && !done) draw();
   }, [rendering, done]);
+
+  if (algorithm === Algorithm.Fancy) {
+    return <FancyRenderer width={width} height={height} />;
+  }
 
   return (
     <div id="renderer">

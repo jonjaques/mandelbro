@@ -5,6 +5,7 @@ import { urlStorage } from "./storage";
 import {
   Algorithm,
   ESCAPE_RADIUS,
+  INITIAL_ALGORITHM,
   INITIAL_COLOR_SCHEME,
   INITIAL_ITERATIONS,
   INITIAL_ORIGIN_X,
@@ -54,7 +55,7 @@ export interface RendererActions {
 export type RendererInterface = RendererState & RendererActions;
 
 export const initialState: RendererState = {
-  algorithm: Algorithm.Revised,
+  algorithm: INITIAL_ALGORITHM,
   cx: INITIAL_ORIGIN_X,
   cy: INITIAL_ORIGIN_Y,
   zoom: INITIAL_ZOOM,

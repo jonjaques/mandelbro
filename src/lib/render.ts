@@ -4,6 +4,51 @@ import { drawPreviewLine, getColorForIteration } from "./colors";
 import { TARGET_FPS } from "./constants";
 import { getComplexRanges, iterateMandelbrotEquation } from "./util";
 
+export function renderMandelbrotImageData(width: number, height: number) {
+  console.log("renderMandelbrotImageData");
+  console.time("renderMandelbrotImageData");
+  const { cx, cy, zoom, iterations, colorScheme, renderDone } =
+    useRendererStore.getState();
+
+  console.time("getComplexRanges");
+  const ranges = getComplexRanges(width, height, cx, cy, zoom);
+  console.timeEnd("getComplexRanges");
+
+  const imageData = new Uint8Array(width * height * 4);
+  for (let py = 0; py < height; py++) {
+    for (let px = 0; px < width; px++) {
+      const { x: x0, y: y0 } = ranges.screenToComplex(px, py);
+      const maxIteration = iterations;
+
+      let x = 0;
+      let y = 0;
+      let iteration = 0;
+      while (x * x + y * y <= 4 && iteration < maxIteration) {
+        const xTemp = x * x - y * y + x0;
+        y = 2 * x * y + y0;
+        x = xTemp;
+        iteration++;
+      }
+
+      const i = (py * width + px) * 4;
+
+      const { r, g, b } = getColorForIteration(
+        iteration,
+        maxIteration,
+        colorScheme,
+      );
+
+      imageData[i + 0] = r;
+      imageData[i + 1] = g;
+      imageData[i + 2] = b;
+      imageData[i + 3] = 255;
+    }
+  }
+
+  console.timeEnd("renderMandelbrotImageData");
+  renderDone();
+  return imageData;
+}
 export function renderRevisedMandelbrot(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,

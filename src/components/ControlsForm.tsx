@@ -7,13 +7,14 @@ import type { RenderOptions } from "../stores/renderer";
 import Button from "./Button";
 import Input from "./Input";
 import Select from "./Select";
-// import { Algorithm } from "../lib/constants";
+import { Algorithm } from "../lib/constants";
 
-// const algoOptions = {
-//   [Algorithm.Noise]: "Noise",
-//   [Algorithm.Naive]: "Naive",
-//   [Algorithm.Revised]: "Revised",
-// };
+const algoOptions = {
+  [Algorithm.Fancy]: "Fancy",
+  [Algorithm.Noise]: "Noise",
+  [Algorithm.Naive]: "Naive",
+  [Algorithm.Revised]: "Revised",
+};
 
 export default function ControlsForm() {
   const { algorithm, cx, cy, zoom, colorScheme, escapeRadius, iterations } =
@@ -79,13 +80,13 @@ export default function ControlsForm() {
       aria-disabled={rendering}
       onSubmit={handleSubmit(onSubmit)}
     >
-      {/*<Select
+      <Select
         name="algorithm"
         control={control}
         label="Algorithm"
         size="sm"
         options={algoOptions}
-      />*/}
+      />
       <Select
         name="colorScheme"
         control={control}
