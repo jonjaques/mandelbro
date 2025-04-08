@@ -165,5 +165,9 @@ export function iterateMandelbrotEquation(
 
 // calculate iterations for given zoom level
 export function getMaxIterationsForZoom(zoom: number) {
-  return floor(50 * log2(zoom) + 10 * pow(log2(zoom), 2));
+  const its = floor(50 * log2(zoom) + 10 * pow(log2(zoom), 2));
+  if (its < 50) {
+    return 50;
+  }
+  return its;
 }

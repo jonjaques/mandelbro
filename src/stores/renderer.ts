@@ -103,6 +103,7 @@ export const useRendererStore = create<RendererInterface>()(
       clickZoom: (
         event: React.MouseEvent<HTMLCanvasElement, MouseEvent>,
         options: Partial<RenderOptions>,
+        reverse?: boolean,
       ) => {
         const state = get();
         if (state.rendering) {
@@ -122,7 +123,12 @@ export const useRendererStore = create<RendererInterface>()(
 
         // Zoom in by a factor of 2, we may want to make this smarter
         // based on current zoom level in the future
-        const newZoom = (options.zoom || 1) * 2;
+        let newZoom = options.zoom || 1;
+        if (event.shiftKey || reverse) {
+          newZoom = newZoom / 2;
+        } else {
+          newZoom = newZoom * 2;
+        }
 
         set(() => ({
           cx: x,
