@@ -6,6 +6,17 @@ import "../styles/global.css";
 const title = "Mandelbro";
 const description =
   "Mandelbro is a web-based Mandelbrot set explorer. It allows you to zoom in and out of the Mandelbrot set, and explore its intricate details. You can also save your progress and share it with others.";
+
+const prodMode = import.meta.env.MODE === "production";
+const gaKey = import.meta.env.PUBLIC_GA_ID;
+const gaScript = `
+window.dataLayer = window.dataLayer || [];
+gtag("js", new Date());
+gtag("config", "${gaKey}");
+function gtag(){dataLayer.push(arguments)}
+`
+  .replaceAll(/(\r\n|\n|\r)/gm, "")
+  .trim();
 ---
 
 <!doctype html>
@@ -44,16 +55,15 @@ const description =
     <meta property="og:image:alt" content={description} />
 
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2XE1QLV3ER"
-    ></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      gtag("js", new Date());
-      gtag("config", "G-2XE1QLV3ER");
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-    </script>
+    {
+      prodMode && (
+        <script
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaKey}`}
+        />
+      )
+    }
+    {prodMode && <script is:inline set:html={gaScript} />}
 
     <script src="/src/pwa.ts"></script>
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}

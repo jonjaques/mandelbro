@@ -26,6 +26,6 @@ export const ESCAPE_RADIUS = 4;
 
 export const INITIAL_COLOR_SCHEME = "turbo";
 
-export const TARGET_FPS = 60;
+export const TARGET_FPS = 30;
 
-export const COLOR_LEVELS = 512;
+export const COLOR_LEVELS = 256;
