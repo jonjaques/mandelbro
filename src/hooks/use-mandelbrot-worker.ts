@@ -6,15 +6,19 @@ import type {
   WorkerOutMessage,
 } from "@/lib/mandelbrot/types";
 
+const WORKER_COUNT = Math.min(navigator.hardwareConcurrency || 4, 16);
+
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
 ) {
-  const workerRef = useRef<Worker | null>(null);
+  const workersRef = useRef<Worker[]>([]);
   const requestIdRef = useRef(0);
   const pendingChunksRef = useRef<ChunkResult[]>([]);
   const rafIdRef = useRef(0);
   const renderSizeRef = useRef({ width: 0, height: 0 });
-  const totalHeightRef = useRef(0);
+  const pixelsReceivedRef = useRef(0);
+  const totalPixelsRef = useRef(0);
+  const completedWorkersRef = useRef(0);
   const [progress, setProgress] = useState<number | null>(null);
 
   const paintChunks = useCallback(() => {
@@ -67,39 +71,51 @@ export function useMandelbrotWorker(
   }, [canvasRef]);
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL("../lib/mandelbrot/worker.ts", import.meta.url),
-      { type: "module" },
-    );
+    const workers: Worker[] = [];
 
-    worker.onmessage = (e: MessageEvent<WorkerOutMessage>) => {
-      const msg = e.data;
+    for (let i = 0; i < WORKER_COUNT; i++) {
+      const worker = new Worker(
+        new URL("../lib/mandelbrot/worker.ts", import.meta.url),
+        { type: "module" },
+      );
 
-      if (msg.type === "chunk") {
-        if (msg.requestId !== requestIdRef.current) return;
+      worker.onmessage = (e: MessageEvent<WorkerOutMessage>) => {
+        const msg = e.data;
 
-        pendingChunksRef.current.push(msg);
+        if (msg.type === "chunk") {
+          if (msg.requestId !== requestIdRef.current) return;
 
-        if (!rafIdRef.current) {
-          rafIdRef.current = requestAnimationFrame(paintChunks);
+          pendingChunksRef.current.push(msg);
+
+          if (!rafIdRef.current) {
+            rafIdRef.current = requestAnimationFrame(paintChunks);
+          }
+
+          // Track progress by pixels received across all workers
+          pixelsReceivedRef.current += msg.width * msg.height;
+          const total = totalPixelsRef.current;
+          if (total > 0) {
+            setProgress(
+              Math.min(100, (pixelsReceivedRef.current / total) * 100),
+            );
+          }
+        } else if (msg.type === "complete") {
+          if (msg.requestId !== requestIdRef.current) return;
+          completedWorkersRef.current++;
+          if (completedWorkersRef.current >= WORKER_COUNT) {
+            setProgress(null);
+          }
         }
+      };
 
-        const total = totalHeightRef.current;
-        if (total > 0) {
-          setProgress(Math.min(100, ((msg.y + msg.height) / total) * 100));
-        }
-      } else if (msg.type === "complete") {
-        if (msg.requestId === requestIdRef.current) {
-          setProgress(null);
-        }
-      }
-    };
+      workers.push(worker);
+    }
 
-    workerRef.current = worker;
+    workersRef.current = workers;
 
     return () => {
-      worker.terminate();
-      workerRef.current = null;
+      workers.forEach((w) => w.terminate());
+      workersRef.current = [];
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = 0;
@@ -109,28 +125,35 @@ export function useMandelbrotWorker(
 
   const render = useCallback(
     (view: ViewState, width: number, height: number) => {
-      if (!workerRef.current || width === 0 || height === 0) return;
+      const workers = workersRef.current;
+      if (workers.length === 0 || width === 0 || height === 0) return;
 
       const id = ++requestIdRef.current;
       renderSizeRef.current = { width, height };
-      totalHeightRef.current = height;
+      totalPixelsRef.current = width * height;
+      pixelsReceivedRef.current = 0;
+      completedWorkersRef.current = 0;
       setProgress(0);
 
       // Clear pending chunks from previous request
       pendingChunksRef.current = [];
 
-      const request: RenderRequest = {
-        requestId: id,
-        width,
-        height,
-        centerX: view.centerX,
-        centerY: view.centerY,
-        zoom: view.zoom,
-        maxIter: view.maxIter,
-        colorScheme: view.colorScheme,
-      };
+      for (let i = 0; i < workers.length; i++) {
+        const request: RenderRequest = {
+          requestId: id,
+          width,
+          height,
+          centerX: view.centerX,
+          centerY: view.centerY,
+          zoom: view.zoom,
+          maxIter: view.maxIter,
+          colorScheme: view.colorScheme,
+          workerIndex: i,
+          workerCount: workers.length,
+        };
 
-      workerRef.current.postMessage(request);
+        workers[i].postMessage(request);
+      }
     },
     [],
   );

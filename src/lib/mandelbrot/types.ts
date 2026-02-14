@@ -24,6 +24,10 @@ export interface RenderRequest {
   zoom: number;
   maxIter: number;
   colorScheme: ColorScheme;
+  /** Index of this worker in the pool (0-based) */
+  workerIndex?: number;
+  /** Total number of workers in the pool */
+  workerCount?: number;
 }
 
 export interface RenderResult {

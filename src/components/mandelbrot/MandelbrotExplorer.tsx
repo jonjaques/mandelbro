@@ -63,11 +63,13 @@ export function MandelbrotExplorer() {
   }, [getInitialView]);
 
   const handleViewChange = useCallback(
-    (view: ViewState, isDraft: boolean) => {
+    (view: ViewState, isDraft: boolean | "skip") => {
       viewRef.current = view;
       setViewForUI(view);
       syncToUrl(view);
-      triggerRender(view, isDraft);
+      if (isDraft !== "skip") {
+        triggerRender(view, isDraft);
+      }
     },
     [syncToUrl, triggerRender],
   );

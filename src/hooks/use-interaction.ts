@@ -3,7 +3,7 @@ import type { ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
 
 interface InteractionCallbacks {
-  onViewChange: (view: ViewState, isDraft: boolean) => void;
+  onViewChange: (view: ViewState, isDraft: boolean | "skip") => void;
   getView: () => ViewState;
 }
 
@@ -27,7 +27,7 @@ export function useInteraction(
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         onViewChange(view, false);
-      }, 150);
+      }, 50);
     },
     [onViewChange],
   );
@@ -80,7 +80,9 @@ export function useInteraction(
         centerY: view.centerY - dyCss * scale,
       };
 
-      onViewChange(newView, true);
+      // Pixel shifting already provides instant visual feedback during drag,
+      // so skip draft renders — just sync state and schedule full render
+      onViewChange(newView, "skip");
       scheduleFullRender(newView);
     };
 

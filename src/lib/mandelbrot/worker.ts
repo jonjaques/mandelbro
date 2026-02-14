@@ -15,7 +15,11 @@ self.onmessage = (e: MessageEvent<RenderRequest>) => {
 function processRequest(req: RenderRequest) {
   const { width, height, centerX, centerY, zoom, maxIter, colorScheme } = req;
 
-  let y = 0;
+  // Multi-worker: each worker processes every Nth band (round-robin)
+  const workerIndex = req.workerIndex ?? 0;
+  const workerCount = req.workerCount ?? 1;
+  let y = workerIndex * BAND_HEIGHT;
+  const stride = workerCount * BAND_HEIGHT;
 
   function nextBand() {
     if (currentRequestId !== req.requestId) return;
@@ -55,7 +59,7 @@ function processRequest(req: RenderRequest) {
 
     self.postMessage(chunk, [rgba.buffer] as unknown as Transferable[]);
 
-    y += BAND_HEIGHT;
+    y += stride;
 
     // Yield to event loop so incoming messages can update currentRequestId
     setTimeout(nextBand, 0);
