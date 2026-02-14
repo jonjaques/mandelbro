@@ -21,7 +21,13 @@ import { MandelbrotExplorer } from '@/components/mandelbrot/MandelbrotExplorer';
 		<MandelbrotExplorer client:load />
 		<script>
 			if ('serviceWorker' in navigator) {
-				navigator.serviceWorker.register('/sw.js');
+				if (import.meta.env.DEV) {
+					navigator.serviceWorker.getRegistrations().then((regs) => {
+						for (const r of regs) r.unregister();
+					});
+				} else {
+					navigator.serviceWorker.register('/sw.js');
+				}
 			}
 		</script>
 	</body>
