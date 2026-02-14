@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ViewState } from "@/lib/mandelbrot/types";
@@ -10,6 +10,7 @@ import { MandelbrotCanvas } from "./MandelbrotCanvas";
 import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
 import { Coordinates } from "./Coordinates";
+import { RenderProgress } from "./RenderProgress";
 
 const DRAFT_SCALE = 0.5;
 
@@ -21,7 +22,7 @@ export function MandelbrotExplorer() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewForUI, setViewForUI] = useState<ViewState>(DEFAULT_VIEW);
 
-  const { render } = useMandelbrotWorker(canvasRef);
+  const { render, progress } = useMandelbrotWorker(canvasRef);
 
   const triggerRender = useCallback(
     (view: ViewState, isDraft: boolean) => {
@@ -49,19 +50,17 @@ export function MandelbrotExplorer() {
 
   const { getInitialView, syncToUrl } = useUrlState(handleHashChange);
 
-  // Initialize view from URL on first render
+  // Initialize view from URL on mount
   const initializedRef = useRef(false);
-  if (!initializedRef.current) {
+  useEffect(() => {
+    if (initializedRef.current) return;
     initializedRef.current = true;
     const initial = getInitialView();
     viewRef.current = initial;
-    // We can't call setViewForUI during render, but the default state matches DEFAULT_VIEW
-    // and we'll trigger a render on first resize anyway
     if (initial !== DEFAULT_VIEW) {
-      // Defer the state update
-      queueMicrotask(() => setViewForUI(initial));
+      setViewForUI(initial);
     }
-  }
+  }, [getInitialView]);
 
   const handleViewChange = useCallback(
     (view: ViewState, isDraft: boolean) => {
@@ -117,6 +116,7 @@ export function MandelbrotExplorer() {
         onReset={handleReset}
       />
       <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
+      <RenderProgress progress={progress} />
     </TooltipProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   RenderRequest,
   ViewState,
@@ -14,6 +14,8 @@ export function useMandelbrotWorker(
   const pendingChunksRef = useRef<ChunkResult[]>([]);
   const rafIdRef = useRef(0);
   const renderSizeRef = useRef({ width: 0, height: 0 });
+  const totalHeightRef = useRef(0);
+  const [progress, setProgress] = useState<number | null>(null);
 
   const paintChunks = useCallback(() => {
     rafIdRef.current = 0;
@@ -81,8 +83,16 @@ export function useMandelbrotWorker(
         if (!rafIdRef.current) {
           rafIdRef.current = requestAnimationFrame(paintChunks);
         }
+
+        const total = totalHeightRef.current;
+        if (total > 0) {
+          setProgress(Math.min(100, ((msg.y + msg.height) / total) * 100));
+        }
+      } else if (msg.type === "complete") {
+        if (msg.requestId === requestIdRef.current) {
+          setProgress(null);
+        }
       }
-      // "complete" messages are received but we don't need to act on them currently
     };
 
     workerRef.current = worker;
@@ -103,6 +113,8 @@ export function useMandelbrotWorker(
 
       const id = ++requestIdRef.current;
       renderSizeRef.current = { width, height };
+      totalHeightRef.current = height;
+      setProgress(0);
 
       // Clear pending chunks from previous request
       pendingChunksRef.current = [];
@@ -123,5 +135,5 @@ export function useMandelbrotWorker(
     [],
   );
 
-  return { render };
+  return { render, progress };
 }
