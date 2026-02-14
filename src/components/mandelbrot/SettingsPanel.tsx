@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { ColorScheme, ViewState } from "@/lib/mandelbrot/types";
 import { COLOR_SCHEME_NAMES, getSwatchColors } from "@/lib/mandelbrot/colors";
+import { autoIterations } from "@/lib/mandelbrot/compute";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -66,6 +67,9 @@ export function SettingsPanel({
           <div className="space-y-3">
             <label className="text-sm font-medium text-white/80">
               Max Iterations: {view.maxIter}
+              {view.maxIter === autoIterations(view.zoom) && (
+                <span className="text-white/40 ml-1">(auto)</span>
+              )}
             </label>
             <Slider
               value={[view.maxIter]}

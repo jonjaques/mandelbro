@@ -1,10 +1,11 @@
 import type { ColorScheme, ViewState } from "./types";
+import { autoIterations } from "./compute";
 
 export const DEFAULT_VIEW: ViewState = {
   centerX: -0.5,
   centerY: 0,
   zoom: 3.5,
-  maxIter: 256,
+  maxIter: autoIterations(3.5),
   colorScheme: "classic",
 };
 

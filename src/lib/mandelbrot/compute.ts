@@ -1,5 +1,15 @@
 const BAILOUT = 256;
 const LOG2 = Math.log(2);
+const DEFAULT_ZOOM = 3.5;
+
+/**
+ * Auto-calculate iteration count based on zoom depth.
+ * Deeper zooms need more iterations to resolve fine boundary detail.
+ */
+export function autoIterations(zoom: number): number {
+  const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));
+  return Math.round(Math.min(5000, Math.max(200, 200 + 50 * depth)));
+}
 
 export function isInCardioid(x0: number, y0: number): boolean {
   // Main cardioid check

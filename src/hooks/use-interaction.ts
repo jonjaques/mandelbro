@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
+import { autoIterations } from "@/lib/mandelbrot/compute";
 
 interface InteractionCallbacks {
   onViewChange: (view: ViewState, isDraft: boolean) => void;
@@ -47,19 +48,36 @@ export function useInteraction(
       if (!isDragging.current) return;
       activityRef.current();
 
+      const dxCss = e.clientX - lastPos.current.x;
+      const dyCss = e.clientY - lastPos.current.y;
+
+      // Immediately shift canvas pixels for instant visual feedback
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (ctx) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dxPx = Math.round(dxCss * dpr);
+        const dyPx = Math.round(dyCss * dpr);
+
+        ctx.drawImage(canvas, dxPx, dyPx);
+
+        // Clear newly exposed strips with black
+        ctx.fillStyle = "#000";
+        if (dxPx > 0) ctx.fillRect(0, 0, dxPx, canvas.height);
+        else if (dxPx < 0) ctx.fillRect(canvas.width + dxPx, 0, -dxPx, canvas.height);
+        if (dyPx > 0) ctx.fillRect(0, 0, canvas.width, dyPx);
+        else if (dyPx < 0) ctx.fillRect(0, canvas.height + dyPx, canvas.width, -dyPx);
+      }
+
       const view = getView();
       const rect = canvas.getBoundingClientRect();
       const scale = view.zoom / rect.height;
-
-      const dx = (e.clientX - lastPos.current.x) * scale;
-      const dy = (e.clientY - lastPos.current.y) * scale;
 
       lastPos.current = { x: e.clientX, y: e.clientY };
 
       const newView: ViewState = {
         ...view,
-        centerX: view.centerX - dx,
-        centerY: view.centerY - dy,
+        centerX: view.centerX - dxCss * scale,
+        centerY: view.centerY - dyCss * scale,
       };
 
       onViewChange(newView, true);
@@ -93,6 +111,7 @@ export function useInteraction(
         centerX: worldX - (mouseX - 0.5) * newZoom * aspectRatio,
         centerY: worldY - (mouseY - 0.5) * newZoom,
         zoom: newZoom,
+        maxIter: autoIterations(newZoom),
       };
 
       onViewChange(newView, true);
@@ -108,12 +127,14 @@ export function useInteraction(
       const mouseY = (e.clientY - rect.top) / rect.height;
 
       const aspectRatio = rect.width / rect.height;
+      const newZoom = view.zoom / 2;
 
       const newView: ViewState = {
         ...view,
         centerX: view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio,
         centerY: view.centerY + (mouseY - 0.5) * view.zoom,
-        zoom: view.zoom / 2,
+        zoom: newZoom,
+        maxIter: autoIterations(newZoom),
       };
 
       onViewChange(newView, false);
@@ -143,7 +164,7 @@ export function useInteraction(
 
         pinchDistance.current = newDist;
 
-        const newView: ViewState = { ...view, zoom: newZoom };
+        const newView: ViewState = { ...view, zoom: newZoom, maxIter: autoIterations(newZoom) };
         onViewChange(newView, true);
         scheduleFullRender(newView);
       }
