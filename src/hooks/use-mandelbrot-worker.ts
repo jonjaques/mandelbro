@@ -1,19 +1,68 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { RenderRequest, RenderResult, ViewState } from "@/lib/mandelbrot/types";
-
-interface WorkerHookResult {
-  render: (
-    view: ViewState,
-    width: number,
-    height: number,
-  ) => void;
-}
+import type {
+  RenderRequest,
+  ViewState,
+  ChunkResult,
+  WorkerOutMessage,
+} from "@/lib/mandelbrot/types";
 
 export function useMandelbrotWorker(
-  onResult: (imageData: ImageData) => void,
-): WorkerHookResult {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+) {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
+  const pendingChunksRef = useRef<ChunkResult[]>([]);
+  const rafIdRef = useRef(0);
+  const renderSizeRef = useRef({ width: 0, height: 0 });
+
+  const paintChunks = useCallback(() => {
+    rafIdRef.current = 0;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
+
+    const chunks = pendingChunksRef.current;
+    pendingChunksRef.current = [];
+
+    const currentId = requestIdRef.current;
+
+    for (const chunk of chunks) {
+      if (chunk.requestId !== currentId) continue;
+
+      const clamped = new Uint8ClampedArray(chunk.buffer);
+      const imgData = new ImageData(clamped, chunk.width, chunk.height);
+
+      if (chunk.width === canvas.width) {
+        // Full resolution — putImageData directly at correct y offset
+        ctx.putImageData(imgData, 0, chunk.y);
+      } else {
+        // Draft render — scale up to canvas size
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = chunk.width;
+        tempCanvas.height = chunk.height;
+        const tempCtx = tempCanvas.getContext("2d")!;
+        tempCtx.putImageData(imgData, 0, 0);
+
+        const scaleX = canvas.width / renderSizeRef.current.width;
+        const scaleY = canvas.height / renderSizeRef.current.height;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(
+          tempCanvas,
+          0,
+          0,
+          chunk.width,
+          chunk.height,
+          0,
+          chunk.y * scaleY,
+          chunk.width * scaleX,
+          chunk.height * scaleY,
+        );
+      }
+    }
+  }, [canvasRef]);
 
   useEffect(() => {
     const worker = new Worker(
@@ -21,11 +70,19 @@ export function useMandelbrotWorker(
       { type: "module" },
     );
 
-    worker.onmessage = (e: MessageEvent<RenderResult>) => {
-      const { width, height, buffer } = e.data;
-      const clamped = new Uint8ClampedArray(buffer);
-      const imageData = new ImageData(clamped, width, height);
-      onResult(imageData);
+    worker.onmessage = (e: MessageEvent<WorkerOutMessage>) => {
+      const msg = e.data;
+
+      if (msg.type === "chunk") {
+        if (msg.requestId !== requestIdRef.current) return;
+
+        pendingChunksRef.current.push(msg);
+
+        if (!rafIdRef.current) {
+          rafIdRef.current = requestAnimationFrame(paintChunks);
+        }
+      }
+      // "complete" messages are received but we don't need to act on them currently
     };
 
     workerRef.current = worker;
@@ -33,14 +90,23 @@ export function useMandelbrotWorker(
     return () => {
       worker.terminate();
       workerRef.current = null;
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = 0;
+      }
     };
-  }, [onResult]);
+  }, [paintChunks]);
 
   const render = useCallback(
     (view: ViewState, width: number, height: number) => {
       if (!workerRef.current || width === 0 || height === 0) return;
 
       const id = ++requestIdRef.current;
+      renderSizeRef.current = { width, height };
+
+      // Clear pending chunks from previous request
+      pendingChunksRef.current = [];
+
       const request: RenderRequest = {
         requestId: id,
         width,

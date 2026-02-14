@@ -32,3 +32,21 @@ export interface RenderResult {
   height: number;
   buffer: ArrayBuffer;
 }
+
+// --- Streaming protocol types ---
+
+export interface ChunkResult {
+  type: "chunk";
+  requestId: number;
+  width: number;
+  y: number;
+  height: number;
+  buffer: ArrayBuffer;
+}
+
+export interface RenderComplete {
+  type: "complete";
+  requestId: number;
+}
+
+export type WorkerOutMessage = ChunkResult | RenderComplete;

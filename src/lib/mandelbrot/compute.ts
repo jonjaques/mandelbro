@@ -39,6 +39,46 @@ export function smoothColor(iterations: number, zMag2: number): number {
   return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
 }
 
+export function computeBand(
+  width: number,
+  fullHeight: number,
+  startY: number,
+  bandHeight: number,
+  centerX: number,
+  centerY: number,
+  zoom: number,
+  maxIter: number,
+): Float64Array {
+  const result = new Float64Array(width * bandHeight);
+  const aspectRatio = width / fullHeight;
+  const halfZoom = zoom / 2;
+
+  const xMin = centerX - halfZoom * aspectRatio;
+  const yMin = centerY - halfZoom;
+  const pixelWidth = (zoom * aspectRatio) / width;
+  const pixelHeight = zoom / fullHeight;
+
+  for (let localY = 0; localY < bandHeight; localY++) {
+    const py = startY + localY;
+    const y0 = yMin + py * pixelHeight;
+    const rowOffset = localY * width;
+
+    for (let px = 0; px < width; px++) {
+      const x0 = xMin + px * pixelWidth;
+
+      if (isInCardioid(x0, y0)) {
+        result[rowOffset + px] = maxIter;
+        continue;
+      }
+
+      const [iter, zMag2] = escapeTime(x0, y0, maxIter);
+      result[rowOffset + px] = smoothColor(iter, zMag2);
+    }
+  }
+
+  return result;
+}
+
 export function computeFrame(
   width: number,
   height: number,

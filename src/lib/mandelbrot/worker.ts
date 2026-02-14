@@ -1,33 +1,65 @@
-import { computeFrame } from "./compute";
+import { computeBand } from "./compute";
 import { mapToColors } from "./colors";
-import type { RenderRequest, RenderResult } from "./types";
+import type { RenderRequest, ChunkResult, RenderComplete } from "./types";
 
 let currentRequestId = -1;
+
+const BAND_HEIGHT = 32;
 
 self.onmessage = (e: MessageEvent<RenderRequest>) => {
   const req = e.data;
   currentRequestId = req.requestId;
-
-  const iterations = computeFrame(
-    req.width,
-    req.height,
-    req.centerX,
-    req.centerY,
-    req.zoom,
-    req.maxIter,
-  );
-
-  // Discard if a newer request arrived while computing
-  if (currentRequestId !== req.requestId) return;
-
-  const rgba = mapToColors(iterations, req.maxIter, req.colorScheme);
-
-  const result: RenderResult = {
-    requestId: req.requestId,
-    width: req.width,
-    height: req.height,
-    buffer: rgba.buffer,
-  };
-
-  self.postMessage(result, [rgba.buffer] as unknown as Transferable[]);
+  processRequest(req);
 };
+
+function processRequest(req: RenderRequest) {
+  const { width, height, centerX, centerY, zoom, maxIter, colorScheme } = req;
+
+  let y = 0;
+
+  function nextBand() {
+    if (currentRequestId !== req.requestId) return;
+
+    if (y >= height) {
+      const complete: RenderComplete = {
+        type: "complete",
+        requestId: req.requestId,
+      };
+      self.postMessage(complete);
+      return;
+    }
+
+    const bandHeight = Math.min(BAND_HEIGHT, height - y);
+
+    const iterations = computeBand(
+      width,
+      height,
+      y,
+      bandHeight,
+      centerX,
+      centerY,
+      zoom,
+      maxIter,
+    );
+
+    const rgba = mapToColors(iterations, maxIter, colorScheme);
+
+    const chunk: ChunkResult = {
+      type: "chunk",
+      requestId: req.requestId,
+      width,
+      y,
+      height: bandHeight,
+      buffer: rgba.buffer,
+    };
+
+    self.postMessage(chunk, [rgba.buffer] as unknown as Transferable[]);
+
+    y += BAND_HEIGHT;
+
+    // Yield to event loop so incoming messages can update currentRequestId
+    setTimeout(nextBand, 0);
+  }
+
+  nextBand();
+}

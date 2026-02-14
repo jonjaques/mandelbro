@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { DEFAULT_VIEW } from "@/lib/mandelbrot/url-state";
@@ -10,7 +11,6 @@ import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
 import { Coordinates } from "./Coordinates";
 
-const MAX_DPR = 2;
 const DRAFT_SCALE = 0.5;
 
 export function MandelbrotExplorer() {
@@ -18,15 +18,10 @@ export function MandelbrotExplorer() {
   const viewRef = useRef<ViewState>(DEFAULT_VIEW);
   const sizeRef = useRef({ width: 0, height: 0 });
 
-  const [imageData, setImageData] = useState<ImageData | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewForUI, setViewForUI] = useState<ViewState>(DEFAULT_VIEW);
 
-  const onResult = useCallback((data: ImageData) => {
-    setImageData(data);
-  }, []);
-
-  const { render } = useMandelbrotWorker(onResult);
+  const { render } = useMandelbrotWorker(canvasRef);
 
   const triggerRender = useCallback(
     (view: ViewState, isDraft: boolean) => {
@@ -108,7 +103,6 @@ export function MandelbrotExplorer() {
     <TooltipProvider>
       <MandelbrotCanvas
         ref={canvasRef}
-        imageData={imageData}
         onResize={handleResize}
       />
       <Toolbar

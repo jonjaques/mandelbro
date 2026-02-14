@@ -82,8 +82,7 @@ export function useInteraction(
       const mouseY = (e.clientY - rect.top) / rect.height;
 
       const aspectRatio = rect.width / rect.height;
-      const worldX =
-        view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio;
+      const worldX = view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio;
       const worldY = view.centerY + (mouseY - 0.5) * view.zoom;
 
       const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
@@ -112,8 +111,7 @@ export function useInteraction(
 
       const newView: ViewState = {
         ...view,
-        centerX:
-          view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio,
+        centerX: view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio,
         centerY: view.centerY + (mouseY - 0.5) * view.zoom,
         zoom: view.zoom / 2,
       };
