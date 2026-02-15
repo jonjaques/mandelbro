@@ -167,6 +167,7 @@ export function SettingsPanel({
                 max={5000}
                 step={50}
                 onValueChange={([val]) => {
+                  if (val === undefined) return;
                   onViewChange({ ...view, maxIter: val });
                 }}
               />

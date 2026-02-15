@@ -145,6 +145,9 @@ export function useMandelbrotWorker(
       pendingChunksRef.current = [];
 
       for (let i = 0; i < workers.length; i++) {
+        const worker = workers[i];
+        if (!worker) continue;
+
         const request: RenderRequest = {
           requestId: id,
           width,
@@ -158,7 +161,7 @@ export function useMandelbrotWorker(
           workerCount: workers.length,
         };
 
-        workers[i].postMessage(request);
+        worker.postMessage(request);
       }
     },
     [],

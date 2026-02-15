@@ -55,20 +55,27 @@ const PALETTES: Record<ColorScheme, RGB[]> = {
 };
 
 function interpolateColor(a: RGB, b: RGB, t: number): RGB {
+  const [ar, ag, ab] = a;
+  const [br, bg, bb] = b;
   return [
-    Math.round(a[0] + (b[0] - a[0]) * t),
-    Math.round(a[1] + (b[1] - a[1]) * t),
-    Math.round(a[2] + (b[2] - a[2]) * t),
+    Math.round(ar + (br - ar) * t),
+    Math.round(ag + (bg - ag) * t),
+    Math.round(ab + (bb - ab) * t),
   ];
 }
 
 export function interpolatePalette(stops: RGB[], t: number): RGB {
+  if (stops.length === 0) return [0, 0, 0];
+  if (stops.length === 1) return stops[0] ?? [0, 0, 0];
+
   const clampedT = Math.max(0, Math.min(1, t));
   const segCount = stops.length - 1;
   const seg = clampedT * segCount;
   const idx = Math.min(Math.floor(seg), segCount - 1);
   const localT = seg - idx;
-  return interpolateColor(stops[idx], stops[idx + 1], localT);
+  const start = stops[idx] ?? stops[0] ?? [0, 0, 0];
+  const end = stops[idx + 1] ?? stops[stops.length - 1] ?? start;
+  return interpolateColor(start, end, localT);
 }
 
 export function mapToColors(
@@ -81,7 +88,7 @@ export function mapToColors(
   const rgba = new Uint8ClampedArray(len * 4);
 
   for (let i = 0; i < len; i++) {
-    const iter = iterations[i];
+    const iter = iterations[i] ?? maxIter;
     const offset = i * 4;
 
     if (iter >= maxIter) {

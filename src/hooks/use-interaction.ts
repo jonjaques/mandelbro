@@ -147,8 +147,11 @@ export function useInteraction(
     // Touch pinch-to-zoom
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const touchA = e.touches.item(0);
+        const touchB = e.touches.item(1);
+        if (!touchA || !touchB) return;
+        const dx = touchA.clientX - touchB.clientX;
+        const dy = touchA.clientY - touchB.clientY;
         pinchDistance.current = Math.sqrt(dx * dx + dy * dy);
       }
     };
@@ -158,8 +161,11 @@ export function useInteraction(
         e.preventDefault();
         activityRef.current?.();
 
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const touchA = e.touches.item(0);
+        const touchB = e.touches.item(1);
+        if (!touchA || !touchB) return;
+        const dx = touchA.clientX - touchB.clientX;
+        const dy = touchA.clientY - touchB.clientY;
         const newDist = Math.sqrt(dx * dx + dy * dy);
 
         const view = getView();

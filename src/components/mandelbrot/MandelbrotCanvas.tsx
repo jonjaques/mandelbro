@@ -28,6 +28,7 @@ export const MandelbrotCanvas = forwardRef<
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
+      if (!entry) return;
 
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       const { width, height } = entry.contentRect;
