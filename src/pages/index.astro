@@ -23,16 +23,20 @@ import { MandelbrotExplorer } from '@/components/mandelbrot/MandelbrotExplorer';
 
 	<body>
 		<MandelbrotExplorer client:load />
-		<script>
-			if ('serviceWorker' in navigator) {
-				if (import.meta.env.DEV) {
+		<script is:inline>
+			(() => {
+				if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+				const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+				if (isLocalhost) {
 					navigator.serviceWorker.getRegistrations().then((regs) => {
 						for (const r of regs) r.unregister();
 					});
-				} else {
-					navigator.serviceWorker.register('/sw.js');
+					return;
 				}
-			}
+
+				navigator.serviceWorker.register('/sw.js');
+			})();
 		</script>
 	</body>
 </html>
