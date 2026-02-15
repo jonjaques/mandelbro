@@ -6,7 +6,10 @@ import type {
   WorkerOutMessage,
 } from "@/lib/mandelbrot/types";
 
-const WORKER_COUNT = Math.min(navigator.hardwareConcurrency || 4, 16);
+const WORKER_COUNT =
+  typeof navigator === "undefined"
+    ? 4
+    : Math.min(navigator.hardwareConcurrency || 4, 16);
 
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
