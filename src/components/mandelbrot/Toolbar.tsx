@@ -1,11 +1,11 @@
-import { Settings, RotateCcw, Maximize, Minimize } from "lucide-react";
+import { Settings, RotateCcw, Maximize, Minimize, Share2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ToolbarProps {
   onSettingsToggle: () => void;
@@ -14,6 +14,8 @@ interface ToolbarProps {
 
 export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleChange = () => {
@@ -32,55 +34,110 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
     }
   }, []);
 
+  const handleShare = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    if (copyTimeout.current) clearTimeout(copyTimeout.current);
+    copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeout.current) clearTimeout(copyTimeout.current);
+    };
+  }, []);
+
+  const btnClass =
+    "text-white/70 hover:text-white hover:bg-white/10 rounded-none first:rounded-t-lg last:rounded-b-lg";
+
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-            onClick={onSettingsToggle}
-          >
-            <Settings className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Settings</TooltipContent>
-      </Tooltip>
+    <>
+      {/* Brand mark */}
+      <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none select-none">
+        <h1
+          className="text-[12vw] leading-none text-white/[0.07] lowercase"
+          style={{ fontFamily: "'Macula', sans-serif", fontWeight: 500 }}
+        >
+          mandelbro
+        </h1>
+      </div>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-            onClick={onReset}
-          >
-            <RotateCcw className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Reset View</TooltipContent>
-      </Tooltip>
+      {/* Toolbar */}
+      <div className="fixed top-4 right-4 z-50 glass rounded-lg flex flex-col">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={btnClass}
+              onClick={onSettingsToggle}
+            >
+              <Settings className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Settings</TooltipContent>
+        </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-            onClick={toggleFullscreen}
-          >
-            {isFullscreen ? (
-              <Minimize className="size-5" />
-            ) : (
-              <Maximize className="size-5" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">
-          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-        </TooltipContent>
-      </Tooltip>
-    </div>
+        <div className="h-px bg-white/10" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={btnClass}
+              onClick={handleShare}
+            >
+              {copied ? (
+                <Check className="size-4 text-green-400" />
+              ) : (
+                <Share2 className="size-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            {copied ? "Copied!" : "Share URL"}
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="h-px bg-white/10" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={btnClass}
+              onClick={onReset}
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Reset View</TooltipContent>
+        </Tooltip>
+
+        <div className="h-px bg-white/10" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={btnClass}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? (
+                <Minimize className="size-4" />
+              ) : (
+                <Maximize className="size-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </>
   );
 }

@@ -20,7 +20,7 @@ export function RenderProgress({ progress }: RenderProgressProps) {
         transitionDelay: visible ? "300ms" : "0ms",
       }}
     >
-      <div className="flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm"
+      <div className="flex items-center justify-center rounded-full glass-subtle"
         style={{ width: SIZE, height: SIZE }}
       >
         <svg

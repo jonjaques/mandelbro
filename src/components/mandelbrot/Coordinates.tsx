@@ -47,12 +47,12 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-50 font-mono text-xs leading-relaxed px-3 py-2 rounded-md bg-black/50 text-white/80 backdrop-blur-sm transition-opacity duration-300 select-none pointer-events-none"
+      className="fixed bottom-4 left-4 z-50 glass-subtle font-mono text-xs leading-relaxed px-3 py-2 rounded-lg text-white/80 transition-opacity duration-500 select-none pointer-events-none"
       style={{ opacity: visible ? 1 : 0 }}
     >
-      <div>Re: {formatNum(view.centerX)}</div>
-      <div>Im: {formatNum(view.centerY)}</div>
-      <div>Zoom: {formatZoom(view.zoom)}</div>
+      <div>Re: <span className="tabular-nums">{formatNum(view.centerX)}</span></div>
+      <div>Im: <span className="tabular-nums">{formatNum(view.centerY)}</span></div>
+      <div>Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span></div>
     </div>
   );
 }
