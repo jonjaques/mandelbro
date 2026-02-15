@@ -12,9 +12,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # Start dev server with HMR
 npm run build     # Production build to /dist
 npm run preview   # Preview production build locally
+npm run lint      # ESLint (strict, type-aware) with zero warnings allowed
+npm run lint:fix  # Auto-fix lint issues when possible
+npm run format    # Prettier write across repo
+npm run format:check # Verify formatting only
+npm run typecheck # Astro + TypeScript project diagnostics
+npm run healthcheck # lint + format:check + typecheck + build
 ```
 
-No test framework or linter is currently configured.
+No test framework is currently configured.
 
 ## Architecture
 
@@ -53,6 +59,24 @@ No test framework or linter is currently configured.
 ### Import Aliases
 
 All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.json and components.json).
+
+## Quality Gates & Strictness
+
+- TypeScript is configured for a **very strict** safety profile on top of `astro/tsconfigs/strict` (including `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`, `noUnusedParameters`, and other defensive compiler flags).
+- ESLint uses strict, type-aware flat config with TypeScript, React, React Hooks, and JSX a11y rules.
+- `npm run lint` enforces `--max-warnings=0`; warnings are treated as failures in normal workflow.
+- `npm run healthcheck` is the primary pre-PR/pre-merge command and should pass before shipping.
+
+## React Entrypoint Policy
+
+- React islands should be wrapped in `React.StrictMode` at entrypoints.
+- The main app island uses `src/components/mandelbrot/MandelbrotExplorerEntrypoint.tsx` and is mounted from `src/pages/index.astro`.
+
+## Editor Diagnostics (VSCode/Cursor)
+
+- Tailwind v4 directives like `@custom-variant`, `@theme`, and `@apply` are valid for this project but may be flagged by the built-in CSS validator as `unknownAtRules`.
+- Workspace settings in `.vscode/settings.json` intentionally suppress those false positives (`css/scss/less.lint.unknownAtRules = ignore`).
+- Tailwind IntelliSense canonical class suggestions are generally worth applying (for example `border-white/[0.08]` -> `border-white/8`).
 
 ## Interaction Model — Draft/Full Quality Tiers
 

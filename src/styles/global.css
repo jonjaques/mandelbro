@@ -131,10 +131,10 @@
 
 @layer utilities {
   .glass {
-    @apply bg-black/60 backdrop-blur-md border border-white/[0.08] shadow-lg;
+    @apply bg-black/60 backdrop-blur-md border border-white/8 shadow-lg;
   }
   .glass-subtle {
-    @apply bg-black/40 backdrop-blur-sm border border-white/[0.06];
+    @apply bg-black/40 backdrop-blur-sm border border-white/6;
   }
 }
 
