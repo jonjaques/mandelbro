@@ -6,11 +6,55 @@ import type {
   WorkerOutMessage,
 } from "@/lib/mandelbrot/types";
 
+/**
+ * Number of Web Workers in the rendering pool.
+ *
+ * Each worker processes a subset of the horizontal bands (round-robin striping),
+ * so N workers means each worker does ~1/N of the total work. Capped at 16 to
+ * avoid diminishing returns from thread overhead. Falls back to 4 during SSR
+ * (where navigator is undefined).
+ */
 const WORKER_COUNT =
   typeof navigator === "undefined"
     ? 4
     : Math.min(navigator.hardwareConcurrency || 4, 16);
 
+/**
+ * Hook that manages the Web Worker pool and progressive rendering pipeline.
+ *
+ * ## Architecture
+ *
+ * ```
+ *  render(view, w, h)
+ *       │
+ *       ├──► Worker 0: bands 0, N, 2N, ...  ──► chunks ──┐
+ *       ├──► Worker 1: bands 1, N+1, 2N+1, ...──► chunks ──┤
+ *       ├──► Worker 2: bands 2, N+2, 2N+2, ...──► chunks ──┤
+ *       │    ...                                            │
+ *       │                                                   ▼
+ *       │                              pendingChunksRef (queue)
+ *       │                                                   │
+ *       │                              requestAnimationFrame │
+ *       │                                                   ▼
+ *       │                                 paintChunks → canvas
+ * ```
+ *
+ * ## Cancellation
+ *
+ * Each render call increments a monotonic requestId. Workers and the main thread
+ * both check this ID: stale chunks from a superseded render are silently dropped.
+ * This means starting a new render implicitly cancels any in-progress render.
+ *
+ * ## Draft vs Full rendering
+ *
+ * The caller controls this by passing different width/height values:
+ * - Draft: half-resolution (width × DRAFT_SCALE, height × DRAFT_SCALE)
+ * - Full: native resolution
+ *
+ * The paintChunks function detects draft chunks (chunk.width < canvas.width) and
+ * uses drawImage to scale them up with bilinear filtering, rather than putImageData
+ * which has no scaling capability.
+ */
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
 ) {
@@ -18,36 +62,66 @@ export function useMandelbrotWorker(
   const requestIdRef = useRef(0);
   const pendingChunksRef = useRef<ChunkResult[]>([]);
   const rafIdRef = useRef(0);
+  // The dimensions of the current render request (may differ from canvas
+  // dimensions during draft renders)
   const renderSizeRef = useRef({ width: 0, height: 0 });
   const pixelsReceivedRef = useRef(0);
   const totalPixelsRef = useRef(0);
   const completedWorkersRef = useRef(0);
+  // Progress: null means no active render, 0-100 means rendering in progress
   const [progress, setProgress] = useState<number | null>(null);
 
+  /**
+   * Paint all queued chunks to the canvas in a single rAF callback.
+   *
+   * This batching strategy ensures we never do more than one DOM/canvas
+   * write per frame, regardless of how many chunk messages arrive between
+   * frames. Without batching, each postMessage → putImageData would trigger
+   * a layout/composite cycle.
+   */
   const paintChunks = useCallback(() => {
     rafIdRef.current = 0;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // { alpha: false } tells the browser this canvas is always opaque,
+    // enabling compositing optimizations (no alpha blending needed)
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
+    // Drain the queue atomically
     const chunks = pendingChunksRef.current;
     pendingChunksRef.current = [];
 
     const currentId = requestIdRef.current;
 
     for (const chunk of chunks) {
+      // Drop stale chunks from a cancelled/superseded render
       if (chunk.requestId !== currentId) continue;
 
+      // Reconstruct an ImageData from the transferred ArrayBuffer.
+      // The buffer was transferred via zero-copy postMessage from the worker,
+      // so this is just wrapping existing memory — no copying.
       const clamped = new Uint8ClampedArray(chunk.buffer);
       const imgData = new ImageData(clamped, chunk.width, chunk.height);
 
       if (chunk.width === canvas.width) {
-        // Full resolution — putImageData directly at correct y offset
+        // ── Full-resolution chunk ────────────────────────────────
+        // putImageData writes pixels 1:1 directly into the canvas buffer.
+        // chunk.y is the band's y-offset within the full canvas.
         ctx.putImageData(imgData, 0, chunk.y);
       } else {
-        // Draft render — scale up to canvas size
+        // ── Draft (half-resolution) chunk ────────────────────────
+        // The chunk is smaller than the canvas (e.g., 50% in each dimension).
+        // We can't use putImageData here because it doesn't scale — it would
+        // only fill a quarter of the canvas.
+        //
+        // Instead, we: (1) write the chunk to a temporary canvas at its
+        // native size, then (2) use drawImage to scale it up to fill the
+        // corresponding region of the main canvas.
+        //
+        // drawImage with imageSmoothingEnabled=true gives us bilinear
+        // interpolation — the upscaled draft looks blurry rather than blocky.
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = chunk.width;
         tempCanvas.height = chunk.height;
@@ -55,16 +129,19 @@ export function useMandelbrotWorker(
         if (!tempCtx) continue;
         tempCtx.putImageData(imgData, 0, 0);
 
+        // Scale factors: how much bigger the canvas is than the render size
         const scaleX = canvas.width / renderSizeRef.current.width;
         const scaleY = canvas.height / renderSizeRef.current.height;
 
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(
           tempCanvas,
+          // Source rectangle (the entire temp canvas)
           0,
           0,
           chunk.width,
           chunk.height,
+          // Destination rectangle (scaled up to canvas coordinates)
           0,
           chunk.y * scaleY,
           chunk.width * scaleX,
@@ -74,6 +151,11 @@ export function useMandelbrotWorker(
     }
   }, [canvasRef]);
 
+  // ── Worker pool lifecycle ──────────────────────────────────────────
+  //
+  // Workers are created once on mount and terminated on unmount.
+  // Each worker runs worker.ts, which processes RenderRequests and
+  // streams back ChunkResult messages.
   useEffect(() => {
     const workers: Worker[] = [];
 
@@ -87,15 +169,20 @@ export function useMandelbrotWorker(
         const msg = e.data;
 
         if (msg.type === "chunk") {
+          // Ignore chunks from stale/cancelled renders
           if (msg.requestId !== requestIdRef.current) return;
 
+          // Queue the chunk for painting on the next animation frame
           pendingChunksRef.current.push(msg);
 
+          // Schedule a paint if one isn't already scheduled.
+          // Multiple chunks arriving in the same frame will all be painted
+          // together in a single rAF callback.
           if (!rafIdRef.current) {
             rafIdRef.current = requestAnimationFrame(paintChunks);
           }
 
-          // Track progress by pixels received across all workers
+          // Track progress: sum pixels from all workers to get overall %
           pixelsReceivedRef.current += msg.width * msg.height;
           const total = totalPixelsRef.current;
           if (total > 0) {
@@ -104,8 +191,10 @@ export function useMandelbrotWorker(
             );
           }
         } else {
+          // "complete" message — this worker finished all its bands
           if (msg.requestId !== requestIdRef.current) return;
           completedWorkersRef.current++;
+          // Hide progress indicator once ALL workers have finished
           if (completedWorkersRef.current >= WORKER_COUNT) {
             setProgress(null);
           }
@@ -129,11 +218,26 @@ export function useMandelbrotWorker(
     };
   }, [paintChunks]);
 
+  /**
+   * Dispatch a render request to all workers.
+   *
+   * Each worker receives the same view/dimensions but a different workerIndex,
+   * causing them to process interleaved bands (round-robin). For example with
+   * 4 workers and 32px bands:
+   *   Worker 0: rows 0-31, 128-159, 256-287, ...
+   *   Worker 1: rows 32-63, 160-191, 288-319, ...
+   *   Worker 2: rows 64-95, 192-223, 320-351, ...
+   *   Worker 3: rows 96-127, 224-255, 352-383, ...
+   *
+   * This interleaving ensures the image fills in evenly from all regions
+   * rather than top-to-bottom, giving a better progressive-display experience.
+   */
   const render = useCallback(
     (view: ViewState, width: number, height: number) => {
       const workers = workersRef.current;
       if (workers.length === 0 || width === 0 || height === 0) return;
 
+      // Increment request ID to implicitly cancel any in-progress render
       const id = ++requestIdRef.current;
       renderSizeRef.current = { width, height };
       totalPixelsRef.current = width * height;

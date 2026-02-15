@@ -1,3 +1,14 @@
+/**
+ * Circular progress indicator shown in the bottom-right corner during rendering.
+ *
+ * Uses SVG stroke-dashoffset animation to draw a circular progress ring.
+ * The "trick" is that a circle with a dashed stroke (dasharray = circumference)
+ * looks like a full ring when dashoffset = 0, and invisible when dashoffset =
+ * circumference. Animating between those values traces an arc.
+ *
+ * Appears with a 300ms delay (to avoid flashing on fast renders) and disappears
+ * instantly when rendering completes.
+ */
 interface RenderProgressProps {
   progress: number | null;
 }
@@ -5,6 +16,7 @@ interface RenderProgressProps {
 const SIZE = 48;
 const STROKE_WIDTH = 3;
 const RADIUS = (SIZE - STROKE_WIDTH) / 2;
+// Total length of the circle's circumference (used for stroke-dash animation)
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function RenderProgress({ progress }: RenderProgressProps) {
