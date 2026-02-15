@@ -118,3 +118,32 @@ export function getSwatchColors(scheme: ColorScheme): string[] {
     ([r, g, b]) => `rgb(${r}, ${g}, ${b})`,
   );
 }
+
+/**
+ * Returns CSS gradient + glow color sampled from the bright inner range
+ * of a palette, suitable for the brand mark.
+ */
+export function getBrandColors(scheme: ColorScheme): {
+  gradient: string;
+  glow: string;
+} {
+  const palette = PALETTES[scheme];
+  const samples = 6;
+  const start = 0.15;
+  const end = 0.85;
+  const colors: string[] = [];
+
+  for (let i = 0; i < samples; i++) {
+    const t = start + (end - start) * (i / (samples - 1));
+    const [r, g, b] = interpolatePalette(palette, t);
+    colors.push(`rgb(${r}, ${g}, ${b})`);
+  }
+
+  // Glow: sample the brightest-feeling point (60% through the palette)
+  const [gr, gg, gb] = interpolatePalette(palette, 0.6);
+
+  return {
+    gradient: `linear-gradient(90deg, ${colors.join(", ")})`,
+    glow: `rgb(${gr}, ${gg}, ${gb})`,
+  };
+}

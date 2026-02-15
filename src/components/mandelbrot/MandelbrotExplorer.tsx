@@ -109,6 +109,7 @@ export function MandelbrotExplorer() {
       <Toolbar
         onSettingsToggle={() => setSettingsOpen((o) => !o)}
         onReset={handleReset}
+        colorScheme={viewForUI.colorScheme}
       />
       <SettingsPanel
         open={settingsOpen}

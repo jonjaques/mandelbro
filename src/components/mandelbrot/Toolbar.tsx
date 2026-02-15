@@ -5,17 +5,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ColorScheme } from "@/lib/mandelbrot/types";
+import { getBrandColors } from "@/lib/mandelbrot/colors";
 
 interface ToolbarProps {
   onSettingsToggle: () => void;
   onReset: () => void;
+  colorScheme: ColorScheme;
 }
 
-export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
+export function Toolbar({ onSettingsToggle, onReset, colorScheme }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const brand = useMemo(() => getBrandColors(colorScheme), [colorScheme]);
 
   useEffect(() => {
     const handleChange = () => {
@@ -53,13 +58,22 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
   return (
     <>
       {/* Brand mark */}
-      <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none select-none">
-        <h1
-          className="text-[12vw] leading-none text-white/[0.07] lowercase"
-          style={{ fontFamily: "'Macula', sans-serif", fontWeight: 500 }}
+      <div className="fixed top-4 left-4 z-40 pointer-events-none select-none glass rounded-lg px-3 py-2">
+        <div
+          className="relative"
+          style={{ filter: `drop-shadow(0 0 6px ${brand.glow}) drop-shadow(0 0 14px ${brand.glow})` }}
         >
-          mandelbro
-        </h1>
+          <h1
+            className="text-2xl leading-none uppercase bg-clip-text text-transparent"
+            style={{
+              fontFamily: "'Macula', sans-serif",
+              fontWeight: 500,
+              backgroundImage: brand.gradient,
+            }}
+          >
+            mandelbro
+          </h1>
+        </div>
       </div>
 
       {/* Toolbar */}
