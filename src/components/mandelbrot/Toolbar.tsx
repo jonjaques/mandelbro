@@ -1,4 +1,11 @@
-import { Settings, RotateCcw, Maximize, Minimize, Share2, Check } from "lucide-react";
+import {
+  Settings,
+  RotateCcw,
+  Maximize,
+  Minimize,
+  Share2,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,7 +22,11 @@ interface ToolbarProps {
   colorScheme: ColorScheme;
 }
 
-export function Toolbar({ onSettingsToggle, onReset, colorScheme }: ToolbarProps) {
+export function Toolbar({
+  onSettingsToggle,
+  onReset,
+  colorScheme,
+}: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,8 +38,7 @@ export function Toolbar({ onSettingsToggle, onReset, colorScheme }: ToolbarProps
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", handleChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleChange);
+    return () => document.removeEventListener("fullscreenchange", handleChange);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -61,7 +71,9 @@ export function Toolbar({ onSettingsToggle, onReset, colorScheme }: ToolbarProps
       <div className="fixed top-4 left-4 z-40 pointer-events-none select-none glass rounded-lg px-3 py-2">
         <div
           className="relative"
-          style={{ filter: `drop-shadow(0 0 6px ${brand.glow}) drop-shadow(0 0 14px ${brand.glow})` }}
+          style={{
+            filter: `drop-shadow(0 0 6px ${brand.glow}) drop-shadow(0 0 14px ${brand.glow})`,
+          }}
         >
           <h1
             className="text-2xl leading-none uppercase bg-clip-text text-transparent"

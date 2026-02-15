@@ -63,9 +63,11 @@ export function useInteraction(
         // Clear newly exposed strips with black
         ctx.fillStyle = "#000";
         if (dxPx > 0) ctx.fillRect(0, 0, dxPx, canvas.height);
-        else if (dxPx < 0) ctx.fillRect(canvas.width + dxPx, 0, -dxPx, canvas.height);
+        else if (dxPx < 0)
+          ctx.fillRect(canvas.width + dxPx, 0, -dxPx, canvas.height);
         if (dyPx > 0) ctx.fillRect(0, 0, canvas.width, dyPx);
-        else if (dyPx < 0) ctx.fillRect(0, canvas.height + dyPx, canvas.width, -dyPx);
+        else if (dyPx < 0)
+          ctx.fillRect(0, canvas.height + dyPx, canvas.width, -dyPx);
       }
 
       const view = getView();
@@ -166,7 +168,11 @@ export function useInteraction(
 
         pinchDistance.current = newDist;
 
-        const newView: ViewState = { ...view, zoom: newZoom, maxIter: autoIterations(newZoom) };
+        const newView: ViewState = {
+          ...view,
+          zoom: newZoom,
+          maxIter: autoIterations(newZoom),
+        };
         onViewChange(newView, true);
         scheduleFullRender(newView);
       }

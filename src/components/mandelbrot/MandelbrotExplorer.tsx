@@ -30,11 +30,7 @@ export function MandelbrotExplorer() {
       if (width === 0 || height === 0) return;
 
       const scale = isDraft ? DRAFT_SCALE : 1;
-      render(
-        view,
-        Math.round(width * scale),
-        Math.round(height * scale),
-      );
+      render(view, Math.round(width * scale), Math.round(height * scale));
     },
     [render],
   );
@@ -102,10 +98,7 @@ export function MandelbrotExplorer() {
 
   return (
     <TooltipProvider>
-      <MandelbrotCanvas
-        ref={canvasRef}
-        onResize={handleResize}
-      />
+      <MandelbrotCanvas ref={canvasRef} onResize={handleResize} />
       <Toolbar
         onSettingsToggle={() => setSettingsOpen((o) => !o)}
         onReset={handleReset}

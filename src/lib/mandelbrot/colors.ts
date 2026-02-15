@@ -114,9 +114,7 @@ export const COLOR_SCHEME_NAMES: Record<ColorScheme, string> = {
 };
 
 export function getSwatchColors(scheme: ColorScheme): string[] {
-  return PALETTES[scheme].map(
-    ([r, g, b]) => `rgb(${r}, ${g}, ${b})`,
-  );
+  return PALETTES[scheme].map(([r, g, b]) => `rgb(${r}, ${g}, ${b})`);
 }
 
 /**

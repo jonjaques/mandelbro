@@ -11,8 +11,7 @@ export const MandelbrotCanvas = forwardRef<
   MandelbrotCanvasProps
 >(function MandelbrotCanvas({ onResize }, ref) {
   const internalRef = useRef<HTMLCanvasElement>(null);
-  const canvasRef =
-    (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef;
+  const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef;
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -95,7 +95,8 @@ function formatCoord(n: number): string {
 function formatZoom(zoom: number): string {
   const magnification = 3.5 / zoom;
   if (magnification >= 1e6) return magnification.toExponential(2) + "x";
-  if (magnification >= 1000) return Math.round(magnification).toLocaleString() + "x";
+  if (magnification >= 1000)
+    return Math.round(magnification).toLocaleString() + "x";
   return magnification.toFixed(1) + "x";
 }
 
@@ -120,10 +121,7 @@ export function SettingsPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="glass text-white w-72 sm:w-80"
-      >
+      <SheetContent side="right" className="glass text-white w-72 sm:w-80">
         <SheetHeader>
           <SheetTitle className="text-white">Settings</SheetTitle>
           <SheetDescription className="text-white/50">
@@ -156,9 +154,7 @@ export function SettingsPanel({
                 </label>
                 <span className="font-mono text-xs text-white/60 tabular-nums">
                   {view.maxIter}
-                  {isAuto && (
-                    <span className="text-white/30 ml-1">(auto)</span>
-                  )}
+                  {isAuto && <span className="text-white/30 ml-1">(auto)</span>}
                 </span>
               </div>
               <Slider

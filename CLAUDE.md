@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**Mandelbro** is a best-of-breed fullscreen Mandelbrot set explorer — an immersive, installable web app where the fractal *is* the entire UI. The goal is Google Maps-level interaction fluidity applied to mathematical visualization: instant visual feedback during navigation, progressive high-fidelity rendering when idle, and shareable deep-zoom URLs. Every technical decision serves one UX principle: **the user should never wait for the math to catch up with their hands.**
+**Mandelbro** is a best-of-breed fullscreen Mandelbrot set explorer — an immersive, installable web app where the fractal _is_ the entire UI. The goal is Google Maps-level interaction fluidity applied to mathematical visualization: instant visual feedback during navigation, progressive high-fidelity rendering when idle, and shareable deep-zoom URLs. Every technical decision serves one UX principle: **the user should never wait for the math to catch up with their hands.**
 
 ## Build & Development Commands
 
@@ -21,10 +21,12 @@ No test framework or linter is currently configured.
 **Astro 5 + React 19** hybrid static site using **Tailwind CSS v4** and **shadcn/ui** components (new-york style). Astro provides the zero-JS static shell; a single React island (`client:load`) runs the entire explorer.
 
 ### Dual Component Model
+
 - **Astro components** (`.astro`) — server-rendered, zero JS by default. Used for pages and layouts.
 - **React components** (`.tsx`) — client-side interactive islands, hydrated with `client:load` directive.
 
 ### Directory Layout
+
 - `src/pages/` — File-based routing (Astro pages); `index.astro` is the fullscreen dark app shell
 - `src/layouts/` — Page layout templates
 - `src/components/mandelbrot/` — React components for the explorer UI
@@ -49,6 +51,7 @@ No test framework or linter is currently configured.
 - `public/` — PWA assets: `manifest.webmanifest`, `sw.js`, `icon-192.svg`
 
 ### Import Aliases
+
 All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.json and components.json).
 
 ## Interaction Model — Draft/Full Quality Tiers
@@ -56,25 +59,29 @@ All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.jso
 The core UX innovation is a **dual-tier rendering strategy** that decouples visual feedback from computational accuracy:
 
 ### Draft Tier (during interaction)
+
 - Triggered immediately on pointer drag, wheel zoom, and pinch-to-zoom
 - Renders at **50% resolution** (`DRAFT_SCALE = 0.5` → 25% pixel area), upscaled with bilinear filtering
 - During pan: existing canvas pixels are **shifted in-place** (instant visual feedback, no compute needed), exposed strips cleared to black
 - During zoom: draft render fires immediately toward cursor position
 
 ### Full Tier (after interaction)
+
 - Scheduled **150ms** after the last interaction event (debounced)
 - Renders at native canvas resolution for final high-fidelity output
 - Double-click is the exception: immediately triggers full render (it's a "decisive" action)
 
 ### Interaction Handlers
-| Input | Behavior | Quality |
-|---|---|---|
-| **Click-drag** | Pan via pointer capture; pixel-shift canvas, update center | Draft → Full |
-| **Mouse wheel** | ±10% zoom toward cursor; preserves focus point | Draft → Full |
-| **Double-click** | 2x zoom into click position | Immediate Full |
-| **Pinch (touch)** | Two-finger zoom based on distance delta | Draft → Full |
+
+| Input             | Behavior                                                   | Quality        |
+| ----------------- | ---------------------------------------------------------- | -------------- |
+| **Click-drag**    | Pan via pointer capture; pixel-shift canvas, update center | Draft → Full   |
+| **Mouse wheel**   | ±10% zoom toward cursor; preserves focus point             | Draft → Full   |
+| **Double-click**  | 2x zoom into click position                                | Immediate Full |
+| **Pinch (touch)** | Two-finger zoom based on distance delta                    | Draft → Full   |
 
 ### Auto-Iterations
+
 `autoIterations(zoom)` scales max iterations with zoom depth: `200 + 50 * log₂(3.5/zoom)`, clamped to [200, 5000]. Deeper zooms automatically get more detail without user intervention.
 
 ## Rendering Pipeline
@@ -112,17 +119,17 @@ Progress indicator updates (circular, bottom-right)
 
 ## Performance Optimizations
 
-| Technique | Where | Impact |
-|---|---|---|
-| DPR capping at 2x | MandelbrotCanvas | Prevents 3x+ oversampling on mobile (4x memory savings) |
-| Draft scale 0.5 | MandelbrotExplorer | 4x fewer pixels during interaction |
-| Canvas pixel shifting | use-interaction.ts | Instant pan feedback, zero compute |
-| Band streaming (32px) | worker.ts | Interruptible renders, progressive display |
-| Zero-copy transfer | worker.ts postMessage | No GC pressure on main thread |
-| Cardioid/bulb detection | compute.ts | Skips ~25% of interior point iterations (geometrically exact) |
-| Smooth coloring | compute.ts | `iter + 1 - log₂(log₂(√|z|²))` eliminates color banding |
-| rAF paint batching | use-mandelbrot-worker.ts | Single DOM flush per frame |
-| Debounced URL sync | url-state.ts (200ms) | Prevents history spam during smooth panning |
+| Technique               | Where                    | Impact                                                        |
+| ----------------------- | ------------------------ | ------------------------------------------------------------- | --- | ----------------------------- |
+| DPR capping at 2x       | MandelbrotCanvas         | Prevents 3x+ oversampling on mobile (4x memory savings)       |
+| Draft scale 0.5         | MandelbrotExplorer       | 4x fewer pixels during interaction                            |
+| Canvas pixel shifting   | use-interaction.ts       | Instant pan feedback, zero compute                            |
+| Band streaming (32px)   | worker.ts                | Interruptible renders, progressive display                    |
+| Zero-copy transfer      | worker.ts postMessage    | No GC pressure on main thread                                 |
+| Cardioid/bulb detection | compute.ts               | Skips ~25% of interior point iterations (geometrically exact) |
+| Smooth coloring         | compute.ts               | `iter + 1 - log₂(log₂(√                                       | z   | ²))` eliminates color banding |
+| rAF paint batching      | use-mandelbrot-worker.ts | Single DOM flush per frame                                    |
+| Debounced URL sync      | url-state.ts (200ms)     | Prevents history spam during smooth panning                   |
 
 ## URL State & Shareability
 

@@ -10,7 +10,13 @@ export const DEFAULT_VIEW: ViewState = {
 };
 
 const VALID_SCHEMES = new Set<ColorScheme>([
-  "classic", "fire", "ocean", "grayscale", "psychedelic", "ice", "neon",
+  "classic",
+  "fire",
+  "ocean",
+  "grayscale",
+  "psychedelic",
+  "ice",
+  "neon",
 ]);
 
 export function serializeToHash(state: ViewState): string {

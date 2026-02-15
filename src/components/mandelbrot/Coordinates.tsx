@@ -14,7 +14,8 @@ function formatNum(n: number): string {
 function formatZoom(zoom: number): string {
   const magnification = 3.5 / zoom;
   if (magnification >= 1e6) return magnification.toExponential(2) + "x";
-  if (magnification >= 1000) return Math.round(magnification).toLocaleString() + "x";
+  if (magnification >= 1000)
+    return Math.round(magnification).toLocaleString() + "x";
   return magnification.toFixed(1) + "x";
 }
 
@@ -50,9 +51,15 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
       className="fixed bottom-4 left-4 z-50 glass-subtle font-mono text-xs leading-relaxed px-3 py-2 rounded-lg text-white/80 transition-opacity duration-500 select-none pointer-events-none"
       style={{ opacity: visible ? 1 : 0 }}
     >
-      <div>Re: <span className="tabular-nums">{formatNum(view.centerX)}</span></div>
-      <div>Im: <span className="tabular-nums">{formatNum(view.centerY)}</span></div>
-      <div>Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span></div>
+      <div>
+        Re: <span className="tabular-nums">{formatNum(view.centerX)}</span>
+      </div>
+      <div>
+        Im: <span className="tabular-nums">{formatNum(view.centerY)}</span>
+      </div>
+      <div>
+        Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span>
+      </div>
     </div>
   );
 }

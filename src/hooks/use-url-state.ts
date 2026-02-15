@@ -6,9 +6,7 @@ import {
   pushHashState,
 } from "@/lib/mandelbrot/url-state";
 
-export function useUrlState(
-  onHashChange: (view: ViewState) => void,
-): {
+export function useUrlState(onHashChange: (view: ViewState) => void): {
   getInitialView: () => ViewState;
   syncToUrl: (view: ViewState) => void;
 } {
