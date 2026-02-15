@@ -33,6 +33,7 @@ import { useMandelbrotWorker } from "@/hooks/use-mandelbrot-worker";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useInteraction } from "@/hooks/use-interaction";
 import { MandelbrotCanvas } from "./MandelbrotCanvas";
+import { BrandMark } from "./BrandMark";
 import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
 import { Coordinates } from "./Coordinates";
@@ -153,12 +154,12 @@ export function MandelbrotExplorer() {
   return (
     <TooltipProvider>
       <MandelbrotCanvas ref={canvasRef} onResize={handleResize} />
+      <BrandMark canvasRef={canvasRef} />
       <Toolbar
         onSettingsToggle={() => {
           setSettingsOpen((o) => !o);
         }}
         onReset={handleReset}
-        colorScheme={viewForUI.colorScheme}
       />
       <SettingsPanel
         open={settingsOpen}
