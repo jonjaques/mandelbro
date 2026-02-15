@@ -38,22 +38,26 @@ export function Toolbar({
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", handleChange);
-    return () => document.removeEventListener("fullscreenchange", handleChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleChange);
+    };
   }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
-      document.exitFullscreen();
+      void document.exitFullscreen();
     } else {
-      document.documentElement.requestFullscreen();
+      void document.documentElement.requestFullscreen();
     }
   }, []);
 
   const handleShare = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href);
+    void navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     if (copyTimeout.current) clearTimeout(copyTimeout.current);
-    copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+    copyTimeout.current = setTimeout(() => {
+      setCopied(false);
+    }, 2000);
   }, []);
 
   useEffect(() => {

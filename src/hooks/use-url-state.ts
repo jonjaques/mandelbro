@@ -25,7 +25,9 @@ export function useUrlState(onHashChange: (view: ViewState) => void): {
       if (parsed) onHashChange(parsed);
     };
     window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
+    return () => {
+      window.removeEventListener("hashchange", handleHash);
+    };
   }, [onHashChange]);
 
   return { getInitialView, syncToUrl };

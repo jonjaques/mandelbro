@@ -26,7 +26,9 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
   const resetHideTimer = useCallback(() => {
     setVisible(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setVisible(false), 3000);
+    hideTimer.current = setTimeout(() => {
+      setVisible(false);
+    }, 3000);
   }, []);
 
   useEffect(() => {
@@ -35,7 +37,9 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
 
   // Show on initial mount then start hide timer
   useEffect(() => {
-    hideTimer.current = setTimeout(() => setVisible(false), 3000);
+    hideTimer.current = setTimeout(() => {
+      setVisible(false);
+    }, 3000);
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
@@ -43,7 +47,10 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
 
   // Show briefly when view changes
   useEffect(() => {
-    resetHideTimer();
+    const timeoutId = setTimeout(resetHideTimer, 0);
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [view.centerX, view.centerY, view.zoom, resetHideTimer]);
 
   return (

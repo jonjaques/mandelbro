@@ -11,15 +11,23 @@ export const MandelbrotCanvas = forwardRef<
   MandelbrotCanvasProps
 >(function MandelbrotCanvas({ onResize }, ref) {
   const internalRef = useRef<HTMLCanvasElement>(null);
-  const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (typeof ref === "function") {
+      ref(internalRef.current);
+      return;
+    }
+    if (ref) {
+      ref.current = internalRef.current;
+    }
+  }, [ref]);
+
+  useEffect(() => {
+    const canvas = internalRef.current;
+    if (canvas === null) return;
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) return;
 
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       const { width, height } = entry.contentRect;
@@ -34,12 +42,14 @@ export const MandelbrotCanvas = forwardRef<
     });
 
     observer.observe(canvas);
-    return () => observer.disconnect();
-  }, [canvasRef, onResize]);
+    return () => {
+      observer.disconnect();
+    };
+  }, [onResize]);
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={internalRef}
       className="fixed inset-0 w-full h-full touch-none"
       style={{ cursor: "crosshair" }}
     />

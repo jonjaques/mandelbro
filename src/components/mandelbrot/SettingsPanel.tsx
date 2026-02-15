@@ -43,10 +43,12 @@ function CoordinateRow({ label, value }: { label: string; value: string }) {
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(value);
+    void navigator.clipboard.writeText(value);
     setCopied(true);
     if (timeout.current) clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => setCopied(false), 1500);
+    timeout.current = setTimeout(() => {
+      setCopied(false);
+    }, 1500);
   }, [value]);
 
   return (
@@ -111,10 +113,12 @@ export function SettingsPanel({
   const shareTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleShare = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href);
+    void navigator.clipboard.writeText(window.location.href);
     setShareCopied(true);
     if (shareTimeout.current) clearTimeout(shareTimeout.current);
-    shareTimeout.current = setTimeout(() => setShareCopied(false), 2000);
+    shareTimeout.current = setTimeout(() => {
+      setShareCopied(false);
+    }, 2000);
   }, []);
 
   const isAuto = view.maxIter === autoIterations(view.zoom);
@@ -141,7 +145,7 @@ export function SettingsPanel({
             </div>
           </div>
 
-          <div className="h-px bg-white/[0.06]" />
+          <div className="h-px bg-white/6" />
 
           {/* Rendering */}
           <div className="space-y-4">
@@ -149,9 +153,9 @@ export function SettingsPanel({
 
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <label className="text-sm font-medium text-white/80">
+                <p className="text-sm font-medium text-white/80">
                   Max Iterations
-                </label>
+                </p>
                 <span className="font-mono text-xs text-white/60 tabular-nums">
                   {view.maxIter}
                   {isAuto && <span className="text-white/30 ml-1">(auto)</span>}
@@ -162,9 +166,9 @@ export function SettingsPanel({
                 min={50}
                 max={5000}
                 step={50}
-                onValueChange={([val]) =>
-                  onViewChange({ ...view, maxIter: val })
-                }
+                onValueChange={([val]) => {
+                  onViewChange({ ...view, maxIter: val });
+                }}
               />
               <div className="flex justify-between text-[10px] text-white/30">
                 <span>50</span>
@@ -173,19 +177,17 @@ export function SettingsPanel({
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/80">
-                Color Scheme
-              </label>
+              <p className="text-sm font-medium text-white/80">Color Scheme</p>
               <Select
                 value={view.colorScheme}
-                onValueChange={(val: ColorScheme) =>
-                  onViewChange({ ...view, colorScheme: val })
-                }
+                onValueChange={(val: ColorScheme) => {
+                  onViewChange({ ...view, colorScheme: val });
+                }}
               >
-                <SelectTrigger className="bg-white/10 border-white/[0.08] text-white">
+                <SelectTrigger className="bg-white/10 border-white/8 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-black/90 backdrop-blur-md border-white/[0.08]">
+                <SelectContent className="bg-black/90 backdrop-blur-md border-white/8">
                   {SCHEMES.map((scheme) => (
                     <SelectItem
                       key={scheme}
@@ -203,7 +205,7 @@ export function SettingsPanel({
             </div>
           </div>
 
-          <div className="h-px bg-white/[0.06]" />
+          <div className="h-px bg-white/6" />
 
           {/* Actions */}
           <div className="space-y-2">
@@ -211,7 +213,7 @@ export function SettingsPanel({
             <div className="flex flex-col gap-2 pt-1">
               <Button
                 variant="outline"
-                className="w-full border-white/[0.08] text-white/80 hover:bg-white/10 hover:text-white"
+                className="w-full border-white/8 text-white/80 hover:bg-white/10 hover:text-white"
                 onClick={handleShare}
               >
                 {shareCopied ? (

@@ -2,11 +2,18 @@ import { computeBand } from "./compute";
 import { mapToColors } from "./colors";
 import type { RenderRequest, ChunkResult, RenderComplete } from "./types";
 
+interface WorkerContext {
+  onmessage: ((e: MessageEvent<RenderRequest>) => void) | null;
+  postMessage: (message: unknown, transfer?: Transferable[]) => void;
+}
+
+const workerSelf = self as unknown as WorkerContext;
+
 let currentRequestId = -1;
 
 const BAND_HEIGHT = 32;
 
-self.onmessage = (e: MessageEvent<RenderRequest>) => {
+workerSelf.onmessage = (e: MessageEvent<RenderRequest>) => {
   const req = e.data;
   currentRequestId = req.requestId;
   processRequest(req);
@@ -29,7 +36,7 @@ function processRequest(req: RenderRequest) {
         type: "complete",
         requestId: req.requestId,
       };
-      self.postMessage(complete);
+      workerSelf.postMessage(complete);
       return;
     }
 
@@ -48,16 +55,18 @@ function processRequest(req: RenderRequest) {
 
     const rgba = mapToColors(iterations, maxIter, colorScheme);
 
+    const buffer = rgba.buffer as ArrayBuffer;
+
     const chunk: ChunkResult = {
       type: "chunk",
       requestId: req.requestId,
       width,
       y,
       height: bandHeight,
-      buffer: rgba.buffer,
+      buffer,
     };
 
-    self.postMessage(chunk, [rgba.buffer] as unknown as Transferable[]);
+    workerSelf.postMessage(chunk, [buffer]);
 
     y += stride;
 

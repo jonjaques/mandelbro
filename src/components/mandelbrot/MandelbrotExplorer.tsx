@@ -54,7 +54,9 @@ export function MandelbrotExplorer() {
     const initial = getInitialView();
     viewRef.current = initial;
     if (initial !== DEFAULT_VIEW) {
-      setViewForUI(initial);
+      setTimeout(() => {
+        setViewForUI(initial);
+      }, 0);
     }
   }, [getInitialView]);
 
@@ -100,7 +102,9 @@ export function MandelbrotExplorer() {
     <TooltipProvider>
       <MandelbrotCanvas ref={canvasRef} onResize={handleResize} />
       <Toolbar
-        onSettingsToggle={() => setSettingsOpen((o) => !o)}
+        onSettingsToggle={() => {
+          setSettingsOpen((o) => !o);
+        }}
         onReset={handleReset}
         colorScheme={viewForUI.colorScheme}
       />

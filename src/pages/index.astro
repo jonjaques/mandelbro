@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { MandelbrotExplorer } from '@/components/mandelbrot/MandelbrotExplorer';
+import { MandelbrotExplorerEntrypoint } from "@/components/mandelbrot/MandelbrotExplorerEntrypoint";
 ---
 
 <html lang="en" class="dark">
@@ -22,7 +22,7 @@ import { MandelbrotExplorer } from '@/components/mandelbrot/MandelbrotExplorer';
 	</head>
 
 	<body>
-		<MandelbrotExplorer client:load />
+		<MandelbrotExplorerEntrypoint client:load />
 		<script is:inline>
 			(() => {
 				if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;

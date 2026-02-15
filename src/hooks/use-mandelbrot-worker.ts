@@ -51,7 +51,8 @@ export function useMandelbrotWorker(
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = chunk.width;
         tempCanvas.height = chunk.height;
-        const tempCtx = tempCanvas.getContext("2d")!;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (!tempCtx) continue;
         tempCtx.putImageData(imgData, 0, 0);
 
         const scaleX = canvas.width / renderSizeRef.current.width;
@@ -102,7 +103,7 @@ export function useMandelbrotWorker(
               Math.min(100, (pixelsReceivedRef.current / total) * 100),
             );
           }
-        } else if (msg.type === "complete") {
+        } else {
           if (msg.requestId !== requestIdRef.current) return;
           completedWorkersRef.current++;
           if (completedWorkersRef.current >= WORKER_COUNT) {
@@ -117,7 +118,9 @@ export function useMandelbrotWorker(
     workersRef.current = workers;
 
     return () => {
-      workers.forEach((w) => w.terminate());
+      workers.forEach((w) => {
+        w.terminate();
+      });
       workersRef.current = [];
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);

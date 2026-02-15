@@ -15,7 +15,7 @@ export function useInteraction(
   const lastPos = useRef({ x: 0, y: 0 });
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pinchDistance = useRef<number | null>(null);
-  const activityRef = useRef<() => void>(() => {});
+  const activityRef = useRef<(() => void) | null>(null);
 
   // Expose an activity callback for external use (coordinates HUD)
   const onActivity = useCallback((cb: () => void) => {
@@ -41,12 +41,12 @@ export function useInteraction(
       isDragging.current = true;
       lastPos.current = { x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
-      activityRef.current();
+      activityRef.current?.();
     };
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!isDragging.current) return;
-      activityRef.current();
+      activityRef.current?.();
 
       const dxCss = e.clientX - lastPos.current.x;
       const dyCss = e.clientY - lastPos.current.y;
@@ -94,7 +94,7 @@ export function useInteraction(
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      activityRef.current();
+      activityRef.current?.();
 
       const view = getView();
       const rect = canvas.getBoundingClientRect();
@@ -123,7 +123,7 @@ export function useInteraction(
     };
 
     const handleDblClick = (e: MouseEvent) => {
-      activityRef.current();
+      activityRef.current?.();
       const view = getView();
       const rect = canvas.getBoundingClientRect();
 
@@ -156,7 +156,7 @@ export function useInteraction(
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2 && pinchDistance.current !== null) {
         e.preventDefault();
-        activityRef.current();
+        activityRef.current?.();
 
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
