@@ -15,6 +15,15 @@ interface InteractionCallbacks {
   getView: () => ViewState;
 }
 
+interface TouchGestureState {
+  mode: "pan" | "pinch";
+  startView: ViewState;
+  snapshot: HTMLCanvasElement;
+  startTouch?: { x: number; y: number };
+  startMidpoint?: { x: number; y: number };
+  startDistance?: number;
+}
+
 /**
  * Hook that attaches all user interaction handlers (pan, zoom, pinch, double-click)
  * to the canvas element. Implements the draft/full quality tier strategy:
@@ -45,7 +54,7 @@ export function useInteraction(
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pinchDistance = useRef<number | null>(null);
+  const touchGesture = useRef<TouchGestureState | null>(null);
   const activityRef = useRef<(() => void) | null>(null);
 
   // Expose an activity callback for external use (the Coordinates HUD uses
@@ -63,6 +72,7 @@ export function useInteraction(
     (view: ViewState) => {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
+        idleTimer.current = null;
         onViewChange(view, false);
       }, 50);
     },
@@ -80,6 +90,7 @@ export function useInteraction(
     // "stuck drag" problem.
 
     const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
       if (e.button !== 0) return; // Left button only
       isDragging.current = true;
       lastPos.current = { x: e.clientX, y: e.clientY };
@@ -88,6 +99,7 @@ export function useInteraction(
     };
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
       if (!isDragging.current) return;
       activityRef.current?.();
 
@@ -165,7 +177,8 @@ export function useInteraction(
       scheduleFullRender(newView);
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
       isDragging.current = false;
     };
 
@@ -258,61 +271,193 @@ export function useInteraction(
       onViewChange(newView, false); // Full quality immediately
     };
 
-    // ── PINCH-TO-ZOOM (touch) ─────────────────────────────────────────
+    // ── TOUCH GESTURES (pan + pinch) ──────────────────────────────────
     //
-    // Two-finger pinch gesture for mobile. Tracks the distance between two
-    // touch points across frames. The ratio (oldDistance / newDistance) gives
-    // the zoom factor: pinching apart (newDist > oldDist) → zoom in,
-    // pinching together → zoom out.
-    //
-    // Note: this currently zooms relative to the viewport center, not the
-    // midpoint of the two fingers (a simplification).
+    // Touch input uses a different preview strategy than desktop. At the start
+    // of a gesture, we snapshot the currently rendered canvas into a temporary
+    // buffer. Each move then re-draws that frozen snapshot with a translate /
+    // scale transform. This gives smooth "native-feeling" pinch feedback using
+    // already-rendered pixels, while the expensive Mandelbrot recompute waits
+    // until the gesture ends.
 
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        const touchA = e.touches.item(0);
-        const touchB = e.touches.item(1);
+    const clearScheduledRender = () => {
+      if (idleTimer.current) {
+        clearTimeout(idleTimer.current);
+        idleTimer.current = null;
+      }
+    };
+
+    const snapshotCanvas = () => {
+      const snapshot = document.createElement("canvas");
+      snapshot.width = canvas.width;
+      snapshot.height = canvas.height;
+      const snapshotCtx = snapshot.getContext("2d", { alpha: false });
+      if (!snapshotCtx) return null;
+      snapshotCtx.drawImage(canvas, 0, 0);
+      return snapshot;
+    };
+
+    const drawTouchPreview = (snapshot: HTMLCanvasElement, scale: number, tx: number, ty: number) => {
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(snapshot, tx, ty, snapshot.width * scale, snapshot.height * scale);
+    };
+
+    const startTouchGesture = (touches: TouchList) => {
+      clearScheduledRender();
+      const snapshot = snapshotCanvas();
+      if (!snapshot) return;
+
+      const startView = getView();
+
+      if (touches.length === 1) {
+        const touch = touches.item(0);
+        if (!touch) return;
+        touchGesture.current = {
+          mode: "pan",
+          startView,
+          snapshot,
+          startTouch: { x: touch.clientX, y: touch.clientY },
+        };
+        return;
+      }
+
+      if (touches.length === 2) {
+        const touchA = touches.item(0);
+        const touchB = touches.item(1);
         if (!touchA || !touchB) return;
         const dx = touchA.clientX - touchB.clientX;
         const dy = touchA.clientY - touchB.clientY;
-        // Store the initial distance between the two fingers
-        pinchDistance.current = Math.sqrt(dx * dx + dy * dy);
+        touchGesture.current = {
+          mode: "pinch",
+          startView,
+          snapshot,
+          startMidpoint: {
+            x: (touchA.clientX + touchB.clientX) / 2,
+            y: (touchA.clientY + touchB.clientY) / 2,
+          },
+          startDistance: Math.max(Math.hypot(dx, dy), 1),
+        };
+        return;
+      }
+
+      touchGesture.current = null;
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      activityRef.current?.();
+      if (e.touches.length === 1 || e.touches.length === 2) {
+        startTouchGesture(e.touches);
+      } else {
+        touchGesture.current = null;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && pinchDistance.current !== null) {
-        e.preventDefault(); // Prevent native browser zoom
-        activityRef.current?.();
+      const gesture = touchGesture.current;
+      if (!gesture) return;
 
-        const touchA = e.touches.item(0);
-        const touchB = e.touches.item(1);
-        if (!touchA || !touchB) return;
-        const dx = touchA.clientX - touchB.clientX;
-        const dy = touchA.clientY - touchB.clientY;
-        const newDist = Math.sqrt(dx * dx + dy * dy);
+      e.preventDefault();
+      activityRef.current?.();
 
-        const view = getView();
-        // If fingers spread apart, factor < 1 → zoom in (smaller zoom value).
-        // If fingers pinch together, factor > 1 → zoom out.
-        const factor = pinchDistance.current / newDist;
-        const newZoom = view.zoom * factor;
+      const rect = canvas.getBoundingClientRect();
+      const pxPerCssX = canvas.width / rect.width;
+      const pxPerCssY = canvas.height / rect.height;
 
-        // Update the reference distance for the next move event (incremental)
-        pinchDistance.current = newDist;
+      if (gesture.mode === "pan") {
+        if (e.touches.length !== 1 || !gesture.startTouch) return;
 
+        const touch = e.touches.item(0);
+        if (!touch) return;
+
+        const dxCss = touch.clientX - gesture.startTouch.x;
+        const dyCss = touch.clientY - gesture.startTouch.y;
+        drawTouchPreview(
+          gesture.snapshot,
+          1,
+          dxCss * pxPerCssX,
+          dyCss * pxPerCssY,
+        );
+
+        const scale = gesture.startView.zoom / rect.height;
         const newView: ViewState = {
-          ...view,
-          zoom: newZoom,
-          maxIter: autoIterations(newZoom),
+          ...gesture.startView,
+          centerX: gesture.startView.centerX - dxCss * scale,
+          centerY: gesture.startView.centerY - dyCss * scale,
         };
-        onViewChange(newView, true); // Draft render
-        scheduleFullRender(newView);
+        onViewChange(newView, "skip");
+        return;
       }
+
+      if (
+        e.touches.length !== 2 ||
+        !gesture.startMidpoint ||
+        !gesture.startDistance
+      ) {
+        return;
+      }
+
+      const touchA = e.touches.item(0);
+      const touchB = e.touches.item(1);
+      if (!touchA || !touchB) return;
+
+      const currentMidpoint = {
+        x: (touchA.clientX + touchB.clientX) / 2,
+        y: (touchA.clientY + touchB.clientY) / 2,
+      };
+      const distanceX = touchA.clientX - touchB.clientX;
+      const distanceY = touchA.clientY - touchB.clientY;
+      const currentDistance = Math.max(Math.hypot(distanceX, distanceY), 1);
+      const previewScale = currentDistance / gesture.startDistance;
+
+      const startMidX = (gesture.startMidpoint.x - rect.left) * pxPerCssX;
+      const startMidY = (gesture.startMidpoint.y - rect.top) * pxPerCssY;
+      const currentMidX = (currentMidpoint.x - rect.left) * pxPerCssX;
+      const currentMidY = (currentMidpoint.y - rect.top) * pxPerCssY;
+
+      drawTouchPreview(
+        gesture.snapshot,
+        previewScale,
+        currentMidX - previewScale * startMidX,
+        currentMidY - previewScale * startMidY,
+      );
+
+      const aspectRatio = rect.width / rect.height;
+      const startMouseX = (gesture.startMidpoint.x - rect.left) / rect.width;
+      const startMouseY = (gesture.startMidpoint.y - rect.top) / rect.height;
+      const currentMouseX = (currentMidpoint.x - rect.left) / rect.width;
+      const currentMouseY = (currentMidpoint.y - rect.top) / rect.height;
+      const worldX =
+        gesture.startView.centerX +
+        (startMouseX - 0.5) * gesture.startView.zoom * aspectRatio;
+      const worldY =
+        gesture.startView.centerY +
+        (startMouseY - 0.5) * gesture.startView.zoom;
+      const newZoom = gesture.startView.zoom * (gesture.startDistance / currentDistance);
+
+      const newView: ViewState = {
+        ...gesture.startView,
+        centerX: worldX - (currentMouseX - 0.5) * newZoom * aspectRatio,
+        centerY: worldY - (currentMouseY - 0.5) * newZoom,
+        zoom: newZoom,
+        maxIter: autoIterations(newZoom),
+      };
+      onViewChange(newView, "skip");
     };
 
-    const handleTouchEnd = () => {
-      pinchDistance.current = null;
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 1 || e.touches.length === 2) {
+        startTouchGesture(e.touches);
+        return;
+      }
+
+      if (!touchGesture.current) return;
+      touchGesture.current = null;
+      onViewChange(getView(), false);
     };
 
     // ── Event listener registration ───────────────────────────────────
@@ -329,6 +474,7 @@ export function useInteraction(
       passive: false, // Need to call preventDefault to block native zoom
     });
     canvas.addEventListener("touchend", handleTouchEnd);
+    canvas.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
       canvas.removeEventListener("pointerdown", handlePointerDown);
@@ -340,6 +486,7 @@ export function useInteraction(
       canvas.removeEventListener("touchstart", handleTouchStart);
       canvas.removeEventListener("touchmove", handleTouchMove);
       canvas.removeEventListener("touchend", handleTouchEnd);
+      canvas.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [canvasRef, getView, onViewChange, scheduleFullRender]);
 
