@@ -9,15 +9,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```sh
-npm run dev       # Start dev server with HMR
-npm run build     # Production build to /dist
-npm run preview   # Preview production build locally
-npm run lint      # ESLint (strict, type-aware) with zero warnings allowed
-npm run lint:fix  # Auto-fix lint issues when possible
-npm run format    # Prettier write across repo
-npm run format:check # Verify formatting only
-npm run typecheck # Astro + TypeScript project diagnostics
-npm run healthcheck # lint + format:check + typecheck + build
+yarn dev          # Start dev server with HMR
+yarn build        # Production build to /dist
+yarn preview      # Preview production build locally
+yarn lint         # ESLint (strict, type-aware) with zero warnings allowed
+yarn lint:fix     # Auto-fix lint issues when possible
+yarn format       # Prettier write across repo
+yarn format:check # Verify formatting only
+yarn typecheck    # Astro + TypeScript project diagnostics
+yarn healthcheck  # lint + format:check + typecheck + build
 ```
 
 No test framework is currently configured.
@@ -36,14 +36,13 @@ No test framework is currently configured.
 - `src/pages/` — File-based routing (Astro pages); `index.astro` is the fullscreen dark app shell
 - `src/layouts/` — Page layout templates
 - `src/components/mandelbrot/` — React components for the explorer UI
-  - `MandelbrotExplorerEntrypoint.tsx` — `StrictMode` wrapper, mounted from `index.astro`
-  - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, workers, interaction, URL sync, and UI overlays
+  - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, workers, interaction, URL sync, UI overlays, and the `StrictMode` wrapper
   - `MandelbrotCanvas.tsx` — Full-viewport `<canvas>` with ResizeObserver, DPR-aware (capped at 2x)
   - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL, reset view, fullscreen toggle; brand mark with palette-adaptive gradient + glow
   - `SettingsPanel.tsx` — shadcn Sheet with iterations slider, color scheme selector, coordinate display with copy-to-clipboard, share URL, and reset
   - `Coordinates.tsx` — Bottom-left HUD showing Re/Im/zoom, auto-hides after 3s of inactivity, reappears on interaction or view change
   - `RenderProgress.tsx` — Bottom-right circular SVG progress indicator (stroke-dashoffset animation), appears with 300ms delay during renders
-- `src/components/ui/` — shadcn/ui React components (generated via `npx shadcn` CLI)
+- `src/components/ui/` — shadcn/ui React components (generated via `yarn dlx shadcn` or `yarn shadcn` CLI)
 - `src/hooks/` — React hooks (the core interaction and rendering logic lives here)
   - `use-mandelbrot-worker.ts` — Multi-worker pool lifecycle, progressive chunk rendering, rAF paint batching, draft/full upscaling
   - `use-url-state.ts` — Two-way sync between ViewState and URL hash (debounced 200ms)
@@ -66,13 +65,13 @@ All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.jso
 
 - TypeScript is configured for a **very strict** safety profile on top of `astro/tsconfigs/strict` (including `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`, `noUnusedParameters`, and other defensive compiler flags).
 - ESLint uses strict, type-aware flat config with TypeScript, React, React Hooks, and JSX a11y rules.
-- `npm run lint` enforces `--max-warnings=0`; warnings are treated as failures in normal workflow.
-- `npm run healthcheck` is the primary pre-PR/pre-merge command and should pass before shipping.
+- `yarn lint` enforces `--max-warnings=0`; warnings are treated as failures in normal workflow.
+- `yarn healthcheck` is the primary pre-PR/pre-merge command and should pass before shipping.
 
 ## React Entrypoint Policy
 
 - React islands should be wrapped in `React.StrictMode` at entrypoints.
-- The main app island uses `src/components/mandelbrot/MandelbrotExplorerEntrypoint.tsx` and is mounted from `src/pages/index.astro` with `client:load`.
+- The main app island mounts `src/components/mandelbrot/MandelbrotExplorer.tsx` from `src/pages/index.astro` with `client:load`, and `StrictMode` is applied inside the component.
 
 ## Editor Diagnostics (VSCode/Cursor)
 
@@ -321,7 +320,7 @@ The `getBrandColors()` function samples a palette's bright inner range (15%–85
 ## Adding shadcn/ui Components
 
 ```sh
-npx shadcn add <component-name>
+yarn shadcn add <component-name>
 ```
 
 Configuration lives in `components.json`. Components are generated as TSX into `src/components/ui/`.

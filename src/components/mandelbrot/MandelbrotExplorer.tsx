@@ -24,7 +24,7 @@
  * the canvas using bilinear interpolation. Full renders compute at native
  * canvas resolution (1:1 pixel mapping).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ViewState } from "@/lib/mandelbrot/types";
@@ -152,24 +152,26 @@ export function MandelbrotExplorer() {
   );
 
   return (
-    <TooltipProvider>
-      <MandelbrotCanvas ref={canvasRef} onResize={handleResize} />
-      <BrandMark canvasRef={canvasRef} />
-      <Toolbar
-        onSettingsToggle={() => {
-          setSettingsOpen((o) => !o);
-        }}
-        onReset={handleReset}
-      />
-      <SettingsPanel
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        view={viewForUI}
-        onViewChange={handleSettingsChange}
-        onReset={handleReset}
-      />
-      <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
-      <RenderProgress progress={progress} />
-    </TooltipProvider>
+    <StrictMode>
+      <TooltipProvider>
+        <MandelbrotCanvas ref={canvasRef} onResize={handleResize} />
+        <BrandMark canvasRef={canvasRef} />
+        <Toolbar
+          onSettingsToggle={() => {
+            setSettingsOpen((o) => !o);
+          }}
+          onReset={handleReset}
+        />
+        <SettingsPanel
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          view={viewForUI}
+          onViewChange={handleSettingsChange}
+          onReset={handleReset}
+        />
+        <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
+        <RenderProgress progress={progress} />
+      </TooltipProvider>
+    </StrictMode>
   );
 }

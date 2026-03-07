@@ -1,3 +1,4 @@
+import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import globals from "globals";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -5,11 +6,13 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: [
       "dist/**",
       ".astro/**",
+      ".yarn/**",
+      ".pnp.*",
       "node_modules/**",
       "public/**",
       "*.config.*",

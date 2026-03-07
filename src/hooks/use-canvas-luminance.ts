@@ -93,7 +93,10 @@ export function useCanvasLuminance(
       try {
         const imageData = ctx.getImageData(x, y, w, h);
         const data = imageData.data;
-        const step = Math.max(MIN_STEP_PX, Math.floor(Math.min(w, h) / GRID_DIVISIONS));
+        const step = Math.max(
+          MIN_STEP_PX,
+          Math.floor(Math.min(w, h) / GRID_DIVISIONS),
+        );
         let totalLuminance = 0;
         let count = 0;
 
