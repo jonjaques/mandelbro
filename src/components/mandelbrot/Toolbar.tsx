@@ -5,6 +5,7 @@ import {
   Minimize,
   Share2,
   Check,
+  Github,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,8 @@ interface ToolbarProps {
   onSettingsToggle: () => void;
   onReset: () => void;
 }
+
+const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
 
 export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -96,6 +99,29 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
         <TooltipContent side="left">
           {copied ? "Copied!" : "Share URL"}
         </TooltipContent>
+      </Tooltip>
+
+      <div className="h-px bg-white/10" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className={btnClass}
+          >
+            <a
+              href={SOURCE_CODE_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View source code on GitHub"
+            >
+              <Github className="size-4" />
+            </a>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">View Source</TooltipContent>
       </Tooltip>
 
       <div className="h-px bg-white/10" />
