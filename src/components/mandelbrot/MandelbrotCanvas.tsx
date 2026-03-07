@@ -94,7 +94,7 @@ export const MandelbrotCanvas = forwardRef<
       style={{
         cursor: "crosshair",
         width: "var(--app-width)",
-        height: "var(--app-height)",
+        height: "var(--app-cover-height)",
       }}
     />
   );

@@ -51,6 +51,7 @@
   --radius: 0.625rem;
   --app-width: 100vw;
   --app-height: 100dvh;
+  --app-cover-height: max(var(--app-height), 100vh);
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -128,16 +129,16 @@
   }
   html {
     width: 100%;
-    height: var(--app-height);
-    min-height: var(--app-height);
+    height: var(--app-cover-height);
+    min-height: var(--app-cover-height);
     background: #000;
     overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground;
     width: var(--app-width);
-    height: var(--app-height);
-    min-height: var(--app-height);
+    height: var(--app-cover-height);
+    min-height: var(--app-cover-height);
     margin: 0;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
