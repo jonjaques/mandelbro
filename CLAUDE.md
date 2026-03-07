@@ -44,9 +44,9 @@ No test framework is currently configured.
   - `RenderProgress.tsx` — Bottom-right circular SVG progress indicator (stroke-dashoffset animation), appears with 300ms delay during renders
 - `src/components/ui/` — shadcn/ui React components (generated via `yarn dlx shadcn` or `yarn shadcn` CLI)
 - `src/hooks/` — React hooks (the core interaction and rendering logic lives here)
-  - `use-mandelbrot-worker.ts` — Multi-worker pool lifecycle, progressive chunk rendering, rAF paint batching, draft/full upscaling
-  - `use-url-state.ts` — Two-way sync between ViewState and URL hash (debounced 200ms)
-  - `use-interaction.ts` — Pointer drag (with pixel-shifting), wheel zoom, pinch-to-zoom, double-click; draft/full/skip quality tiers
+- `use-mandelbrot-worker.ts` — Multi-worker pool lifecycle, progressive chunk rendering, and rAF paint batching for full-resolution renders
+- `use-url-state.ts` — Two-way sync between ViewState and URL hash (debounced 200ms)
+- `use-interaction.ts` — Pointer drag (with pixel-shifting), wheel zoom, pinch-to-zoom, double-click; snapshot-based interaction previews with deferred commit renders
 - `src/lib/mandelbrot/` — Core computation library
   - `types.ts` — ViewState, RenderRequest, RenderResult, ChunkResult, RenderComplete, ColorScheme interfaces
   - `colors.ts` — 7 color palettes with linear RGB interpolation (cycling every 256 iterations); palette swatch generation; brand gradient/glow color extraction
@@ -79,36 +79,32 @@ All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.jso
 - Workspace settings in `.vscode/settings.json` intentionally suppress those false positives (`css/scss/less.lint.unknownAtRules = ignore`).
 - Tailwind IntelliSense canonical class suggestions are generally worth applying (for example `border-white/[0.08]` → `border-white/8`).
 
-## Interaction Model — Draft/Full/Skip Quality Tiers
+## Interaction Model — Preview Then Commit
 
-The core UX innovation is a **multi-tier rendering strategy** that decouples visual feedback from computational accuracy:
+The core UX innovation is a **preview/commit rendering strategy** that decouples visual feedback from computational accuracy:
 
-### Draft Tier (during zoom interaction)
+### Preview Phase (during interaction)
 
-- Triggered immediately on wheel zoom and pinch-to-zoom
-- Renders at **50% resolution** (`DRAFT_SCALE = 0.5` → 25% pixel area), upscaled with bilinear filtering via `ctx.drawImage`
+- During pan/drag: existing canvas pixels are **shifted in-place** via `ctx.drawImage(canvas, dx, dy)` for instant feedback with zero compute
+- During wheel zoom and pinch-to-zoom: the app snapshots the current canvas once, then scales/translates that cached image during the gesture
+- Preview frames are intentionally blurry or pixelated when zoomed because they reuse already-rendered pixels instead of recalculating the fractal
+- During preview, only the view state and URL are updated; no worker render is dispatched yet
 
-### Skip Tier (during pan)
+### Commit Phase (after interaction)
 
-- During pan/drag: existing canvas pixels are **shifted in-place** via `ctx.drawImage(canvas, dx, dy)` (instant visual feedback, zero compute needed)
-- Exposed strips cleared to black; no render is dispatched at all
-- Only the view state and URL are updated; the debounced full render fires after the user stops
-
-### Full Tier (after interaction)
-
-- Scheduled **50ms** after the last interaction event (debounced)
-- Renders at native canvas resolution for final high-fidelity output
-- Double-click is the exception: immediately triggers full render (it's a "decisive" action)
+- Scheduled **50ms** after the last continuous interaction event (debounced)
+- Dispatches a native-resolution worker render for the exact current view
+- Double-click is the exception: it immediately commits a full render because it's a single decisive action
 - Also triggered by: settings changes, reset, resize, and browser back/forward navigation
 
 ### Interaction Handlers
 
-| Input             | Behavior                                                   | Quality             |
-| ----------------- | ---------------------------------------------------------- | ------------------- |
-| **Click-drag**    | Pan via pointer capture; pixel-shift canvas, update center | Skip → Full (50ms)  |
-| **Mouse wheel**   | ±10% zoom toward cursor; preserves focus point             | Draft → Full (50ms) |
-| **Double-click**  | 2× zoom into click position                                | Immediate Full      |
-| **Pinch (touch)** | Two-finger zoom based on distance delta                    | Draft → Full (50ms) |
+| Input             | Behavior                                                   | Quality          |
+| ----------------- | ---------------------------------------------------------- | ---------------- |
+| **Click-drag**    | Pan via pointer capture; pixel-shift canvas, update center | Preview → Commit |
+| **Mouse wheel**   | ±10% zoom toward cursor; preserves focus point             | Preview → Commit |
+| **Double-click**  | 2× zoom into click position                                | Immediate Full   |
+| **Pinch (touch)** | Two-finger zoom based on distance delta                    | Preview → Commit |
 
 ### Auto-Iterations
 
@@ -121,7 +117,7 @@ User Interaction
     │
     ▼
 MandelbrotExplorer (orchestrator)
-    │ applies DRAFT_SCALE or 1.0
+    │ updates ViewState and schedules commit renders
     ▼
 useMandelbrotWorker → posts RenderRequest with requestId to N workers
     │
@@ -141,7 +137,6 @@ Each worker, for each assigned band:
 Main Thread receives chunks (from all workers)
     │ queues in pendingChunksRef
     │ paints via requestAnimationFrame (batched, one flush per frame)
-    │ draft chunks: drawn to temp canvas, scaled up via drawImage
     │ full chunks: putImageData directly at correct y offset
     │
     ▼
@@ -259,20 +254,20 @@ The modulo-256 cycling creates repeating color "contour lines" that prevent the 
 
 ## Performance Optimizations
 
-| Technique               | Where                    | Impact                                                        |
-| ----------------------- | ------------------------ | ------------------------------------------------------------- | --- | ---------------------------- |
-| DPR capping at 2×       | MandelbrotCanvas         | Prevents 3×+ oversampling on mobile (2.25× memory savings)    |
-| Draft scale 0.5         | MandelbrotExplorer       | 4× fewer pixels during interaction                            |
-| Canvas pixel shifting   | use-interaction.ts       | Instant pan feedback, zero compute                            |
-| Multi-worker pool       | use-mandelbrot-worker.ts | Parallel computation across all CPU cores (round-robin bands) |
-| Band streaming (32px)   | worker.ts                | Interruptible renders, progressive display                    |
-| Zero-copy transfer      | worker.ts postMessage    | No serialization cost or GC pressure on main thread           |
-| Cardioid/bulb detection | compute.ts               | Skips ~25% of interior point iterations (geometrically exact) |
-| Smooth coloring         | compute.ts               | `iter + 1 - log₂(log₂(                                        | z   | ))` eliminates color banding |
-| High bailout (256)      | compute.ts               | More dynamic range for smooth coloring at negligible cost     |
-| rAF paint batching      | use-mandelbrot-worker.ts | Single DOM flush per frame regardless of chunk arrival rate   |
-| Debounced URL sync      | url-state.ts (200ms)     | Prevents history spam during smooth panning                   |
-| Skip tier for pan       | use-interaction.ts       | No render dispatched at all during drag (pixel-shift only)    |
+| Technique                | Where                    | Impact                                                        |
+| ------------------------ | ------------------------ | ------------------------------------------------------------- | --- | ---------------------------- |
+| DPR capping at 2×        | MandelbrotCanvas         | Prevents 3×+ oversampling on mobile (2.25× memory savings)    |
+| Canvas pixel shifting    | use-interaction.ts       | Instant pan feedback, zero compute                            |
+| Snapshot preview scaling | use-interaction.ts       | Smooth wheel/pinch zoom feedback without recomputing fractals |
+| Multi-worker pool        | use-mandelbrot-worker.ts | Parallel computation across all CPU cores (round-robin bands) |
+| Band streaming (32px)    | worker.ts                | Interruptible renders, progressive display                    |
+| Zero-copy transfer       | worker.ts postMessage    | No serialization cost or GC pressure on main thread           |
+| Cardioid/bulb detection  | compute.ts               | Skips ~25% of interior point iterations (geometrically exact) |
+| Smooth coloring          | compute.ts               | `iter + 1 - log₂(log₂(                                        | z   | ))` eliminates color banding |
+| High bailout (256)       | compute.ts               | More dynamic range for smooth coloring at negligible cost     |
+| rAF paint batching       | use-mandelbrot-worker.ts | Single DOM flush per frame regardless of chunk arrival rate   |
+| Debounced URL sync       | url-state.ts (200ms)     | Prevents history spam during smooth panning                   |
+| Deferred commit renders  | use-interaction.ts       | Avoids redundant recomputation while gestures are in flight   |
 
 ## URL State & Shareability
 
@@ -302,7 +297,7 @@ The `getBrandColors()` function samples a palette's bright inner range (15%–85
 ## UX Philosophy
 
 1. **Immersive & Minimal** — The fractal IS the app. UI is floating glass-morphism overlays that auto-hide. Cursor is crosshair.
-2. **Never Wait** — Draft renders during zoom, pixel-shifting during pan, full renders on idle. Band streaming for progressive reveal. Multi-worker parallelism for maximum throughput.
+2. **Never Wait** — Snapshot previews during zoom, pixel-shifting during pan, full commit renders on idle. Band streaming for progressive reveal. Multi-worker parallelism for maximum throughput.
 3. **Precision & Shareability** — 15-digit coordinates, auto-scaling iterations, URL hash for bookmarking and sharing. Copy coordinates from settings panel.
 4. **Mobile-First PWA** — Installable, offline-capable, touch-native, fullscreen.
 

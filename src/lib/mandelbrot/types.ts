@@ -49,7 +49,7 @@ export interface ViewState {
  */
 export interface RenderRequest {
   requestId: number;
-  width: number; // Render width in pixels (may be < canvas width for draft)
+  width: number; // Render width in pixels
   height: number; // Render height in pixels
   centerX: number;
   centerY: number;

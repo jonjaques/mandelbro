@@ -5,7 +5,7 @@ import {
   Minimize,
   Share2,
   Check,
-  Github,
+  SquareCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,19 +105,14 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            className={btnClass}
-          >
+          <Button asChild variant="ghost" size="icon" className={btnClass}>
             <a
               href={SOURCE_CODE_URL}
               target="_blank"
               rel="noreferrer"
               aria-label="View source code on GitHub"
             >
-              <Github className="size-4" />
+              <SquareCode className="size-4" />
             </a>
           </Button>
         </TooltipTrigger>

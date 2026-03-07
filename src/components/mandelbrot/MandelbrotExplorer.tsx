@@ -17,12 +17,12 @@
  * A parallel `viewForUI` state drives React re-renders for the UI overlays
  * (coordinates display, settings panel). Both are always kept in sync.
  *
- * ## Render Quality Tiers
+ * ## Interaction Preview Strategy
  *
- * `DRAFT_SCALE = 0.5` means draft renders compute at 50% resolution in each
- * dimension (= 25% of the pixels). The worker output is then upscaled to fill
- * the canvas using bilinear interpolation. Full renders compute at native
- * canvas resolution (1:1 pixel mapping).
+ * During interaction, the explorer reuses the current canvas pixels for
+ * instant visual feedback (pixel-shift for pan, snapshot transforms for zoom).
+ * Once the user pauses, it dispatches a full-resolution render to reconcile
+ * the exact fractal state.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -39,13 +39,6 @@ import { SettingsPanel } from "./SettingsPanel";
 import { Coordinates } from "./Coordinates";
 import { RenderProgress } from "./RenderProgress";
 
-/**
- * Draft renders use half resolution per axis (0.5 × 0.5 = 25% pixel count).
- * This makes draft renders ~4x faster than full renders, providing snappy
- * visual feedback during continuous interaction (wheel zoom, pinch).
- */
-const DRAFT_SCALE = 0.5;
-
 export function MandelbrotExplorer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Authoritative view state — ref (not state) for synchronous access
@@ -61,18 +54,12 @@ export function MandelbrotExplorer() {
 
   const { render, progress } = useMandelbrotWorker(canvasRef);
 
-  /**
-   * Dispatch a render to the worker pool at draft or full quality.
-   * Draft renders shrink the pixel dimensions by DRAFT_SCALE before sending
-   * to workers; the worker output is upscaled during painting.
-   */
   const triggerRender = useCallback(
-    (view: ViewState, isDraft: boolean) => {
+    (view: ViewState) => {
       const { width, height } = sizeRef.current;
       if (width === 0 || height === 0) return;
 
-      const scale = isDraft ? DRAFT_SCALE : 1;
-      render(view, Math.round(width * scale), Math.round(height * scale));
+      render(view, width, height);
     },
     [render],
   );
@@ -82,7 +69,7 @@ export function MandelbrotExplorer() {
     (view: ViewState) => {
       viewRef.current = view;
       setViewForUI(view);
-      triggerRender(view, false); // Full quality for navigation events
+      triggerRender(view); // Full quality for navigation events
     },
     [triggerRender],
   );
@@ -107,17 +94,16 @@ export function MandelbrotExplorer() {
   /**
    * Central handler for all view changes (from interaction, settings, or URL).
    *
-   * @param isDraft - `true` for draft render, `false` for full, `"skip"` to
-   *   skip rendering entirely (used during pan where pixel-shifting provides
-   *   the visual feedback).
+   * @param commitRender - `true` to render immediately, `false` to rely on the
+   *   interaction preview and defer rendering until the user pauses.
    */
   const handleViewChange = useCallback(
-    (view: ViewState, isDraft: boolean | "skip") => {
+    (view: ViewState, commitRender: boolean) => {
       viewRef.current = view;
       setViewForUI(view);
       syncToUrl(view);
-      if (isDraft !== "skip") {
-        triggerRender(view, isDraft);
+      if (commitRender) {
+        triggerRender(view);
       }
     },
     [syncToUrl, triggerRender],
@@ -135,18 +121,18 @@ export function MandelbrotExplorer() {
   const handleResize = useCallback(
     (width: number, height: number) => {
       sizeRef.current = { width, height };
-      triggerRender(viewRef.current, false);
+      triggerRender(viewRef.current);
     },
     [triggerRender],
   );
 
   const handleReset = useCallback(() => {
-    handleViewChange(DEFAULT_VIEW, false);
+    handleViewChange(DEFAULT_VIEW, true);
   }, [handleViewChange]);
 
   const handleSettingsChange = useCallback(
     (view: ViewState) => {
-      handleViewChange(view, false); // Settings changes always get full render
+      handleViewChange(view, true); // Settings changes always get full render
     },
     [handleViewChange],
   );

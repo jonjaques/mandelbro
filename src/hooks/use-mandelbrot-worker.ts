@@ -45,15 +45,8 @@ const WORKER_COUNT =
  * both check this ID: stale chunks from a superseded render are silently dropped.
  * This means starting a new render implicitly cancels any in-progress render.
  *
- * ## Draft vs Full rendering
- *
- * The caller controls this by passing different width/height values:
- * - Draft: half-resolution (width × DRAFT_SCALE, height × DRAFT_SCALE)
- * - Full: native resolution
- *
- * The paintChunks function detects draft chunks (chunk.width < canvas.width) and
- * uses drawImage to scale them up with bilinear filtering, rather than putImageData
- * which has no scaling capability.
+ * Renders always target the canvas's native pixel dimensions. Interaction
+ * previews are handled separately by reusing the already-rendered canvas.
  */
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -62,9 +55,6 @@ export function useMandelbrotWorker(
   const requestIdRef = useRef(0);
   const pendingChunksRef = useRef<ChunkResult[]>([]);
   const rafIdRef = useRef(0);
-  // The dimensions of the current render request (may differ from canvas
-  // dimensions during draft renders)
-  const renderSizeRef = useRef({ width: 0, height: 0 });
   const pixelsReceivedRef = useRef(0);
   const totalPixelsRef = useRef(0);
   const completedWorkersRef = useRef(0);
@@ -104,50 +94,9 @@ export function useMandelbrotWorker(
       // so this is just wrapping existing memory — no copying.
       const clamped = new Uint8ClampedArray(chunk.buffer);
       const imgData = new ImageData(clamped, chunk.width, chunk.height);
-
-      if (chunk.width === canvas.width) {
-        // ── Full-resolution chunk ────────────────────────────────
-        // putImageData writes pixels 1:1 directly into the canvas buffer.
-        // chunk.y is the band's y-offset within the full canvas.
-        ctx.putImageData(imgData, 0, chunk.y);
-      } else {
-        // ── Draft (half-resolution) chunk ────────────────────────
-        // The chunk is smaller than the canvas (e.g., 50% in each dimension).
-        // We can't use putImageData here because it doesn't scale — it would
-        // only fill a quarter of the canvas.
-        //
-        // Instead, we: (1) write the chunk to a temporary canvas at its
-        // native size, then (2) use drawImage to scale it up to fill the
-        // corresponding region of the main canvas.
-        //
-        // drawImage with imageSmoothingEnabled=true gives us bilinear
-        // interpolation — the upscaled draft looks blurry rather than blocky.
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = chunk.width;
-        tempCanvas.height = chunk.height;
-        const tempCtx = tempCanvas.getContext("2d");
-        if (!tempCtx) continue;
-        tempCtx.putImageData(imgData, 0, 0);
-
-        // Scale factors: how much bigger the canvas is than the render size
-        const scaleX = canvas.width / renderSizeRef.current.width;
-        const scaleY = canvas.height / renderSizeRef.current.height;
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(
-          tempCanvas,
-          // Source rectangle (the entire temp canvas)
-          0,
-          0,
-          chunk.width,
-          chunk.height,
-          // Destination rectangle (scaled up to canvas coordinates)
-          0,
-          chunk.y * scaleY,
-          chunk.width * scaleX,
-          chunk.height * scaleY,
-        );
-      }
+      // putImageData writes pixels 1:1 directly into the canvas buffer.
+      // chunk.y is the band's y-offset within the full canvas.
+      ctx.putImageData(imgData, 0, chunk.y);
     }
   }, [canvasRef]);
 
@@ -239,7 +188,6 @@ export function useMandelbrotWorker(
 
       // Increment request ID to implicitly cancel any in-progress render
       const id = ++requestIdRef.current;
-      renderSizeRef.current = { width, height };
       totalPixelsRef.current = width * height;
       pixelsReceivedRef.current = 0;
       completedWorkersRef.current = 0;

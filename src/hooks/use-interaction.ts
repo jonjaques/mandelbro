@@ -4,14 +4,12 @@ import { autoIterations } from "@/lib/mandelbrot/compute";
 
 interface InteractionCallbacks {
   /**
-   * Called when the user interacts with the canvas. The `isDraft` parameter
-   * controls render quality:
-   *   - `true`   → trigger a fast draft render (half resolution)
-   *   - `false`  → trigger a full-quality render
-   *   - `"skip"` → update state but DON'T render (used during pan, where
-   *                 pixel-shifting provides the visual feedback instead)
+   * Called when the user interacts with the canvas:
+   *   - `true`  → commit a full-quality render
+   *   - `false` → update state but DON'T render yet because the canvas preview
+   *               already provides the visual feedback
    */
-  onViewChange: (view: ViewState, isDraft: boolean | "skip") => void;
+  onViewChange: (view: ViewState, commitRender: boolean) => void;
   getView: () => ViewState;
 }
 
@@ -24,12 +22,17 @@ interface TouchGestureState {
   startDistance?: number;
 }
 
+interface WheelGestureState {
+  startView: ViewState;
+  snapshot: HTMLCanvasElement;
+}
+
 /**
  * Hook that attaches all user interaction handlers (pan, zoom, pinch, double-click)
- * to the canvas element. Implements the draft/full quality tier strategy:
+ * to the canvas element.
  *
  * - During continuous interaction (drag, wheel, pinch): instant visual feedback
- *   via canvas pixel-shifting or draft renders
+ *   via canvas pixel-shifting or snapshot-based previews
  * - After interaction stops (50ms debounce): schedule a full-quality render
  *
  * All coordinate math in this hook converts between three coordinate spaces:
@@ -49,12 +52,13 @@ interface TouchGestureState {
  */
 export function useInteraction(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  { onViewChange, getView }: InteractionCallbacks,
+  { onViewChange: commitViewChange, getView }: InteractionCallbacks,
 ) {
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchGesture = useRef<TouchGestureState | null>(null);
+  const wheelGesture = useRef<WheelGestureState | null>(null);
   const activityRef = useRef<(() => void) | null>(null);
 
   // Expose an activity callback for external use (the Coordinates HUD uses
@@ -73,10 +77,11 @@ export function useInteraction(
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         idleTimer.current = null;
-        onViewChange(view, false);
+        wheelGesture.current = null;
+        commitViewChange(view, true);
       }, 50);
     },
-    [onViewChange],
+    [commitViewChange],
   );
 
   useEffect(() => {
@@ -92,6 +97,7 @@ export function useInteraction(
     const handlePointerDown = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
       if (e.button !== 0) return; // Left button only
+      wheelGesture.current = null;
       isDragging.current = true;
       lastPos.current = { x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
@@ -173,7 +179,7 @@ export function useInteraction(
       // "skip" means: update the view state and URL, but don't trigger any
       // render — the pixel-shift already provides the visual feedback.
       // The scheduled full render will catch up when the user stops dragging.
-      onViewChange(newView, "skip");
+      commitViewChange(newView, false);
       scheduleFullRender(newView);
     };
 
@@ -191,8 +197,17 @@ export function useInteraction(
       e.preventDefault();
       activityRef.current?.();
 
-      const view = getView();
       const rect = canvas.getBoundingClientRect();
+      const view = getView();
+
+      if (!wheelGesture.current) {
+        const snapshot = snapshotCanvas();
+        if (!snapshot) return;
+        wheelGesture.current = {
+          startView: view,
+          snapshot,
+        };
+      }
 
       // Mouse position as a fraction of the canvas (0 = left/top, 1 = right/bottom)
       const mouseX = (e.clientX - rect.left) / rect.width;
@@ -235,14 +250,20 @@ export function useInteraction(
         maxIter: autoIterations(newZoom),
       };
 
-      onViewChange(newView, true); // Draft render for speed
+      commitViewChange(newView, false);
+      drawViewPreview(
+        wheelGesture.current.snapshot,
+        wheelGesture.current.startView,
+        newView,
+        rect,
+      );
       scheduleFullRender(newView);
     };
 
     // ── DOUBLE-CLICK (2x zoom in) ────────────────────────────────────
     //
     // Instantly zooms to 2x centered on the click point. Unlike wheel zoom,
-    // this triggers an immediate full-quality render (no draft) because it's
+    // this triggers an immediate full-quality render because it's
     // a single discrete action, not a continuous gesture.
 
     const handleDblClick = (e: MouseEvent) => {
@@ -268,7 +289,7 @@ export function useInteraction(
         maxIter: autoIterations(newZoom),
       };
 
-      onViewChange(newView, false); // Full quality immediately
+      commitViewChange(newView, true); // Full quality immediately
     };
 
     // ── TOUCH GESTURES (pan + pinch) ──────────────────────────────────
@@ -285,6 +306,7 @@ export function useInteraction(
         clearTimeout(idleTimer.current);
         idleTimer.current = null;
       }
+      wheelGesture.current = null;
     };
 
     const snapshotCanvas = () => {
@@ -297,14 +319,38 @@ export function useInteraction(
       return snapshot;
     };
 
-    const drawTouchPreview = (snapshot: HTMLCanvasElement, scale: number, tx: number, ty: number) => {
+    const drawViewPreview = (
+      snapshot: HTMLCanvasElement,
+      fromView: ViewState,
+      toView: ViewState,
+      rect: DOMRect,
+    ) => {
       const ctx = canvas.getContext("2d", { alpha: false });
       if (!ctx) return;
+
+      const aspectRatio = rect.width / rect.height;
+      const fromWidth = fromView.zoom * aspectRatio;
+      const toWidth = toView.zoom * aspectRatio;
+      const fromXMin = fromView.centerX - fromWidth / 2;
+      const fromYMin = fromView.centerY - fromView.zoom / 2;
+      const toXMin = toView.centerX - toWidth / 2;
+      const toYMin = toView.centerY - toView.zoom / 2;
+      const scaleX = fromWidth / toWidth;
+      const scaleY = fromView.zoom / toView.zoom;
+      const translateX = ((fromXMin - toXMin) / toWidth) * canvas.width;
+      const translateY = ((fromYMin - toYMin) / toView.zoom) * canvas.height;
+
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = true;
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(snapshot, tx, ty, snapshot.width * scale, snapshot.height * scale);
+      ctx.drawImage(
+        snapshot,
+        translateX,
+        translateY,
+        snapshot.width * scaleX,
+        snapshot.height * scaleY,
+      );
     };
 
     const startTouchGesture = (touches: TouchList) => {
@@ -365,8 +411,6 @@ export function useInteraction(
       activityRef.current?.();
 
       const rect = canvas.getBoundingClientRect();
-      const pxPerCssX = canvas.width / rect.width;
-      const pxPerCssY = canvas.height / rect.height;
 
       if (gesture.mode === "pan") {
         if (e.touches.length !== 1 || !gesture.startTouch) return;
@@ -376,20 +420,14 @@ export function useInteraction(
 
         const dxCss = touch.clientX - gesture.startTouch.x;
         const dyCss = touch.clientY - gesture.startTouch.y;
-        drawTouchPreview(
-          gesture.snapshot,
-          1,
-          dxCss * pxPerCssX,
-          dyCss * pxPerCssY,
-        );
-
         const scale = gesture.startView.zoom / rect.height;
         const newView: ViewState = {
           ...gesture.startView,
           centerX: gesture.startView.centerX - dxCss * scale,
           centerY: gesture.startView.centerY - dyCss * scale,
         };
-        onViewChange(newView, "skip");
+        drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
+        commitViewChange(newView, false);
         return;
       }
 
@@ -412,19 +450,6 @@ export function useInteraction(
       const distanceX = touchA.clientX - touchB.clientX;
       const distanceY = touchA.clientY - touchB.clientY;
       const currentDistance = Math.max(Math.hypot(distanceX, distanceY), 1);
-      const previewScale = currentDistance / gesture.startDistance;
-
-      const startMidX = (gesture.startMidpoint.x - rect.left) * pxPerCssX;
-      const startMidY = (gesture.startMidpoint.y - rect.top) * pxPerCssY;
-      const currentMidX = (currentMidpoint.x - rect.left) * pxPerCssX;
-      const currentMidY = (currentMidpoint.y - rect.top) * pxPerCssY;
-
-      drawTouchPreview(
-        gesture.snapshot,
-        previewScale,
-        currentMidX - previewScale * startMidX,
-        currentMidY - previewScale * startMidY,
-      );
 
       const aspectRatio = rect.width / rect.height;
       const startMouseX = (gesture.startMidpoint.x - rect.left) / rect.width;
@@ -437,7 +462,8 @@ export function useInteraction(
       const worldY =
         gesture.startView.centerY +
         (startMouseY - 0.5) * gesture.startView.zoom;
-      const newZoom = gesture.startView.zoom * (gesture.startDistance / currentDistance);
+      const newZoom =
+        gesture.startView.zoom * (gesture.startDistance / currentDistance);
 
       const newView: ViewState = {
         ...gesture.startView,
@@ -446,7 +472,8 @@ export function useInteraction(
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
       };
-      onViewChange(newView, "skip");
+      drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
+      commitViewChange(newView, false);
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
@@ -457,7 +484,7 @@ export function useInteraction(
 
       if (!touchGesture.current) return;
       touchGesture.current = null;
-      onViewChange(getView(), false);
+      commitViewChange(getView(), true);
     };
 
     // ── Event listener registration ───────────────────────────────────
@@ -488,7 +515,7 @@ export function useInteraction(
       canvas.removeEventListener("touchend", handleTouchEnd);
       canvas.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [canvasRef, getView, onViewChange, scheduleFullRender]);
+  }, [canvasRef, commitViewChange, getView, scheduleFullRender]);
 
   return { onActivity };
 }
