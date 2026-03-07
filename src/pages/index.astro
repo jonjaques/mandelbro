@@ -1,42 +1,33 @@
 ---
-import "../styles/global.css";
 import { MandelbrotExplorer } from "@/components/mandelbrot/MandelbrotExplorer";
+import MainLayout from "@/layouts/main.astro";
+
+const description =
+  "Mandelbro is a web-based Mandelbrot set explorer. It allows you to zoom in and out of the Mandelbrot set, and explore its intricate details. You can also save your progress and share it with others.";
 ---
 
-<html lang="en" class="dark">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="manifest" href="/manifest.webmanifest" />
-		<meta name="theme-color" content="#000000" />
-		<meta name="mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<link rel="apple-touch-icon" href="/icon-192.svg" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-		<link href="https://fonts.cdnfonts.com/css/macula" rel="stylesheet" />
-		<meta name="description" content="Interactive Mandelbrot set explorer" />
-		<title>Mandelbro</title>
-	</head>
+<MainLayout title="Mandelbro" description={description}>
+  <MandelbrotExplorer client:load />
+  <script is:inline>
+    (() => {
+      if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+        return;
+      }
 
-	<body>
-		<MandelbrotExplorer client:load />
-		<script is:inline>
-			(() => {
-				if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+      const isLocalhost = ["localhost", "127.0.0.1", "[::1]"].includes(
+        window.location.hostname,
+      );
 
-				const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
-				if (isLocalhost) {
-					navigator.serviceWorker.getRegistrations().then((regs) => {
-						for (const r of regs) r.unregister();
-					});
-					return;
-				}
+      if (isLocalhost) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+        });
+        return;
+      }
 
-				navigator.serviceWorker.register('/sw.js');
-			})();
-		</script>
-	</body>
-</html>
+      navigator.serviceWorker.register("/sw.js");
+    })();
+  </script>
+</MainLayout>

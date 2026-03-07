@@ -1,17 +1,103 @@
 ---
-import '../styles/global.css';
-const { content } = Astro.props;
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  noIndex?: boolean;
+}
+
+const {
+  title = "Mandelbro",
+  description = "Mandelbro is a web-based Mandelbrot set explorer. It allows you to zoom in and out of the Mandelbrot set, and explore its intricate details. You can also save your progress and share it with others.",
+  image = "/preview.jpg",
+  noIndex = false,
+} = Astro.props;
+
+const siteBase = Astro.site ?? Astro.url;
+const canonicalUrl = new URL(
+  `${Astro.url.pathname}${Astro.url.search}`,
+  siteBase,
+);
+const imageUrl = new URL(image, siteBase);
+
+const gaKey = import.meta.env.PUBLIC_GA_ID;
+const hasAnalytics =
+  import.meta.env.PROD && typeof gaKey === "string" && gaKey.length > 0;
+const gaScript = hasAnalytics
+  ? [
+      "window.dataLayer = window.dataLayer || [];",
+      "function gtag(){dataLayer.push(arguments)}",
+      "gtag('js', new Date());",
+      `gtag('config', '${gaKey}');`,
+    ].join("")
+  : "";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<title>{content.title}</title>
-	</head>
-	<body>
-		<slot />
-	</body>
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={title} />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
+
+    <link rel="canonical" href={canonicalUrl.toString()} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/appicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/appicon-180.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/appicon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/appicon-512.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/macula" rel="stylesheet" />
+
+    <title>{title}</title>
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mandelbro" />
+    <meta property="og:url" content={canonicalUrl.toString()} />
+    <meta property="og:image" content={imageUrl.toString()} />
+    <meta property="og:image:alt" content={description} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl.toString()} />
+
+    {
+      hasAnalytics && (
+        <script
+          is:inline
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaKey}`}
+        />
+      )
+    }
+    {hasAnalytics && <script is:inline set:html={gaScript} />}
+  </head>
+  <body>
+    <slot />
+  </body>
 </html>
