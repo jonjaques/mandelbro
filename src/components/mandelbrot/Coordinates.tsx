@@ -55,8 +55,12 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-50 glass-subtle font-mono text-xs leading-relaxed px-3 py-2 rounded-lg text-white/80 transition-opacity duration-500 select-none pointer-events-none"
-      style={{ opacity: visible ? 1 : 0 }}
+      className="fixed z-50 glass-subtle font-mono text-xs leading-relaxed px-3 py-2 rounded-lg text-white/80 transition-opacity duration-500 select-none pointer-events-none"
+      style={{
+        opacity: visible ? 1 : 0,
+        bottom: "calc(1rem + var(--safe-area-bottom))",
+        left: "calc(1rem + var(--safe-area-left))",
+      }}
     >
       <div>
         Re: <span className="tabular-nums">{formatNum(view.centerX)}</span>

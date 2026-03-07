@@ -22,26 +22,108 @@ interface ToolbarProps {
 
 const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
 
+type FullscreenDocument = Document & {
+  webkitExitFullscreen?: () => Promise<void>;
+  webkitFullscreenElement?: Element | null;
+  webkitFullscreenEnabled?: boolean;
+};
+
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+};
+
+type StandaloneNavigator = Navigator & {
+  standalone?: boolean;
+};
+
+function getActiveFullscreenElement(doc: FullscreenDocument): Element | null {
+  return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
+function isStandaloneApp(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    (window.navigator as StandaloneNavigator).standalone === true
+  );
+}
+
 export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [supportsFullscreen, setSupportsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const doc = document as FullscreenDocument;
+    const root = document.documentElement as FullscreenElement;
+    const standaloneMedia = window.matchMedia("(display-mode: standalone)");
+    const fullscreenMedia = window.matchMedia("(display-mode: fullscreen)");
+
     const handleChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const fullscreenEnabled =
+        doc.fullscreenEnabled ||
+        doc.webkitFullscreenEnabled === true ||
+        typeof root.webkitRequestFullscreen === "function";
+
+      setIsFullscreen(getActiveFullscreenElement(doc) !== null);
+      setIsStandalone(isStandaloneApp());
+      setSupportsFullscreen(fullscreenEnabled);
     };
+
+    handleChange();
     document.addEventListener("fullscreenchange", handleChange);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      handleChange as EventListener,
+    );
+    standaloneMedia.addEventListener("change", handleChange);
+    fullscreenMedia.addEventListener("change", handleChange);
+    window.addEventListener("pageshow", handleChange);
+
     return () => {
       document.removeEventListener("fullscreenchange", handleChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleChange as EventListener,
+      );
+      standaloneMedia.removeEventListener("change", handleChange);
+      fullscreenMedia.removeEventListener("change", handleChange);
+      window.removeEventListener("pageshow", handleChange);
     };
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen();
+  const toggleFullscreen = useCallback(async () => {
+    const doc = document as FullscreenDocument;
+    const root = document.documentElement as FullscreenElement;
+    const activeFullscreenElement = getActiveFullscreenElement(doc);
+
+    if (activeFullscreenElement) {
+      if (typeof doc.exitFullscreen === "function") {
+        await doc.exitFullscreen();
+        return;
+      }
+      if (typeof doc.webkitExitFullscreen === "function") {
+        await doc.webkitExitFullscreen();
+      }
+      return;
+    }
+
+    if (typeof root.requestFullscreen === "function") {
+      await root.requestFullscreen();
+      return;
+    }
+
+    if (typeof root.webkitRequestFullscreen === "function") {
+      await root.webkitRequestFullscreen();
+      return;
+    }
+
+    if (!isStandaloneApp()) {
+      window.alert(
+        "Fullscreen is not available in iPhone Safari. Add Mandelbro to your Home Screen for a native full-screen experience.",
+      );
     }
   }, []);
 
@@ -62,9 +144,22 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
 
   const btnClass =
     "text-white/70 hover:text-white hover:bg-white/10 rounded-none first:rounded-t-lg last:rounded-b-lg";
+  const fullscreenLabel = isStandalone
+    ? "Installed app already fills the screen"
+    : supportsFullscreen
+      ? isFullscreen
+        ? "Exit Fullscreen"
+        : "Fullscreen"
+      : "Use Add to Home Screen on iPhone";
 
   return (
-    <div className="fixed top-4 right-4 z-50 glass rounded-lg flex flex-col">
+    <div
+      className="fixed z-50 glass rounded-lg flex flex-col"
+      style={{
+        top: "calc(1rem + var(--safe-area-top))",
+        right: "calc(1rem + var(--safe-area-right))",
+      }}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -143,7 +238,10 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
             variant="ghost"
             size="icon"
             className={btnClass}
-            onClick={toggleFullscreen}
+            onClick={() => {
+              void toggleFullscreen();
+            }}
+            aria-label={fullscreenLabel}
           >
             {isFullscreen ? (
               <Minimize className="size-4" />
@@ -152,9 +250,7 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
             )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">
-          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-        </TooltipContent>
+        <TooltipContent side="left">{fullscreenLabel}</TooltipContent>
       </Tooltip>
     </div>
   );

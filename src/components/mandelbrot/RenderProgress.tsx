@@ -26,9 +26,11 @@ export function RenderProgress({ progress }: RenderProgressProps) {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 pointer-events-none select-none transition-opacity duration-150"
+      className="fixed z-50 pointer-events-none select-none transition-opacity duration-150"
       style={{
         opacity: visible ? 1 : 0,
+        bottom: "calc(1rem + var(--safe-area-bottom))",
+        right: "calc(1rem + var(--safe-area-right))",
         transitionDelay: visible ? "300ms" : "0ms",
       }}
     >

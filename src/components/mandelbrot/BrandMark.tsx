@@ -31,7 +31,11 @@ export function BrandMark({ canvasRef }: BrandMarkProps) {
   return (
     <div
       ref={brandRef}
-      className="fixed top-4 left-4 z-40 pointer-events-none select-none px-3 py-2"
+      className="fixed z-40 pointer-events-none select-none px-3 py-2"
+      style={{
+        top: "calc(1rem + var(--safe-area-top))",
+        left: "calc(1rem + var(--safe-area-left))",
+      }}
     >
       <h1
         className="text-2xl leading-none uppercase transition-[color,text-shadow] duration-300"
