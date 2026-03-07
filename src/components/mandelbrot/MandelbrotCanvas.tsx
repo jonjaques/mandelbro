@@ -87,10 +87,15 @@ export const MandelbrotCanvas = forwardRef<
   return (
     <canvas
       ref={internalRef}
-      // fixed inset-0: fill the entire viewport
+      // fixed positioning plus explicit app viewport vars avoids iOS
+      // dynamic-toolbar gaps that can appear with generic h-full sizing.
       // touch-none: disable browser touch gestures (we handle them manually)
-      className="fixed inset-0 w-full h-full touch-none"
-      style={{ cursor: "crosshair" }}
+      className="fixed top-0 left-0 touch-none"
+      style={{
+        cursor: "crosshair",
+        width: "var(--app-width)",
+        height: "var(--app-height)",
+      }}
     />
   );
 });
