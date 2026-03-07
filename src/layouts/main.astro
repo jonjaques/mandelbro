@@ -99,30 +99,5 @@ const gaScript = hasAnalytics
   </head>
   <body>
     <slot />
-    <script is:inline>
-      (() => {
-        const updateViewportVars = () => {
-          const viewport = window.visualViewport;
-          const width = viewport?.width ?? window.innerWidth;
-          const height = viewport?.height ?? window.innerHeight;
-
-          document.documentElement.style.setProperty(
-            "--app-width",
-            `${Math.round(width)}px`,
-          );
-          document.documentElement.style.setProperty(
-            "--app-height",
-            `${Math.round(height)}px`,
-          );
-        };
-
-        updateViewportVars();
-        window.addEventListener("resize", updateViewportVars);
-        window.addEventListener("orientationchange", updateViewportVars);
-        window.addEventListener("pageshow", updateViewportVars);
-        window.visualViewport?.addEventListener("resize", updateViewportVars);
-        window.visualViewport?.addEventListener("scroll", updateViewportVars);
-      })();
-    </script>
   </body>
 </html>

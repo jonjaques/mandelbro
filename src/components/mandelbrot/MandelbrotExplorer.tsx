@@ -32,6 +32,7 @@ import { DEFAULT_VIEW } from "@/lib/mandelbrot/url-state";
 import { useMandelbrotWorker } from "@/hooks/use-mandelbrot-worker";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useInteraction } from "@/hooks/use-interaction";
+import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { MandelbrotCanvas } from "./MandelbrotCanvas";
 import { BrandMark } from "./BrandMark";
 import { Toolbar } from "./Toolbar";
@@ -40,6 +41,8 @@ import { Coordinates } from "./Coordinates";
 import { RenderProgress } from "./RenderProgress";
 
 export function MandelbrotExplorer() {
+  useViewportHeight();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Authoritative view state — ref (not state) for synchronous access
   // in high-frequency event handlers that would have stale closure issues

@@ -49,7 +49,6 @@
 
 :root {
   --radius: 0.625rem;
-  --app-width: 100vw;
   --app-height: 100dvh;
   --app-cover-height: max(var(--app-height), 100vh);
   --safe-area-top: env(safe-area-inset-top, 0px);
@@ -136,7 +135,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    width: var(--app-width);
+    width: 100%;
     height: var(--app-cover-height);
     min-height: var(--app-cover-height);
     margin: 0;
