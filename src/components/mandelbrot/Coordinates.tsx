@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
+import {
+  formatPreciseValue,
+  getMagnification,
+  resolvePrecisionMode,
+} from "@/lib/mandelbrot/precision";
 
 interface CoordinatesProps {
   view: ViewState;
   onRegisterActivity: (cb: () => void) => void;
 }
 
-function formatNum(n: number): string {
-  if (Math.abs(n) < 0.0001) return n.toExponential(4);
-  return n.toFixed(8);
+function formatNum(value: string): string {
+  return formatPreciseValue(value, 8);
 }
 
-function formatZoom(zoom: number): string {
-  const magnification = 3.5 / zoom;
+function formatZoom(view: ViewState): string {
+  const magnification = getMagnification(view);
   if (magnification >= 1e6) return magnification.toExponential(2) + "x";
   if (magnification >= 1000)
     return Math.round(magnification).toLocaleString() + "x";
@@ -22,6 +26,7 @@ function formatZoom(zoom: number): string {
 export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
   const [visible, setVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeMode = resolvePrecisionMode(view);
 
   const resetHideTimer = useCallback(() => {
     setVisible(true);
@@ -51,7 +56,13 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [view.centerX, view.centerY, view.zoom, resetHideTimer]);
+  }, [
+    view.centerXPrecise,
+    view.centerYPrecise,
+    view.zoomPrecise,
+    view.precisionMode,
+    resetHideTimer,
+  ]);
 
   return (
     <div
@@ -63,13 +74,21 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
       }}
     >
       <div>
-        Re: <span className="tabular-nums">{formatNum(view.centerX)}</span>
+        Re:{" "}
+        <span className="tabular-nums">{formatNum(view.centerXPrecise)}</span>
       </div>
       <div>
-        Im: <span className="tabular-nums">{formatNum(view.centerY)}</span>
+        Im:{" "}
+        <span className="tabular-nums">{formatNum(view.centerYPrecise)}</span>
       </div>
       <div>
-        Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span>
+        Zoom: <span className="tabular-nums">{formatZoom(view)}</span>
+      </div>
+      <div>
+        Mode:{" "}
+        <span className="tabular-nums uppercase">
+          {activeMode === "precise" ? "precise" : "native"}
+        </span>
       </div>
     </div>
   );

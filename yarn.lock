@@ -4340,6 +4340,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bigfloat-esnext@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "bigfloat-esnext@npm:3.0.1"
+  checksum: 10c0/2cedd6f43c86267ff45fb093ee4671ba8022e5b51d924d9ffefb01d8c5fd16aec2dac19e53a8d40b65b2ea27f41ed5bced406be651edb5dd0375b6dd43bfbe60
+  languageName: node
+  linkType: hard
+
 "body-parser@npm:^2.2.1":
   version: 2.2.2
   resolution: "body-parser@npm:2.2.2"
@@ -7828,6 +7835,7 @@ __metadata:
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
     astro: "npm:^5.18.0"
+    bigfloat-esnext: "npm:^3.0.1"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
     eslint: "npm:^9.39.4"

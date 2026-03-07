@@ -15,6 +15,7 @@
  */
 import type { ColorScheme, ViewState } from "./types";
 import { autoIterations } from "./compute";
+import { withPreciseFields } from "./precision";
 
 /**
  * The default "home" view: the classic Mandelbrot set overview.
@@ -27,8 +28,12 @@ export const DEFAULT_VIEW: ViewState = {
   centerX: -0.5,
   centerY: 0,
   zoom: 3.5,
+  centerXPrecise: "-0.5",
+  centerYPrecise: "0",
+  zoomPrecise: "3.5",
   maxIter: autoIterations(3.5),
   colorScheme: "classic",
+  precisionMode: "auto",
 };
 
 const VALID_SCHEMES = new Set<ColorScheme>([
@@ -56,11 +61,19 @@ const VALID_SCHEMES = new Set<ColorScheme>([
  */
 export function serializeToHash(state: ViewState): string {
   const params = new URLSearchParams();
-  params.set("x", state.centerX.toPrecision(15));
-  params.set("y", state.centerY.toPrecision(15));
-  params.set("z", state.zoom.toPrecision(10));
+  params.set("x", state.centerXPrecise);
+  params.set("y", state.centerYPrecise);
+  params.set("z", state.zoomPrecise);
   params.set("i", String(state.maxIter));
   params.set("c", state.colorScheme);
+  params.set(
+    "p",
+    state.precisionMode === "native"
+      ? "n"
+      : state.precisionMode === "precise"
+        ? "h"
+        : "a",
+  );
   return "#" + params.toString();
 }
 
@@ -73,22 +86,36 @@ export function deserializeFromHash(hash: string): ViewState | null {
   if (!hash || hash === "#") return null;
 
   const params = new URLSearchParams(hash.slice(1));
-  const x = Number(params.get("x"));
-  const y = Number(params.get("y"));
-  const z = Number(params.get("z"));
+  const xRaw = params.get("x");
+  const yRaw = params.get("y");
+  const zRaw = params.get("z");
   const i = Number(params.get("i"));
   const c = params.get("c") as ColorScheme;
+  const p = params.get("p");
 
-  if (isNaN(x) || isNaN(y) || isNaN(z) || isNaN(i)) return null;
+  if (!xRaw || !yRaw || !zRaw || isNaN(i)) return null;
   if (!VALID_SCHEMES.has(c)) return null;
+  if (p && p !== "n" && p !== "a" && p !== "h") return null;
 
-  return {
+  const x = Number(xRaw);
+  const y = Number(yRaw);
+  const z = Number(zRaw);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+    return null;
+  }
+
+  return withPreciseFields({
     centerX: x,
     centerY: y,
     zoom: z,
+    centerXPrecise: xRaw,
+    centerYPrecise: yRaw,
+    zoomPrecise: zRaw,
     maxIter: Math.max(50, Math.min(5000, Math.round(i))),
     colorScheme: c,
-  };
+    precisionMode: p === "n" ? "native" : p === "h" ? "precise" : "auto",
+  });
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;

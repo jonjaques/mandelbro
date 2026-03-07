@@ -16,9 +16,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import type { ColorScheme, ViewState } from "@/lib/mandelbrot/types";
+import type {
+  ColorScheme,
+  PrecisionMode,
+  ViewState,
+} from "@/lib/mandelbrot/types";
 import { COLOR_SCHEME_NAMES, getSwatchColors } from "@/lib/mandelbrot/colors";
 import { autoIterations } from "@/lib/mandelbrot/compute";
+import {
+  formatPreciseValue,
+  getMagnification,
+  resolvePrecisionMode,
+} from "@/lib/mandelbrot/precision";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -29,6 +38,12 @@ interface SettingsPanelProps {
 }
 
 const SCHEMES = Object.keys(COLOR_SCHEME_NAMES) as ColorScheme[];
+const PRECISION_MODES: PrecisionMode[] = ["native", "auto", "precise"];
+const PRECISION_MODE_LABELS: Record<PrecisionMode, string> = {
+  native: "Native",
+  auto: "Auto",
+  precise: "Precise",
+};
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
@@ -89,13 +104,12 @@ function ColorSwatch({ scheme }: { scheme: ColorScheme }) {
   );
 }
 
-function formatCoord(n: number): string {
-  if (Math.abs(n) < 0.0001) return n.toExponential(6);
-  return n.toPrecision(12);
+function formatCoord(value: string): string {
+  return formatPreciseValue(value, 8);
 }
 
-function formatZoom(zoom: number): string {
-  const magnification = 3.5 / zoom;
+function formatZoom(view: ViewState): string {
+  const magnification = getMagnification(view);
   if (magnification >= 1e6) return magnification.toExponential(2) + "x";
   if (magnification >= 1000)
     return Math.round(magnification).toLocaleString() + "x";
@@ -111,6 +125,7 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const [shareCopied, setShareCopied] = useState(false);
   const shareTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resolvedMode = resolvePrecisionMode(view);
 
   const handleShare = useCallback(() => {
     void navigator.clipboard.writeText(window.location.href);
@@ -138,9 +153,15 @@ export function SettingsPanel({
           <div className="space-y-2">
             <SectionHeader>Position</SectionHeader>
             <div className="flex flex-col -mx-2">
-              <CoordinateRow label="Re" value={formatCoord(view.centerX)} />
-              <CoordinateRow label="Im" value={formatCoord(view.centerY)} />
-              <CoordinateRow label="Zoom" value={formatZoom(view.zoom)} />
+              <CoordinateRow
+                label="Re"
+                value={formatCoord(view.centerXPrecise)}
+              />
+              <CoordinateRow
+                label="Im"
+                value={formatCoord(view.centerYPrecise)}
+              />
+              <CoordinateRow label="Zoom" value={formatZoom(view)} />
               <CoordinateRow label="Iter" value={String(view.maxIter)} />
             </div>
           </div>
@@ -203,6 +224,43 @@ export function SettingsPanel({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-medium text-white/80">
+                  Precision Mode
+                </p>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-white/40">
+                  Active: {PRECISION_MODE_LABELS[resolvedMode]}
+                </span>
+              </div>
+              <Select
+                value={view.precisionMode}
+                onValueChange={(val: PrecisionMode) => {
+                  onViewChange({ ...view, precisionMode: val });
+                }}
+              >
+                <SelectTrigger className="bg-white/10 border-white/8 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 backdrop-blur-md border-white/8">
+                  {PRECISION_MODES.map((mode) => (
+                    <SelectItem
+                      key={mode}
+                      value={mode}
+                      className="text-white focus:bg-white/20 focus:text-white"
+                    >
+                      {PRECISION_MODE_LABELS[mode]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] leading-relaxed text-white/45">
+                Native keeps the current fast path, Auto switches near the deep
+                zoom artifact threshold, and Precise always forces arbitrary
+                precision rendering.
+              </p>
             </div>
           </div>
 

@@ -130,7 +130,13 @@ export function MandelbrotExplorer() {
   );
 
   const handleReset = useCallback(() => {
-    handleViewChange(DEFAULT_VIEW, true);
+    handleViewChange(
+      {
+        ...DEFAULT_VIEW,
+        precisionMode: viewRef.current.precisionMode,
+      },
+      true,
+    );
   }, [handleViewChange]);
 
   const handleSettingsChange = useCallback(

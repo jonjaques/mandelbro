@@ -5,6 +5,10 @@ import type {
   ChunkResult,
   WorkerOutMessage,
 } from "@/lib/mandelbrot/types";
+import {
+  getDivisionPrecisionForZoom,
+  resolvePrecisionMode,
+} from "@/lib/mandelbrot/precision";
 
 /**
  * Number of Web Workers in the rendering pool.
@@ -200,18 +204,38 @@ export function useMandelbrotWorker(
         const worker = workers[i];
         if (!worker) continue;
 
-        const request: RenderRequest = {
-          requestId: id,
-          width,
-          height,
-          centerX: view.centerX,
-          centerY: view.centerY,
-          zoom: view.zoom,
-          maxIter: view.maxIter,
-          colorScheme: view.colorScheme,
-          workerIndex: i,
-          workerCount: workers.length,
-        };
+        const request: RenderRequest =
+          resolvePrecisionMode(view) === "precise"
+            ? {
+                requestId: id,
+                mode: "precise",
+                width,
+                height,
+                centerX: view.centerXPrecise,
+                centerY: view.centerYPrecise,
+                zoom: view.zoomPrecise,
+                maxIter: view.maxIter,
+                colorScheme: view.colorScheme,
+                precision: getDivisionPrecisionForZoom(
+                  view.zoomPrecise,
+                  Math.max(width, height),
+                ),
+                workerIndex: i,
+                workerCount: workers.length,
+              }
+            : {
+                requestId: id,
+                mode: "native",
+                width,
+                height,
+                centerX: view.centerX,
+                centerY: view.centerY,
+                zoom: view.zoom,
+                maxIter: view.maxIter,
+                colorScheme: view.colorScheme,
+                workerIndex: i,
+                workerCount: workers.length,
+              };
 
         worker.postMessage(request);
       }

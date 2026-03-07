@@ -18,6 +18,9 @@ export type ColorScheme =
   | "ice"
   | "neon";
 
+/** How viewport math should be resolved for committed renders. */
+export type PrecisionMode = "native" | "auto" | "precise";
+
 /**
  * The complete state of the fractal viewport. This is the single source of
  * truth for "what the user is looking at." It's persisted in the URL hash,
@@ -33,8 +36,12 @@ export interface ViewState {
   centerX: number;
   centerY: number;
   zoom: number;
+  centerXPrecise: string;
+  centerYPrecise: string;
+  zoomPrecise: string;
   maxIter: number;
   colorScheme: ColorScheme;
+  precisionMode: PrecisionMode;
 }
 
 /**
@@ -47,8 +54,9 @@ export interface ViewState {
  * `workerIndex` and `workerCount` control round-robin band distribution:
  * worker N processes bands N, N+count, N+2*count, etc.
  */
-export interface RenderRequest {
+export interface NativeRenderRequest {
   requestId: number;
+  mode: "native";
   width: number; // Render width in pixels
   height: number; // Render height in pixels
   centerX: number;
@@ -61,6 +69,25 @@ export interface RenderRequest {
   /** Total number of workers in the pool */
   workerCount?: number;
 }
+
+export interface PreciseRenderRequest {
+  requestId: number;
+  mode: "precise";
+  width: number; // Render width in pixels
+  height: number; // Render height in pixels
+  centerX: string;
+  centerY: string;
+  zoom: string;
+  maxIter: number;
+  colorScheme: ColorScheme;
+  precision: number;
+  /** Index of this worker in the pool (0-based) */
+  workerIndex?: number;
+  /** Total number of workers in the pool */
+  workerCount?: number;
+}
+
+export type RenderRequest = NativeRenderRequest | PreciseRenderRequest;
 
 /** Legacy non-streaming result type (retained for compatibility) */
 export interface RenderResult {

@@ -1,3 +1,14 @@
+import {
+  add,
+  div,
+  make,
+  mul,
+  scientific,
+  sub,
+  type IBigFloat,
+} from "bigfloat-esnext";
+import { getDivisionPrecisionForZoom } from "./precision";
+
 /**
  * Higher bailout values produce smoother color gradients at the escape boundary
  * because they let |z|² grow larger before we declare "escaped," giving the
@@ -7,6 +18,11 @@
  */
 const BAILOUT = 256;
 const LOG2 = Math.log(2);
+const PRECISE_TWO = make("2");
+
+function preciseToApproxNumber(value: IBigFloat): number {
+  return Number(scientific(value));
+}
 
 /**
  * The default zoom level of 3.5 corresponds to the "standard view" of the
@@ -210,6 +226,54 @@ export function computeBand(
       const [iter, zMag2] = escapeTime(x0, y0, maxIter);
       result[rowOffset + px] = smoothColor(iter, zMag2);
     }
+  }
+
+  return result;
+}
+
+export function computeBandPrecise(
+  width: number,
+  fullHeight: number,
+  startY: number,
+  bandHeight: number,
+  centerX: string,
+  centerY: string,
+  zoom: string,
+  maxIter: number,
+  precision = getDivisionPrecisionForZoom(zoom, Math.max(width, fullHeight)),
+): Float64Array {
+  const result = new Float64Array(width * bandHeight);
+  const widthBig = make(String(width));
+  const heightBig = make(String(fullHeight));
+  const zoomBig = make(zoom);
+  const aspectRatio = div(widthBig, heightBig, precision);
+  const halfZoom = div(zoomBig, PRECISE_TWO, precision);
+  const xMin = sub(make(centerX), mul(halfZoom, aspectRatio));
+  const yMin = sub(make(centerY), halfZoom);
+  const pixelWidth = div(mul(zoomBig, aspectRatio), widthBig, precision);
+  const pixelHeight = div(zoomBig, heightBig, precision);
+  let y0 = add(yMin, mul(make(String(startY)), pixelHeight));
+
+  for (let localY = 0; localY < bandHeight; localY++) {
+    const rowOffset = localY * width;
+    let x0 = xMin;
+    const y0Number = preciseToApproxNumber(y0);
+
+    for (let px = 0; px < width; px++) {
+      const x0Number = preciseToApproxNumber(x0);
+
+      if (isInCardioid(x0Number, y0Number)) {
+        result[rowOffset + px] = maxIter;
+        x0 = add(x0, pixelWidth);
+        continue;
+      }
+
+      const [iter, zMag2] = escapeTime(x0Number, y0Number, maxIter);
+      result[rowOffset + px] = smoothColor(iter, zMag2);
+      x0 = add(x0, pixelWidth);
+    }
+
+    y0 = add(y0, pixelHeight);
   }
 
   return result;

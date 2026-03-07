@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
+import {
+  addPrecise,
+  applyPrecisePan,
+  applyPreciseRecenterZoom,
+  applyPreciseZoomAroundPoint,
+  canonicalizeNumber,
+  mulPrecise,
+  shouldUseHighPrecision,
+  subPrecise,
+  withPreciseFields,
+} from "@/lib/mandelbrot/precision";
 
 interface InteractionCallbacks {
   /**
@@ -171,10 +182,20 @@ export function useInteraction(
       lastPos.current = { x: e.clientX, y: e.clientY };
 
       const newView: ViewState = {
+        ...withPreciseFields(view),
         ...view,
         centerX: view.centerX - dxCss * scale,
         centerY: view.centerY - dyCss * scale,
       };
+
+      if (shouldUseHighPrecision(view)) {
+        const precisePan = applyPrecisePan(view, dxCss, dyCss, rect.height);
+        newView.centerXPrecise = precisePan.centerXPrecise;
+        newView.centerYPrecise = precisePan.centerYPrecise;
+      } else {
+        newView.centerXPrecise = canonicalizeNumber(newView.centerX);
+        newView.centerYPrecise = canonicalizeNumber(newView.centerY);
+      }
 
       // "skip" means: update the view state and URL, but don't trigger any
       // render — the pixel-shift already provides the visual feedback.
@@ -241,14 +262,37 @@ export function useInteraction(
 
       const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
       const newZoom = view.zoom * factor;
+      const nextZoomPrecise = canonicalizeNumber(newZoom);
+      const preciseMode = shouldUseHighPrecision({
+        zoomPrecise: nextZoomPrecise,
+        precisionMode: view.precisionMode,
+      });
 
       const newView: ViewState = {
+        ...withPreciseFields(view),
         ...view,
         centerX: worldX - (mouseX - 0.5) * newZoom * aspectRatio,
         centerY: worldY - (mouseY - 0.5) * newZoom,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
       };
+
+      if (preciseMode) {
+        const preciseZoom = applyPreciseZoomAroundPoint(
+          view,
+          mouseX,
+          mouseY,
+          aspectRatio,
+          factor,
+        );
+        newView.centerXPrecise = preciseZoom.centerXPrecise;
+        newView.centerYPrecise = preciseZoom.centerYPrecise;
+        newView.zoomPrecise = preciseZoom.zoomPrecise;
+      } else {
+        newView.centerXPrecise = canonicalizeNumber(newView.centerX);
+        newView.centerYPrecise = canonicalizeNumber(newView.centerY);
+        newView.zoomPrecise = nextZoomPrecise;
+      }
 
       commitViewChange(newView, false);
       drawViewPreview(
@@ -276,18 +320,41 @@ export function useInteraction(
 
       const aspectRatio = rect.width / rect.height;
       const newZoom = view.zoom / 2; // 2x magnification = half the zoom range
+      const nextZoomPrecise = canonicalizeNumber(newZoom);
+      const preciseMode = shouldUseHighPrecision({
+        zoomPrecise: nextZoomPrecise,
+        precisionMode: view.precisionMode,
+      });
 
       // New center = the complex-plane point under the cursor.
       // This is the same worldX/worldY formula from wheel zoom, but we set
       // it directly as the new center (no need to back-solve, because the
       // click point BECOMES the center).
       const newView: ViewState = {
+        ...withPreciseFields(view),
         ...view,
         centerX: view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio,
         centerY: view.centerY + (mouseY - 0.5) * view.zoom,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
       };
+
+      if (preciseMode) {
+        const preciseZoom = applyPreciseRecenterZoom(
+          view,
+          mouseX,
+          mouseY,
+          aspectRatio,
+          0.5,
+        );
+        newView.centerXPrecise = preciseZoom.centerXPrecise;
+        newView.centerYPrecise = preciseZoom.centerYPrecise;
+        newView.zoomPrecise = preciseZoom.zoomPrecise;
+      } else {
+        newView.centerXPrecise = canonicalizeNumber(newView.centerX);
+        newView.centerYPrecise = canonicalizeNumber(newView.centerY);
+        newView.zoomPrecise = nextZoomPrecise;
+      }
 
       commitViewChange(newView, true); // Full quality immediately
     };
@@ -422,10 +489,24 @@ export function useInteraction(
         const dyCss = touch.clientY - gesture.startTouch.y;
         const scale = gesture.startView.zoom / rect.height;
         const newView: ViewState = {
+          ...withPreciseFields(gesture.startView),
           ...gesture.startView,
           centerX: gesture.startView.centerX - dxCss * scale,
           centerY: gesture.startView.centerY - dyCss * scale,
         };
+        if (shouldUseHighPrecision(gesture.startView)) {
+          const precisePan = applyPrecisePan(
+            gesture.startView,
+            dxCss,
+            dyCss,
+            rect.height,
+          );
+          newView.centerXPrecise = precisePan.centerXPrecise;
+          newView.centerYPrecise = precisePan.centerYPrecise;
+        } else {
+          newView.centerXPrecise = canonicalizeNumber(newView.centerX);
+          newView.centerYPrecise = canonicalizeNumber(newView.centerY);
+        }
         drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
         commitViewChange(newView, false);
         return;
@@ -464,14 +545,52 @@ export function useInteraction(
         (startMouseY - 0.5) * gesture.startView.zoom;
       const newZoom =
         gesture.startView.zoom * (gesture.startDistance / currentDistance);
+      const nextZoomPrecise = canonicalizeNumber(newZoom);
+      const preciseMode = shouldUseHighPrecision({
+        zoomPrecise: nextZoomPrecise,
+        precisionMode: gesture.startView.precisionMode,
+      });
 
       const newView: ViewState = {
+        ...withPreciseFields(gesture.startView),
         ...gesture.startView,
         centerX: worldX - (currentMouseX - 0.5) * newZoom * aspectRatio,
         centerY: worldY - (currentMouseY - 0.5) * newZoom,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
       };
+      if (preciseMode) {
+        const startOffsetX = canonicalizeNumber(startMouseX - 0.5);
+        const startOffsetY = canonicalizeNumber(startMouseY - 0.5);
+        const currentOffsetX = canonicalizeNumber(currentMouseX - 0.5);
+        const currentOffsetY = canonicalizeNumber(currentMouseY - 0.5);
+        const aspect = canonicalizeNumber(aspectRatio);
+        const worldXPrecise = addPrecise(
+          gesture.startView.centerXPrecise,
+          mulPrecise(
+            mulPrecise(startOffsetX, gesture.startView.zoomPrecise),
+            aspect,
+          ),
+        );
+        const worldYPrecise = addPrecise(
+          gesture.startView.centerYPrecise,
+          mulPrecise(startOffsetY, gesture.startView.zoomPrecise),
+        );
+
+        newView.centerXPrecise = subPrecise(
+          worldXPrecise,
+          mulPrecise(mulPrecise(currentOffsetX, nextZoomPrecise), aspect),
+        );
+        newView.centerYPrecise = subPrecise(
+          worldYPrecise,
+          mulPrecise(currentOffsetY, nextZoomPrecise),
+        );
+        newView.zoomPrecise = nextZoomPrecise;
+      } else {
+        newView.centerXPrecise = canonicalizeNumber(newView.centerX);
+        newView.centerYPrecise = canonicalizeNumber(newView.centerY);
+        newView.zoomPrecise = nextZoomPrecise;
+      }
       drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
       commitViewChange(newView, false);
     };

@@ -30,7 +30,7 @@
  * bands 1, N+1, 2N+1, ...; etc. This interleaving distributes work evenly
  * and ensures all regions of the image progress simultaneously.
  */
-import { computeBand } from "./compute";
+import { computeBand, computeBandPrecise } from "./compute";
 import { mapToColors } from "./colors";
 import type { RenderRequest, ChunkResult, RenderComplete } from "./types";
 
@@ -56,6 +56,7 @@ let currentRequestId = -1;
  * - Matches common CPU cache line patterns for memory access efficiency
  */
 const BAND_HEIGHT = 32;
+const PRECISE_BAND_HEIGHT = 4;
 
 workerSelf.onmessage = (e: MessageEvent<RenderRequest>) => {
   const req = e.data;
@@ -64,15 +65,16 @@ workerSelf.onmessage = (e: MessageEvent<RenderRequest>) => {
 };
 
 function processRequest(req: RenderRequest) {
-  const { width, height, centerX, centerY, zoom, maxIter, colorScheme } = req;
+  const { width, height, maxIter, colorScheme } = req;
 
   // Multi-worker round-robin: this worker starts at its assigned band and
   // skips ahead by workerCount bands each iteration.
   // With 4 workers: worker 0 → bands 0,4,8,...  worker 1 → bands 1,5,9,...
   const workerIndex = req.workerIndex ?? 0;
   const workerCount = req.workerCount ?? 1;
-  let y = workerIndex * BAND_HEIGHT;
-  const stride = workerCount * BAND_HEIGHT;
+  const bandSize = req.mode === "precise" ? PRECISE_BAND_HEIGHT : BAND_HEIGHT;
+  let y = workerIndex * bandSize;
+  const stride = workerCount * bandSize;
 
   function nextBand() {
     // ── Cancellation check ──────────────────────────────────────
@@ -91,21 +93,34 @@ function processRequest(req: RenderRequest) {
       return;
     }
 
-    // Last band may be shorter than BAND_HEIGHT if height isn't evenly divisible
-    const bandHeight = Math.min(BAND_HEIGHT, height - y);
+    // Last band may be shorter than the configured band size if height isn't evenly divisible
+    const bandHeight = Math.min(bandSize, height - y);
 
     // Step 1: Compute smooth iteration counts for every pixel in this band.
     // Returns Float64Array because the smooth coloring produces fractional values.
-    const iterations = computeBand(
-      width,
-      height,
-      y,
-      bandHeight,
-      centerX,
-      centerY,
-      zoom,
-      maxIter,
-    );
+    const iterations =
+      req.mode === "precise"
+        ? computeBandPrecise(
+            width,
+            height,
+            y,
+            bandHeight,
+            req.centerX,
+            req.centerY,
+            req.zoom,
+            maxIter,
+            req.precision,
+          )
+        : computeBand(
+            width,
+            height,
+            y,
+            bandHeight,
+            req.centerX,
+            req.centerY,
+            req.zoom,
+            maxIter,
+          );
 
     // Step 2: Map iteration counts → RGBA pixel data using the selected palette.
     const rgba = mapToColors(iterations, maxIter, colorScheme);
