@@ -37,6 +37,8 @@
     "astro": "^5.18.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "d3-color": "^3.1.0",
+    "d3-scale-chromatic": "^3.1.0",
     "lucide-react": "^0.577.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
@@ -47,6 +49,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
     "@eslint/js": "^9.39.4",
+    "@types/d3-color": "^3",
+    "@types/d3-scale-chromatic": "^3",
     "eslint": "^9.39.4",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",

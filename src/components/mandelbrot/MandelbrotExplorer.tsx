@@ -55,7 +55,7 @@ export function MandelbrotExplorer() {
   // Mirror of viewRef as React state, driving UI re-renders
   const [viewForUI, setViewForUI] = useState<ViewState>(DEFAULT_VIEW);
 
-  const { render, progress } = useMandelbrotWorker(canvasRef);
+  const { render, cancelRender, progress } = useMandelbrotWorker(canvasRef);
 
   const triggerRender = useCallback(
     (view: ViewState) => {
@@ -118,6 +118,7 @@ export function MandelbrotExplorer() {
   const { onActivity } = useInteraction(canvasRef, {
     onViewChange: handleViewChange,
     getView,
+    onInteractionStart: cancelRender,
   });
 
   // Called by MandelbrotCanvas when the viewport resizes (window resize, DPR change)

@@ -33,11 +33,15 @@ const RAW_RUNTIME_STATE =
           ["@astrojs/react", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:4.4.2"],\
           ["@eslint/js", "npm:9.39.4"],\
           ["@tailwindcss/vite", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:4.2.1"],\
+          ["@types/d3-color", "npm:3.1.3"],\
+          ["@types/d3-scale-chromatic", "npm:3.1.0"],\
           ["@types/react", "npm:19.2.14"],\
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["astro", "npm:5.18.0"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
+          ["d3-color", "npm:3.1.0"],\
+          ["d3-scale-chromatic", "npm:3.1.0"],\
           ["eslint", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:9.39.4"],\
           ["eslint-plugin-jsx-a11y", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:6.10.2"],\
           ["eslint-plugin-react", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:7.37.5"],\
@@ -4543,6 +4547,24 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@types/d3-color", [\
+      ["npm:3.1.3", {\
+        "packageLocation": "../../.yarn/berry/cache/@types-d3-color-npm-3.1.3-220f383461-10c0.zip/node_modules/@types/d3-color/",\
+        "packageDependencies": [\
+          ["@types/d3-color", "npm:3.1.3"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["@types/d3-scale-chromatic", [\
+      ["npm:3.1.0", {\
+        "packageLocation": "../../.yarn/berry/cache/@types-d3-scale-chromatic-npm-3.1.0-9022e50bfe-10c0.zip/node_modules/@types/d3-scale-chromatic/",\
+        "packageDependencies": [\
+          ["@types/d3-scale-chromatic", "npm:3.1.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["@types/debug", [\
       ["npm:4.1.12", {\
         "packageLocation": "../../.yarn/berry/cache/@types-debug-npm-4.1.12-82a3fc4905-10c0.zip/node_modules/@types/debug/",\
@@ -6220,6 +6242,36 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "../../.yarn/berry/cache/csstype-npm-3.2.3-741053244e-10c0.zip/node_modules/csstype/",\
         "packageDependencies": [\
           ["csstype", "npm:3.2.3"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["d3-color", [\
+      ["npm:3.1.0", {\
+        "packageLocation": "../../.yarn/berry/cache/d3-color-npm-3.1.0-fc73fe3b15-10c0.zip/node_modules/d3-color/",\
+        "packageDependencies": [\
+          ["d3-color", "npm:3.1.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["d3-interpolate", [\
+      ["npm:3.0.1", {\
+        "packageLocation": "../../.yarn/berry/cache/d3-interpolate-npm-3.0.1-77ddca7977-10c0.zip/node_modules/d3-interpolate/",\
+        "packageDependencies": [\
+          ["d3-color", "npm:3.1.0"],\
+          ["d3-interpolate", "npm:3.0.1"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["d3-scale-chromatic", [\
+      ["npm:3.1.0", {\
+        "packageLocation": "../../.yarn/berry/cache/d3-scale-chromatic-npm-3.1.0-4c3af415f5-10c0.zip/node_modules/d3-scale-chromatic/",\
+        "packageDependencies": [\
+          ["d3-color", "npm:3.1.0"],\
+          ["d3-interpolate", "npm:3.0.1"],\
+          ["d3-scale-chromatic", "npm:3.1.0"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -9494,11 +9546,15 @@ const RAW_RUNTIME_STATE =
           ["@astrojs/react", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:4.4.2"],\
           ["@eslint/js", "npm:9.39.4"],\
           ["@tailwindcss/vite", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:4.2.1"],\
+          ["@types/d3-color", "npm:3.1.3"],\
+          ["@types/d3-scale-chromatic", "npm:3.1.0"],\
           ["@types/react", "npm:19.2.14"],\
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["astro", "npm:5.18.0"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
+          ["d3-color", "npm:3.1.0"],\
+          ["d3-scale-chromatic", "npm:3.1.0"],\
           ["eslint", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:9.39.4"],\
           ["eslint-plugin-jsx-a11y", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:6.10.2"],\
           ["eslint-plugin-react", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:7.37.5"],\

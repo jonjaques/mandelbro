@@ -7,16 +7,15 @@
  *   Main thread ──► Worker:     RenderRequest (start/cancel a render)
  *   Worker ──► Main thread:     ChunkResult | RenderComplete (streaming output)
  */
+import type { ColorScheme } from "./color-schemes";
 
-/** Available color palette names */
-export type ColorScheme =
-  | "classic"
-  | "fire"
-  | "ocean"
-  | "grayscale"
-  | "psychedelic"
-  | "ice"
-  | "neon";
+export { COLOR_SCHEMES } from "./color-schemes";
+export type { ColorScheme } from "./color-schemes";
+
+export const ANTIALIAS_MODES = ["auto", 1, 2, 4] as const;
+export const ANTIALIAS_SAMPLES = [1, 2, 4] as const;
+export type AntialiasMode = (typeof ANTIALIAS_MODES)[number];
+export type AntialiasSamples = (typeof ANTIALIAS_SAMPLES)[number];
 
 /**
  * The complete state of the fractal viewport. This is the single source of
@@ -28,6 +27,7 @@ export type ColorScheme =
  *         (smaller = more zoomed in)
  * - maxIter: maximum escape-time iterations (higher = more detail but slower)
  * - colorScheme: which color palette to use
+ * - antialias: anti-aliasing mode for committed renders
  */
 export interface ViewState {
   centerX: number;
@@ -35,6 +35,7 @@ export interface ViewState {
   zoom: number;
   maxIter: number;
   colorScheme: ColorScheme;
+  antialias: AntialiasMode;
 }
 
 /**
@@ -48,6 +49,7 @@ export interface ViewState {
  * worker N processes bands N, N+count, N+2*count, etc.
  */
 export interface RenderRequest {
+  type: "render";
   requestId: number;
   width: number; // Render width in pixels
   height: number; // Render height in pixels
@@ -56,11 +58,19 @@ export interface RenderRequest {
   zoom: number;
   maxIter: number;
   colorScheme: ColorScheme;
+  antialiasSamples: AntialiasSamples;
   /** Index of this worker in the pool (0-based) */
   workerIndex?: number;
   /** Total number of workers in the pool */
   workerCount?: number;
 }
+
+export interface CancelRequest {
+  type: "cancel";
+  requestId: number;
+}
+
+export type WorkerInMessage = RenderRequest | CancelRequest;
 
 /** Legacy non-streaming result type (retained for compatibility) */
 export interface RenderResult {

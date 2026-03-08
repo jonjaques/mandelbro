@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  CancelRequest,
   RenderRequest,
   ViewState,
   ChunkResult,
   WorkerOutMessage,
 } from "@/lib/mandelbrot/types";
+import { resolveAntialiasSamples } from "@/lib/mandelbrot/compute";
 
 /**
  * Number of Web Workers in the rendering pool.
@@ -167,6 +169,32 @@ export function useMandelbrotWorker(
     };
   }, [paintChunks]);
 
+  const cancelRender = useCallback(() => {
+    const workers = workersRef.current;
+    if (workers.length === 0) return;
+
+    const id = ++requestIdRef.current;
+    pendingChunksRef.current = [];
+    pixelsReceivedRef.current = 0;
+    totalPixelsRef.current = 0;
+    completedWorkersRef.current = 0;
+    setProgress(null);
+
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
+
+    const cancelMessage: CancelRequest = {
+      type: "cancel",
+      requestId: id,
+    };
+
+    for (const worker of workers) {
+      worker.postMessage(cancelMessage);
+    }
+  }, []);
+
   /**
    * Dispatch a render request to all workers.
    *
@@ -201,6 +229,7 @@ export function useMandelbrotWorker(
         if (!worker) continue;
 
         const request: RenderRequest = {
+          type: "render",
           requestId: id,
           width,
           height,
@@ -209,6 +238,7 @@ export function useMandelbrotWorker(
           zoom: view.zoom,
           maxIter: view.maxIter,
           colorScheme: view.colorScheme,
+          antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
           workerIndex: i,
           workerCount: workers.length,
         };
@@ -219,5 +249,5 @@ export function useMandelbrotWorker(
     [],
   );
 
-  return { render, progress };
+  return { render, cancelRender, progress };
 }

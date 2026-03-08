@@ -1,3 +1,5 @@
+import type { AntialiasMode, AntialiasSamples } from "./types";
+
 /**
  * Higher bailout values produce smoother color gradients at the escape boundary
  * because they let |z|² grow larger before we declare "escaped," giving the
@@ -33,6 +35,21 @@ export function autoIterations(zoom: number): number {
   // At default zoom this is 0; at 2x zoom it's 1; at 4x zoom it's 2, etc.
   const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));
   return Math.round(Math.min(5000, Math.max(200, 200 + 50 * depth)));
+}
+
+/**
+ * Resolve the user's anti-aliasing preference to a concrete sample count for
+ * worker renders. `auto` uses a light pass at broad views and ramps up once
+ * the zoom is deep enough that edge shimmer becomes more noticeable.
+ */
+export function resolveAntialiasSamples(
+  mode: AntialiasMode,
+  zoom: number,
+): AntialiasSamples {
+  if (mode !== "auto") return mode;
+
+  const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));
+  return depth >= 6 ? 4 : 2;
 }
 
 /**
@@ -134,6 +151,19 @@ export function smoothColor(iterations: number, zMag2: number): number {
   return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
 }
 
+export function computePixelSample(
+  x0: number,
+  y0: number,
+  maxIter: number,
+): number {
+  if (isInCardioid(x0, y0)) {
+    return maxIter;
+  }
+
+  const [iter, zMag2] = escapeTime(x0, y0, maxIter);
+  return smoothColor(iter, zMag2);
+}
+
 /**
  * Compute a horizontal band (stripe) of the Mandelbrot set.
  *
@@ -200,15 +230,7 @@ export function computeBand(
     for (let px = 0; px < width; px++) {
       // Map pixel column to real axis coordinate
       const x0 = xMin + px * pixelWidth;
-
-      // Fast analytical check: skip iteration for known interior regions
-      if (isInCardioid(x0, y0)) {
-        result[rowOffset + px] = maxIter;
-        continue;
-      }
-
-      const [iter, zMag2] = escapeTime(x0, y0, maxIter);
-      result[rowOffset + px] = smoothColor(iter, zMag2);
+      result[rowOffset + px] = computePixelSample(x0, y0, maxIter);
     }
   }
 
@@ -243,14 +265,7 @@ export function computeFrame(
 
     for (let px = 0; px < width; px++) {
       const x0 = xMin + px * pixelWidth;
-
-      if (isInCardioid(x0, y0)) {
-        result[rowOffset + px] = maxIter;
-        continue;
-      }
-
-      const [iter, zMag2] = escapeTime(x0, y0, maxIter);
-      result[rowOffset + px] = smoothColor(iter, zMag2);
+      result[rowOffset + px] = computePixelSample(x0, y0, maxIter);
     }
   }
 

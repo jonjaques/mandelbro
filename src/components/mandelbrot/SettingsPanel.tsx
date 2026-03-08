@@ -16,9 +16,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import type { ColorScheme, ViewState } from "@/lib/mandelbrot/types";
+import {
+  ANTIALIAS_MODES,
+  COLOR_SCHEMES,
+  type AntialiasMode,
+  type AntialiasSamples,
+  type ColorScheme,
+  type ViewState,
+} from "@/lib/mandelbrot/types";
 import { COLOR_SCHEME_NAMES, getSwatchColors } from "@/lib/mandelbrot/colors";
-import { autoIterations } from "@/lib/mandelbrot/compute";
+import {
+  autoIterations,
+  resolveAntialiasSamples,
+} from "@/lib/mandelbrot/compute";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -28,7 +38,15 @@ interface SettingsPanelProps {
   onReset: () => void;
 }
 
-const SCHEMES = Object.keys(COLOR_SCHEME_NAMES) as ColorScheme[];
+const SCHEMES = COLOR_SCHEMES;
+
+function getAntialiasLabel(mode: AntialiasMode, zoom: number): string {
+  if (mode === "auto") {
+    return `Auto (${resolveAntialiasSamples(mode, zoom)} samples)`;
+  }
+
+  return mode === 1 ? "Off" : `${mode} samples`;
+}
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
@@ -199,6 +217,48 @@ export function SettingsPanel({
                         <ColorSwatch scheme={scheme} />
                         <span>{COLOR_SCHEME_NAMES[scheme]}</span>
                       </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-medium text-white/80">
+                  Anti-Aliasing
+                </p>
+                <span className="font-mono text-xs text-white/60 tabular-nums">
+                  {getAntialiasLabel(view.antialias, view.zoom)}
+                </span>
+              </div>
+              <Select
+                value={String(view.antialias)}
+                onValueChange={(value) => {
+                  onViewChange({
+                    ...view,
+                    antialias:
+                      value === "auto"
+                        ? "auto"
+                        : (Number(value) as AntialiasSamples),
+                  });
+                }}
+              >
+                <SelectTrigger className="bg-white/10 border-white/8 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 backdrop-blur-md border-white/8">
+                  {ANTIALIAS_MODES.map((mode) => (
+                    <SelectItem
+                      key={String(mode)}
+                      value={String(mode)}
+                      className="text-white focus:bg-white/20 focus:text-white"
+                    >
+                      {mode === "auto"
+                        ? "Auto"
+                        : mode === 1
+                          ? "Off"
+                          : `${mode} samples`}
                     </SelectItem>
                   ))}
                 </SelectContent>

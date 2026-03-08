@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
 
+const DRAG_RENDER_DEBOUNCE_MS = 60;
+const WHEEL_RENDER_DEBOUNCE_MS = 140;
+const TOUCH_RENDER_DEBOUNCE_MS = 100;
+
 interface InteractionCallbacks {
   /**
    * Called when the user interacts with the canvas:
@@ -11,6 +15,7 @@ interface InteractionCallbacks {
    */
   onViewChange: (view: ViewState, commitRender: boolean) => void;
   getView: () => ViewState;
+  onInteractionStart: () => void;
 }
 
 interface TouchGestureState {
@@ -52,7 +57,11 @@ interface WheelGestureState {
  */
 export function useInteraction(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  { onViewChange: commitViewChange, getView }: InteractionCallbacks,
+  {
+    onViewChange: commitViewChange,
+    getView,
+    onInteractionStart,
+  }: InteractionCallbacks,
 ) {
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
@@ -73,13 +82,13 @@ export function useInteraction(
    * the timer resets — so the full render only fires when the user pauses.
    */
   const scheduleFullRender = useCallback(
-    (view: ViewState) => {
+    (view: ViewState, delayMs: number) => {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         idleTimer.current = null;
         wheelGesture.current = null;
         commitViewChange(view, true);
-      }, 50);
+      }, delayMs);
     },
     [commitViewChange],
   );
@@ -97,6 +106,7 @@ export function useInteraction(
     const handlePointerDown = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
       if (e.button !== 0) return; // Left button only
+      onInteractionStart();
       wheelGesture.current = null;
       isDragging.current = true;
       lastPos.current = { x: e.clientX, y: e.clientY };
@@ -180,7 +190,7 @@ export function useInteraction(
       // render — the pixel-shift already provides the visual feedback.
       // The scheduled full render will catch up when the user stops dragging.
       commitViewChange(newView, false);
-      scheduleFullRender(newView);
+      scheduleFullRender(newView, DRAG_RENDER_DEBOUNCE_MS);
     };
 
     const handlePointerUp = (e: PointerEvent) => {
@@ -201,6 +211,7 @@ export function useInteraction(
       const view = getView();
 
       if (!wheelGesture.current) {
+        onInteractionStart();
         const snapshot = snapshotCanvas();
         if (!snapshot) return;
         wheelGesture.current = {
@@ -257,7 +268,7 @@ export function useInteraction(
         newView,
         rect,
       );
-      scheduleFullRender(newView);
+      scheduleFullRender(newView, WHEEL_RENDER_DEBOUNCE_MS);
     };
 
     // ── DOUBLE-CLICK (2x zoom in) ────────────────────────────────────
@@ -355,6 +366,7 @@ export function useInteraction(
 
     const startTouchGesture = (touches: TouchList) => {
       clearScheduledRender();
+      onInteractionStart();
       const snapshot = snapshotCanvas();
       if (!snapshot) return;
 
@@ -483,8 +495,14 @@ export function useInteraction(
       }
 
       if (!touchGesture.current) return;
+      const finishedGesture = touchGesture.current;
       touchGesture.current = null;
-      commitViewChange(getView(), true);
+      scheduleFullRender(
+        getView(),
+        finishedGesture.mode === "pinch"
+          ? TOUCH_RENDER_DEBOUNCE_MS
+          : DRAG_RENDER_DEBOUNCE_MS,
+      );
     };
 
     // ── Event listener registration ───────────────────────────────────
@@ -515,7 +533,13 @@ export function useInteraction(
       canvas.removeEventListener("touchend", handleTouchEnd);
       canvas.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [canvasRef, commitViewChange, getView, scheduleFullRender]);
+  }, [
+    canvasRef,
+    commitViewChange,
+    getView,
+    onInteractionStart,
+    scheduleFullRender,
+  ]);
 
   return { onActivity };
 }

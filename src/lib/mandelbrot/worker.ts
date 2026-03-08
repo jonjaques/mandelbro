@@ -8,7 +8,7 @@
  * ## Band-based streaming
  *
  * Instead of computing the entire image and sending it back in one shot,
- * the canvas is divided into 32px-tall horizontal bands. Each band is
+ * the canvas is divided into small horizontal bands. Each band is
  * computed, colored, and posted back independently. This gives us:
  *
  * 1. **Progressive display** — the user sees the image filling in band by
@@ -30,12 +30,18 @@
  * bands 1, N+1, 2N+1, ...; etc. This interleaving distributes work evenly
  * and ensures all regions of the image progress simultaneously.
  */
-import { computeBand } from "./compute";
-import { mapToColors } from "./colors";
-import type { RenderRequest, ChunkResult, RenderComplete } from "./types";
+import { computeBand, computePixelSample } from "./compute";
+import { colorFromSmoothIteration, mapToColors } from "./colors";
+import type {
+  AntialiasSamples,
+  WorkerInMessage,
+  RenderRequest,
+  ChunkResult,
+  RenderComplete,
+} from "./types";
 
 interface WorkerContext {
-  onmessage: ((e: MessageEvent<RenderRequest>) => void) | null;
+  onmessage: ((e: MessageEvent<WorkerInMessage>) => void) | null;
   postMessage: (message: unknown, transfer?: Transferable[]) => void;
 }
 
@@ -50,29 +56,44 @@ const workerSelf = self as unknown as WorkerContext;
 let currentRequestId = -1;
 
 /**
- * Height of each horizontal band in pixels. 32px is a sweet spot:
- * - Small enough for fine-grained cancellation and smooth progressive display
- * - Large enough to amortize the per-band overhead (postMessage, setTimeout)
- * - Matches common CPU cache line patterns for memory access efficiency
+ * Baseline height of each horizontal band in pixels. The actual height is
+ * reduced for expensive renders so the first chunk arrives sooner and stale
+ * work can be cancelled with lower latency.
  */
-const BAND_HEIGHT = 32;
+const BASE_BAND_HEIGHT = 32;
 
-workerSelf.onmessage = (e: MessageEvent<RenderRequest>) => {
-  const req = e.data;
-  currentRequestId = req.requestId;
-  processRequest(req);
+workerSelf.onmessage = (e: MessageEvent<WorkerInMessage>) => {
+  const msg = e.data;
+  currentRequestId = msg.requestId;
+
+  if (msg.type === "cancel") {
+    return;
+  }
+
+  processRequest(msg);
 };
 
 function processRequest(req: RenderRequest) {
-  const { width, height, centerX, centerY, zoom, maxIter, colorScheme } = req;
+  const {
+    width,
+    height,
+    centerX,
+    centerY,
+    zoom,
+    maxIter,
+    colorScheme,
+    antialiasSamples,
+  } = req;
+
+  const bandHeightStep = getBandHeight(maxIter, antialiasSamples);
 
   // Multi-worker round-robin: this worker starts at its assigned band and
   // skips ahead by workerCount bands each iteration.
   // With 4 workers: worker 0 → bands 0,4,8,...  worker 1 → bands 1,5,9,...
   const workerIndex = req.workerIndex ?? 0;
   const workerCount = req.workerCount ?? 1;
-  let y = workerIndex * BAND_HEIGHT;
-  const stride = workerCount * BAND_HEIGHT;
+  let y = workerIndex * bandHeightStep;
+  const stride = workerCount * bandHeightStep;
 
   function nextBand() {
     // ── Cancellation check ──────────────────────────────────────
@@ -91,24 +112,37 @@ function processRequest(req: RenderRequest) {
       return;
     }
 
-    // Last band may be shorter than BAND_HEIGHT if height isn't evenly divisible
-    const bandHeight = Math.min(BAND_HEIGHT, height - y);
+    // Last band may be shorter than the target band size if height isn't evenly divisible
+    const bandHeight = Math.min(bandHeightStep, height - y);
 
-    // Step 1: Compute smooth iteration counts for every pixel in this band.
-    // Returns Float64Array because the smooth coloring produces fractional values.
-    const iterations = computeBand(
-      width,
-      height,
-      y,
-      bandHeight,
-      centerX,
-      centerY,
-      zoom,
-      maxIter,
-    );
-
-    // Step 2: Map iteration counts → RGBA pixel data using the selected palette.
-    const rgba = mapToColors(iterations, maxIter, colorScheme);
+    const rgba =
+      antialiasSamples === 1
+        ? mapToColors(
+            computeBand(
+              width,
+              height,
+              y,
+              bandHeight,
+              centerX,
+              centerY,
+              zoom,
+              maxIter,
+            ),
+            maxIter,
+            colorScheme,
+          )
+        : computeSupersampledBand(
+            width,
+            height,
+            y,
+            bandHeight,
+            centerX,
+            centerY,
+            zoom,
+            maxIter,
+            colorScheme,
+            antialiasSamples,
+          );
 
     // Step 3: Transfer the RGBA buffer to the main thread.
     // The second argument `[buffer]` is the Transferable list — this moves
@@ -140,4 +174,78 @@ function processRequest(req: RenderRequest) {
   }
 
   nextBand();
+}
+
+function hashFloat01(seed: number): number {
+  let value = seed | 0;
+  value = Math.imul(value ^ 61, value | 1);
+  value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+  const hashed = (value ^ (value >>> 14)) >>> 0;
+  return hashed / 4294967296;
+}
+
+function getBandHeight(
+  maxIter: number,
+  antialiasSamples: AntialiasSamples,
+): number {
+  if (antialiasSamples >= 4 || maxIter >= 2000) return 4;
+  if (antialiasSamples >= 2 || maxIter >= 800) return 8;
+  if (maxIter >= 400) return 16;
+  return BASE_BAND_HEIGHT;
+}
+
+function computeSupersampledBand(
+  width: number,
+  fullHeight: number,
+  startY: number,
+  bandHeight: number,
+  centerX: number,
+  centerY: number,
+  zoom: number,
+  maxIter: number,
+  colorScheme: RenderRequest["colorScheme"],
+  samples: AntialiasSamples,
+): Uint8ClampedArray {
+  const rgba = new Uint8ClampedArray(width * bandHeight * 4);
+  const aspectRatio = width / fullHeight;
+  const halfZoom = zoom / 2;
+  const xMin = centerX - halfZoom * aspectRatio;
+  const yMin = centerY - halfZoom;
+  const pixelWidth = (zoom * aspectRatio) / width;
+  const pixelHeight = zoom / fullHeight;
+
+  for (let localY = 0; localY < bandHeight; localY++) {
+    const py = startY + localY;
+    const rowOffset = localY * width;
+
+    for (let px = 0; px < width; px++) {
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+
+      for (let sampleIndex = 0; sampleIndex < samples; sampleIndex++) {
+        const baseSeed =
+          Math.imul(py + 1, 374761393) ^
+          Math.imul(px + 1, 668265263) ^
+          Math.imul(sampleIndex + 1, 2147483647);
+        const offsetX = hashFloat01(baseSeed) - 0.5;
+        const offsetY = hashFloat01(baseSeed ^ 0x9e3779b9) - 0.5;
+        const x0 = xMin + (px + 0.5 + offsetX) * pixelWidth;
+        const y0 = yMin + (py + 0.5 + offsetY) * pixelHeight;
+        const iter = computePixelSample(x0, y0, maxIter);
+        const color = colorFromSmoothIteration(iter, maxIter, colorScheme);
+        red += color[0];
+        green += color[1];
+        blue += color[2];
+      }
+
+      const offset = (rowOffset + px) * 4;
+      rgba[offset] = Math.round(red / samples);
+      rgba[offset + 1] = Math.round(green / samples);
+      rgba[offset + 2] = Math.round(blue / samples);
+      rgba[offset + 3] = 255;
+    }
+  }
+
+  return rgba;
 }

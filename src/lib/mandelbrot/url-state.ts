@@ -13,7 +13,15 @@
  * Hash (not query string) is used because changes don't cause page reloads
  * and aren't sent to the server.
  */
-import type { ColorScheme, ViewState } from "./types";
+import {
+  ANTIALIAS_MODES,
+  ANTIALIAS_SAMPLES,
+  type AntialiasMode,
+  COLOR_SCHEMES,
+  type AntialiasSamples,
+  type ColorScheme,
+  type ViewState,
+} from "./types";
 import { autoIterations } from "./compute";
 
 /**
@@ -29,17 +37,12 @@ export const DEFAULT_VIEW: ViewState = {
   zoom: 3.5,
   maxIter: autoIterations(3.5),
   colorScheme: "classic",
+  antialias: "auto",
 };
 
-const VALID_SCHEMES = new Set<ColorScheme>([
-  "classic",
-  "fire",
-  "ocean",
-  "grayscale",
-  "psychedelic",
-  "ice",
-  "neon",
-]);
+const VALID_SCHEMES = new Set<ColorScheme>(COLOR_SCHEMES);
+const VALID_ANTIALIAS_MODES = new Set<AntialiasMode>(ANTIALIAS_MODES);
+const VALID_ANTIALIAS_SAMPLES = new Set<AntialiasSamples>(ANTIALIAS_SAMPLES);
 
 /**
  * Encode a ViewState as a URL hash string.
@@ -61,6 +64,7 @@ export function serializeToHash(state: ViewState): string {
   params.set("z", state.zoom.toPrecision(10));
   params.set("i", String(state.maxIter));
   params.set("c", state.colorScheme);
+  params.set("aa", String(state.antialias));
   return "#" + params.toString();
 }
 
@@ -78,9 +82,22 @@ export function deserializeFromHash(hash: string): ViewState | null {
   const z = Number(params.get("z"));
   const i = Number(params.get("i"));
   const c = params.get("c") as ColorScheme;
+  const aaParam = params.get("aa");
+  const aa: AntialiasMode =
+    aaParam === null
+      ? "auto"
+      : aaParam === "auto"
+        ? "auto"
+        : (Number(aaParam) as AntialiasSamples);
 
   if (isNaN(x) || isNaN(y) || isNaN(z) || isNaN(i)) return null;
   if (!VALID_SCHEMES.has(c)) return null;
+  if (
+    !VALID_ANTIALIAS_MODES.has(aa) &&
+    !VALID_ANTIALIAS_SAMPLES.has(aa as AntialiasSamples)
+  ) {
+    return null;
+  }
 
   return {
     centerX: x,
@@ -88,6 +105,7 @@ export function deserializeFromHash(hash: string): ViewState | null {
     zoom: z,
     maxIter: Math.max(50, Math.min(5000, Math.round(i))),
     colorScheme: c,
+    antialias: aa,
   };
 }
 
