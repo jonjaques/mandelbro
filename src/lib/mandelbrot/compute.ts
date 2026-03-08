@@ -24,6 +24,18 @@ function preciseToApproxNumber(value: IBigFloat): number {
   return Number(scientific(value));
 }
 
+function trimPrecise(value: IBigFloat, precision: number): IBigFloat {
+  if (value.exponent >= precision) return value;
+
+  const digitsToDrop = precision - value.exponent;
+  const divisor = 10n ** BigInt(digitsToDrop);
+  const coefficient = value.coefficient / divisor;
+
+  if (coefficient === 0n) return make("0");
+
+  return make(coefficient, precision);
+}
+
 /**
  * The default zoom level of 3.5 corresponds to the "standard view" of the
  * Mandelbrot set: a viewport ~3.5 units wide on the complex plane, centered
@@ -245,14 +257,31 @@ export function computeBandPrecise(
   const result = new Float64Array(width * bandHeight);
   const widthBig = make(String(width));
   const heightBig = make(String(fullHeight));
-  const zoomBig = make(zoom);
-  const aspectRatio = div(widthBig, heightBig, precision);
-  const halfZoom = div(zoomBig, PRECISE_TWO, precision);
-  const xMin = sub(make(centerX), mul(halfZoom, aspectRatio));
-  const yMin = sub(make(centerY), halfZoom);
-  const pixelWidth = div(mul(zoomBig, aspectRatio), widthBig, precision);
-  const pixelHeight = div(zoomBig, heightBig, precision);
-  let y0 = add(yMin, mul(make(String(startY)), pixelHeight));
+  const zoomBig = trimPrecise(make(zoom), precision);
+  const centerXBig = trimPrecise(make(centerX), precision);
+  const centerYBig = trimPrecise(make(centerY), precision);
+  const aspectRatio = trimPrecise(
+    div(widthBig, heightBig, precision),
+    precision,
+  );
+  const halfZoom = trimPrecise(div(zoomBig, PRECISE_TWO, precision), precision);
+  const xMin = trimPrecise(
+    sub(centerXBig, mul(halfZoom, aspectRatio)),
+    precision,
+  );
+  const yMin = trimPrecise(sub(centerYBig, halfZoom), precision);
+  const pixelWidth = trimPrecise(
+    div(mul(zoomBig, aspectRatio), widthBig, precision),
+    precision,
+  );
+  const pixelHeight = trimPrecise(
+    div(zoomBig, heightBig, precision),
+    precision,
+  );
+  let y0 = trimPrecise(
+    add(yMin, mul(make(String(startY)), pixelHeight)),
+    precision,
+  );
 
   for (let localY = 0; localY < bandHeight; localY++) {
     const rowOffset = localY * width;
@@ -264,16 +293,16 @@ export function computeBandPrecise(
 
       if (isInCardioid(x0Number, y0Number)) {
         result[rowOffset + px] = maxIter;
-        x0 = add(x0, pixelWidth);
+        x0 = trimPrecise(add(x0, pixelWidth), precision);
         continue;
       }
 
       const [iter, zMag2] = escapeTime(x0Number, y0Number, maxIter);
       result[rowOffset + px] = smoothColor(iter, zMag2);
-      x0 = add(x0, pixelWidth);
+      x0 = trimPrecise(add(x0, pixelWidth), precision);
     }
 
-    y0 = add(y0, pixelHeight);
+    y0 = trimPrecise(add(y0, pixelHeight), precision);
   }
 
   return result;
