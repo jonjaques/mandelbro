@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface ToolbarProps {
   onSettingsToggle: () => void;
@@ -106,6 +107,7 @@ export function Toolbar({
     const activeFullscreenElement = getActiveFullscreenElement(doc);
 
     if (activeFullscreenElement) {
+      trackEvent("fullscreen_toggle", { state: "exit" });
       if (typeof doc.exitFullscreen === "function") {
         await doc.exitFullscreen();
         return;
@@ -115,6 +117,8 @@ export function Toolbar({
       }
       return;
     }
+
+    trackEvent("fullscreen_toggle", { state: "enter" });
 
     if (typeof root.requestFullscreen === "function") {
       await root.requestFullscreen();
@@ -135,6 +139,7 @@ export function Toolbar({
 
   const handleShare = useCallback(() => {
     void navigator.clipboard.writeText(window.location.href);
+    trackEvent("share_url_copy");
     setCopied(true);
     if (copyTimeout.current) clearTimeout(copyTimeout.current);
     copyTimeout.current = setTimeout(() => {
@@ -172,7 +177,10 @@ export function Toolbar({
             variant="ghost"
             size="icon"
             className={btnClass}
-            onClick={onSettingsToggle}
+            onClick={() => {
+              trackEvent("settings_open");
+              onSettingsToggle();
+            }}
           >
             <Settings className="size-4" />
           </Button>

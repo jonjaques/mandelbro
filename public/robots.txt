@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mandelbro.jonjaques.com/sitemap-index.xml

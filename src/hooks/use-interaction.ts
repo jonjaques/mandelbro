@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
+import { trackEvent } from "@/lib/analytics";
 
 const DRAG_RENDER_DEBOUNCE_MS = 60;
 const WHEEL_RENDER_DEBOUNCE_MS = 140;
@@ -82,11 +83,12 @@ export function useInteraction(
    * the timer resets — so the full render only fires when the user pauses.
    */
   const scheduleFullRender = useCallback(
-    (view: ViewState, delayMs: number) => {
+    (view: ViewState, delayMs: number, gesture: string) => {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         idleTimer.current = null;
         wheelGesture.current = null;
+        trackEvent(gesture, { zoom_level: view.zoom });
         commitViewChange(view, true);
       }, delayMs);
     },
@@ -190,7 +192,7 @@ export function useInteraction(
       // render — the pixel-shift already provides the visual feedback.
       // The scheduled full render will catch up when the user stops dragging.
       commitViewChange(newView, false);
-      scheduleFullRender(newView, DRAG_RENDER_DEBOUNCE_MS);
+      scheduleFullRender(newView, DRAG_RENDER_DEBOUNCE_MS, "pan_complete");
     };
 
     const handlePointerUp = (e: PointerEvent) => {
@@ -268,7 +270,7 @@ export function useInteraction(
         newView,
         rect,
       );
-      scheduleFullRender(newView, WHEEL_RENDER_DEBOUNCE_MS);
+      scheduleFullRender(newView, WHEEL_RENDER_DEBOUNCE_MS, "zoom_wheel");
     };
 
     // ── DOUBLE-CLICK (2x zoom in) ────────────────────────────────────
@@ -300,6 +302,7 @@ export function useInteraction(
         maxIter: autoIterations(newZoom),
       };
 
+      trackEvent("zoom_double_click", { zoom_level: newView.zoom });
       commitViewChange(newView, true); // Full quality immediately
     };
 
@@ -502,6 +505,7 @@ export function useInteraction(
         finishedGesture.mode === "pinch"
           ? TOUCH_RENDER_DEBOUNCE_MS
           : DRAG_RENDER_DEBOUNCE_MS,
+        finishedGesture.mode === "pinch" ? "zoom_pinch" : "pan_complete",
       );
     };
 

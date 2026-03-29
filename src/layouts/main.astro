@@ -80,11 +80,30 @@ const gaScript = hasAnalytics
     <meta property="og:url" content={canonicalUrl.toString()} />
     <meta property="og:image" content={imageUrl.toString()} />
     <meta property="og:image:alt" content={description} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl.toString()} />
+
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        name: title,
+        url: canonicalUrl.toString(),
+        description,
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Any",
+        browserRequirements: "Requires JavaScript and Web Workers",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      })}
+    />
 
     {
       hasAnalytics && (

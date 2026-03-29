@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { Copy, Check, Share2 } from "lucide-react";
 import {
   Sheet,
@@ -69,12 +70,13 @@ function CoordinateRow({ label, value }: { label: string; value: string }) {
 
   const handleCopy = useCallback(() => {
     void navigator.clipboard.writeText(value);
+    trackEvent("coordinates_copy", { label });
     setCopied(true);
     if (timeout.current) clearTimeout(timeout.current);
     timeout.current = setTimeout(() => {
       setCopied(false);
     }, 1500);
-  }, [value]);
+  }, [value, label]);
 
   return (
     <button
@@ -144,6 +146,7 @@ export function SettingsPanel({
 
   const handleShare = useCallback(() => {
     void navigator.clipboard.writeText(window.location.href);
+    trackEvent("share_url_copy");
     setShareCopied(true);
     if (shareTimeout.current) clearTimeout(shareTimeout.current);
     shareTimeout.current = setTimeout(() => {
@@ -210,6 +213,10 @@ export function SettingsPanel({
                 min={50}
                 max={5000}
                 step={50}
+                onValueCommit={([val]) => {
+                  if (val === undefined) return;
+                  trackEvent("iterations_change", { value: val });
+                }}
                 onValueChange={([val]) => {
                   if (val === undefined) return;
                   onViewChange({ ...view, maxIter: val });
@@ -226,6 +233,7 @@ export function SettingsPanel({
               <Select
                 value={view.colorScheme}
                 onValueChange={(val: ColorScheme) => {
+                  trackEvent("color_scheme_change", { scheme: val });
                   onViewChange({ ...view, colorScheme: val });
                 }}
               >
@@ -261,6 +269,7 @@ export function SettingsPanel({
               <Select
                 value={String(view.antialias)}
                 onValueChange={(value) => {
+                  trackEvent("antialias_change", { mode: value });
                   onViewChange({
                     ...view,
                     antialias:

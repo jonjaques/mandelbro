@@ -25,6 +25,7 @@
  * the exact fractal state.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ViewState } from "@/lib/mandelbrot/types";
@@ -147,6 +148,7 @@ export function MandelbrotExplorer() {
   );
 
   const handleReset = useCallback(() => {
+    trackEvent("reset_view");
     handleViewChange(DEFAULT_VIEW, true);
   }, [handleViewChange]);
 
@@ -159,6 +161,7 @@ export function MandelbrotExplorer() {
 
   const handleSaveFavorite = useCallback(
     (name: string) => {
+      trackEvent("favorite_save", { name });
       addFavorite(viewStateToFavorite(viewRef.current, name));
     },
     [addFavorite],
@@ -166,6 +169,10 @@ export function MandelbrotExplorer() {
 
   const handleNavigateToFavorite = useCallback(
     (favorite: Favorite) => {
+      trackEvent("favorite_navigate", {
+        name: favorite.name,
+        is_preset: favorite.isPreset,
+      });
       handleViewChange(favoriteToViewState(favorite), true);
     },
     [handleViewChange],
@@ -194,7 +201,10 @@ export function MandelbrotExplorer() {
           presets={presets}
           userFavorites={userFavorites}
           onNavigateToFavorite={handleNavigateToFavorite}
-          onRemoveFavorite={removeFavorite}
+          onRemoveFavorite={(id: string) => {
+            trackEvent("favorite_delete");
+            removeFavorite(id);
+          }}
           onRenameFavorite={renameFavorite}
         />
         <SaveFavoriteDialog
