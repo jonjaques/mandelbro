@@ -26,6 +26,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
+  // Cache API only supports GET — let non-GET requests (POST, etc.) pass through
+  if (request.method !== "GET") return;
+
   // Network-first for navigation requests
   if (request.mode === "navigate") {
     event.respondWith(

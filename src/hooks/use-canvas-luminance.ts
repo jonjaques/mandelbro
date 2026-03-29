@@ -70,17 +70,17 @@ export function useCanvasLuminance(
   intervalMs: number = DEFAULT_INTERVAL_MS,
 ): boolean {
   const [isLight, setIsLight] = useState(false);
-  // Track the last value to avoid unnecessary re-renders from setInterval
   const lastValueRef = useRef(false);
+  const offscreenRef = useRef<{
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+  } | null>(null);
 
   useEffect(() => {
     const sampleLuminance = () => {
       const canvas = canvasRef.current;
       const target = targetRef.current;
       if (!canvas || !target) return;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
 
       const rect = target.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
@@ -91,7 +91,22 @@ export function useCanvasLuminance(
       if (w <= 0 || h <= 0) return;
 
       try {
-        const imageData = ctx.getImageData(x, y, w, h);
+        let offscreen = offscreenRef.current;
+        if (!offscreen) {
+          const c = document.createElement("canvas");
+          const ctx = c.getContext("2d", { willReadFrequently: true });
+          if (!ctx) return;
+          offscreen = { canvas: c, ctx };
+          offscreenRef.current = offscreen;
+        }
+
+        if (offscreen.canvas.width !== w || offscreen.canvas.height !== h) {
+          offscreen.canvas.width = w;
+          offscreen.canvas.height = h;
+        }
+
+        offscreen.ctx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+        const imageData = offscreen.ctx.getImageData(0, 0, w, h);
         const data = imageData.data;
         const step = Math.max(
           MIN_STEP_PX,
