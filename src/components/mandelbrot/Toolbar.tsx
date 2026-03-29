@@ -6,6 +6,7 @@ import {
   Share2,
   Check,
   SquareCode,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface ToolbarProps {
   onSettingsToggle: () => void;
   onReset: () => void;
+  onSaveFavorite: () => void;
 }
 
 const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
@@ -48,7 +50,11 @@ function isStandaloneApp(): boolean {
   );
 }
 
-export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
+export function Toolbar({
+  onSettingsToggle,
+  onReset,
+  onSaveFavorite,
+}: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [supportsFullscreen, setSupportsFullscreen] = useState(false);
@@ -172,6 +178,22 @@ export function Toolbar({ onSettingsToggle, onReset }: ToolbarProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Settings</TooltipContent>
+      </Tooltip>
+
+      <div className="h-px bg-white/10" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={btnClass}
+            onClick={onSaveFavorite}
+          >
+            <Star className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Save Favorite</TooltipContent>
       </Tooltip>
 
       <div className="h-px bg-white/10" />

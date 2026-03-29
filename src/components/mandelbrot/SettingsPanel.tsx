@@ -29,6 +29,8 @@ import {
   autoIterations,
   resolveAntialiasSamples,
 } from "@/lib/mandelbrot/compute";
+import type { Favorite } from "@/lib/mandelbrot/favorites";
+import { FavoritesList } from "./FavoritesList";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -36,6 +38,11 @@ interface SettingsPanelProps {
   view: ViewState;
   onViewChange: (view: ViewState) => void;
   onReset: () => void;
+  presets: Favorite[];
+  userFavorites: Favorite[];
+  onNavigateToFavorite: (favorite: Favorite) => void;
+  onRemoveFavorite: (id: string) => void;
+  onRenameFavorite: (id: string, name: string) => void;
 }
 
 const SCHEMES = COLOR_SCHEMES;
@@ -126,6 +133,11 @@ export function SettingsPanel({
   view,
   onViewChange,
   onReset,
+  presets,
+  userFavorites,
+  onNavigateToFavorite,
+  onRemoveFavorite,
+  onRenameFavorite,
 }: SettingsPanelProps) {
   const [shareCopied, setShareCopied] = useState(false);
   const shareTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,6 +173,20 @@ export function SettingsPanel({
               <CoordinateRow label="Zoom" value={formatZoom(view.zoom)} />
               <CoordinateRow label="Iter" value={String(view.maxIter)} />
             </div>
+          </div>
+
+          <div className="h-px bg-white/6" />
+
+          {/* Favorites */}
+          <div className="space-y-2">
+            <SectionHeader>Favorites</SectionHeader>
+            <FavoritesList
+              presets={presets}
+              userFavorites={userFavorites}
+              onNavigate={onNavigateToFavorite}
+              onRemove={onRemoveFavorite}
+              onRename={onRenameFavorite}
+            />
           </div>
 
           <div className="h-px bg-white/6" />

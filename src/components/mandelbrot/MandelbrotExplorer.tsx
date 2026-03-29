@@ -29,14 +29,21 @@ import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { DEFAULT_VIEW } from "@/lib/mandelbrot/url-state";
+import {
+  viewStateToFavorite,
+  favoriteToViewState,
+  type Favorite,
+} from "@/lib/mandelbrot/favorites";
 import { useMandelbrotWorker } from "@/hooks/use-mandelbrot-worker";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useInteraction } from "@/hooks/use-interaction";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
+import { useFavorites } from "@/hooks/use-favorites";
 import { MandelbrotCanvas } from "./MandelbrotCanvas";
 import { BrandMark } from "./BrandMark";
 import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
+import { SaveFavoriteDialog } from "./SaveFavoriteDialog";
 import { Coordinates } from "./Coordinates";
 import { RenderProgress } from "./RenderProgress";
 
@@ -47,13 +54,22 @@ export function MandelbrotExplorer() {
   // Authoritative view state — ref (not state) for synchronous access
   // in high-frequency event handlers that would have stale closure issues
   // with React state.
-  const viewRef = useRef<ViewState>(DEFAULT_VIEW);
+  const viewRef = useRef(DEFAULT_VIEW);
   // Canvas dimensions in device pixels (set by ResizeObserver in MandelbrotCanvas)
   const sizeRef = useRef({ width: 0, height: 0 });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [saveFavoriteOpen, setSaveFavoriteOpen] = useState(false);
   // Mirror of viewRef as React state, driving UI re-renders
-  const [viewForUI, setViewForUI] = useState<ViewState>(DEFAULT_VIEW);
+  const [viewForUI, setViewForUI] = useState(DEFAULT_VIEW);
+
+  const {
+    presets,
+    userFavorites,
+    addFavorite,
+    removeFavorite,
+    renameFavorite,
+  } = useFavorites();
 
   const { render, cancelRender, progress } = useMandelbrotWorker(canvasRef);
 
@@ -136,7 +152,21 @@ export function MandelbrotExplorer() {
 
   const handleSettingsChange = useCallback(
     (view: ViewState) => {
-      handleViewChange(view, true); // Settings changes always get full render
+      handleViewChange(view, true);
+    },
+    [handleViewChange],
+  );
+
+  const handleSaveFavorite = useCallback(
+    (name: string) => {
+      addFavorite(viewStateToFavorite(viewRef.current, name));
+    },
+    [addFavorite],
+  );
+
+  const handleNavigateToFavorite = useCallback(
+    (favorite: Favorite) => {
+      handleViewChange(favoriteToViewState(favorite), true);
     },
     [handleViewChange],
   );
@@ -151,6 +181,9 @@ export function MandelbrotExplorer() {
             setSettingsOpen((o) => !o);
           }}
           onReset={handleReset}
+          onSaveFavorite={() => {
+            setSaveFavoriteOpen(true);
+          }}
         />
         <SettingsPanel
           open={settingsOpen}
@@ -158,6 +191,16 @@ export function MandelbrotExplorer() {
           view={viewForUI}
           onViewChange={handleSettingsChange}
           onReset={handleReset}
+          presets={presets}
+          userFavorites={userFavorites}
+          onNavigateToFavorite={handleNavigateToFavorite}
+          onRemoveFavorite={removeFavorite}
+          onRenameFavorite={renameFavorite}
+        />
+        <SaveFavoriteDialog
+          open={saveFavoriteOpen}
+          onOpenChange={setSaveFavoriteOpen}
+          onSave={handleSaveFavorite}
         />
         <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
         <RenderProgress progress={progress} />
