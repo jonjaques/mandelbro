@@ -14,7 +14,7 @@
     "url": "https://github.com/jonjaques/mandelbro/issues"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "astro dev",
