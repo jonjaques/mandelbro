@@ -21,7 +21,10 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function RenderProgress({ progress }: RenderProgressProps) {
   const visible = progress !== null;
-  const pct = progress ?? 0;
+  // When hiding (progress = null), hold at 100% so the bar doesn't animate
+  // backward during the opacity fade-out. The 300ms appear delay ensures
+  // the 100→0 reset is invisible when the next render starts.
+  const pct = progress ?? 100;
   const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
 
   return (
@@ -62,7 +65,6 @@ export function RenderProgress({ progress }: RenderProgressProps) {
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className="transition-[stroke-dashoffset] duration-150 ease-linear"
           />
         </svg>
         <span className="text-[10px] font-mono text-white/80 tabular-nums">
