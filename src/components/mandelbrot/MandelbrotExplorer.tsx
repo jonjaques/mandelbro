@@ -39,6 +39,7 @@ import { useMandelbrotWorker } from "@/hooks/use-mandelbrot-worker";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useInteraction } from "@/hooks/use-interaction";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
+import { useSafariMinimalUI } from "@/hooks/use-safari-minimal-ui";
 import { useFavorites } from "@/hooks/use-favorites";
 import { MandelbrotCanvas } from "./MandelbrotCanvas";
 import { BrandMark } from "./BrandMark";
@@ -50,6 +51,7 @@ import { RenderProgress } from "./RenderProgress";
 
 export function MandelbrotExplorer() {
   useViewportHeight();
+  useSafariMinimalUI();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Authoritative view state — ref (not state) for synchronous access

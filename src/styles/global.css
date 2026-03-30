@@ -129,7 +129,9 @@
   html {
     width: 100%;
     height: var(--app-cover-height);
+    height: -webkit-fill-available;
     min-height: var(--app-cover-height);
+    min-height: -webkit-fill-available;
     background: #000;
     overscroll-behavior: none;
   }
@@ -137,7 +139,9 @@
     @apply bg-background text-foreground;
     width: 100%;
     height: var(--app-cover-height);
+    height: -webkit-fill-available;
     min-height: var(--app-cover-height);
+    min-height: -webkit-fill-available;
     margin: 0;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
