@@ -5,15 +5,13 @@ import {
   normalize,
   make_big_float,
   add,
-  sub,
   mul,
   gt,
-  set_precision,
   type IBigFloat,
 } from "bigfloat-esnext";
 
 export type { IBigFloat } from "bigfloat-esnext";
-export { add, sub, mul, set_precision, make, string as bfToString };
+export { add, mul, make, string as bfToString };
 
 const ZERO = make(0);
 const BAILOUT_BF = make(256);

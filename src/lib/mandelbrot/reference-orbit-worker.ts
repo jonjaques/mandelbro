@@ -1,3 +1,16 @@
+/**
+ * Web Worker for computing the high-precision reference orbit (Phase 1 of
+ * the perturbation pipeline).
+ *
+ * Receives a center point as arbitrary-precision decimal strings, computes
+ * the Mandelbrot orbit using BigFloat arithmetic (bigfloat-esnext), and
+ * transfers the orbit values back as Float64Arrays for consumption by
+ * the perturbation render workers. Optionally computes Series Approximation
+ * coefficients (A, B, C) alongside the orbit for iteration skipping.
+ *
+ * Streams progress updates during computation and supports cancellation
+ * via requestId checking between iteration batches.
+ */
 import { computeReferenceOrbit } from "./reference-orbit";
 import type {
   ReferenceWorkerIn,

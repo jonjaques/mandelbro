@@ -5,10 +5,17 @@
  * math itself; instead it wires together:
  *
  * - **MandelbrotCanvas** — the full-viewport <canvas> element
- * - **useMandelbrotWorker** — the Web Worker pool that computes fractal data
+ * - **useMandelbrotWorker** — standard double-precision worker pool (zoom ≥ 1e-13)
+ * - **usePerturbationRenderer** — arbitrary-precision perturbation pipeline (zoom < 1e-13)
  * - **useInteraction** — mouse/touch handlers for pan, zoom, and pinch
  * - **useUrlState** — two-way sync between ViewState and the URL hash
- * - **Toolbar, SettingsPanel, Coordinates, RenderProgress** — UI overlays
+ * - **Toolbar, SettingsPanel, Coordinates, DeepZoomBanner, RenderProgress** — UI overlays
+ *
+ * ## Dual Rendering Pipeline
+ *
+ * The explorer maintains both rendering pipelines simultaneously and switches
+ * between them based on zoom depth (PRECISION_THRESHOLD = 1e-13). Both produce
+ * identical ChunkResult messages, so all UI overlays work transparently.
  *
  * ## State Architecture
  *
@@ -16,13 +23,15 @@
  * can be read synchronously by event handlers without stale-closure issues.
  * A parallel `viewForUI` state drives React re-renders for the UI overlays
  * (coordinates display, settings panel). Both are always kept in sync.
+ * ViewState includes optional high-precision string fields (centerXHp/centerYHp)
+ * for arbitrary-precision coordinates at deep zoom.
  *
  * ## Interaction Preview Strategy
  *
  * During interaction, the explorer reuses the current canvas pixels for
  * instant visual feedback (pixel-shift for pan, snapshot transforms for zoom).
  * Once the user pauses, it dispatches a full-resolution render to reconcile
- * the exact fractal state.
+ * the exact fractal state — routing to the appropriate pipeline.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";

@@ -72,7 +72,10 @@ interface WheelGestureState {
  *
  * - During continuous interaction (drag, wheel, pinch): instant visual feedback
  *   via canvas pixel-shifting or snapshot-based previews
- * - After interaction stops (50ms debounce): schedule a full-quality render
+ * - After interaction stops (debounce varies by gesture): schedule a full-quality render
+ * - At deep zoom (past PRECISION_THRESHOLD): coordinate updates use BigFloat
+ *   arithmetic via applyHpDelta() to maintain arbitrary-precision center coordinates
+ * - Zoom math uses algebraic deltas to avoid catastrophic cancellation at deep zoom
  *
  * All coordinate math in this hook converts between three coordinate spaces:
  *
@@ -88,6 +91,7 @@ interface WheelGestureState {
  * 3. **Complex plane** — the mathematical coordinate system of the Mandelbrot set.
  *    Defined by ViewState (centerX, centerY, zoom). The zoom value is the height
  *    of the visible region in complex-plane units; the width is zoom × aspectRatio.
+ *    At deep zoom, the Hp string fields carry full arbitrary-precision coordinates.
  */
 export function useInteraction(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -295,10 +299,12 @@ export function useInteraction(
       // lose accuracy at deep zoom.
       const ctx = canvas.getContext("2d", { alpha: false });
       if (ctx) {
-        const { snapshot, cursorCanvasX: cx, cursorCanvasY: cy } =
-          wheelGesture.current;
-        const overallScale =
-          wheelGesture.current.startView.zoom / newView.zoom;
+        const {
+          snapshot,
+          cursorCanvasX: cx,
+          cursorCanvasY: cy,
+        } = wheelGesture.current;
+        const overallScale = wheelGesture.current.startView.zoom / newView.zoom;
         ctx.imageSmoothingEnabled = true;
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);

@@ -26,13 +26,18 @@ const DEFAULT_ZOOM = 3.5;
  * boundary escape very slowly, and with too few iterations they'll be
  * misclassified as interior (black) instead of exterior (colored).
  *
- * The formula: 200 + 50 * log₂(3.5 / zoom), clamped to [200, 10000].
- * Each doubling of magnification adds 50 iterations. At the default view
- * (zoom=3.5), depth=0 so we get the base 200. At 1000x zoom we get ~700.
- * At zoom 1e-50 we get ~8750. The 10000 cap balances detail vs compute
- * cost — each pixel in the perturbation pipeline iterates up to maxIter
- * times, and with thousands of pixels × thousands of iterations across
- * multiple workers, higher caps can saturate all CPU cores.
+ * The formula: 200 + 50 × log₂(3.5 / zoom), clamped to [200, 10000].
+ *   - Default view (zoom=3.5): 200 iterations
+ *   - 1,000× zoom:            ~700 iterations
+ *   - 10^14× zoom:            ~2550 iterations (standard pipeline limit)
+ *   - 10^50× zoom:            ~8750 iterations (perturbation pipeline)
+ *   - 10^100× zoom:           capped at 10,000
+ *
+ * The 10,000 cap balances detail against compute cost. In the perturbation
+ * pipeline, each pixel iterates up to maxIter times, and the reference
+ * orbit computation (BigFloat arithmetic) is also bounded by this limit.
+ * The reference orbit worker additionally caps at MAX_SAFE_ITERATIONS
+ * (10,000) to bound BigFloat computation time.
  */
 export function autoIterations(zoom: number): number {
   const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));

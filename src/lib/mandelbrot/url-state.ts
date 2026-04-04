@@ -2,11 +2,15 @@
  * URL hash serialization for shareable Mandelbrot views.
  *
  * The entire view state (center position, zoom level, iteration count, color
- * scheme) is encoded in the URL hash fragment, e.g.:
- *   #x=-0.500000000000000&y=0.00000000000000&z=3.50000000&i=200&c=classic
+ * scheme, anti-aliasing) is encoded in the URL hash fragment, e.g.:
+ *   #x=-0.500000000000000&y=0.00000000000000&z=3.50000000&i=200&c=classic&aa=auto
+ *
+ * For deep zoom (past PRECISION_THRESHOLD), coordinates are stored as
+ * arbitrary-precision decimal strings — the full centerXHp/centerYHp/zoomHp
+ * values are serialized directly, enabling shareable URLs at 10^50× and beyond.
  *
  * This enables:
- * - **Bookmarking**: save a specific deep-zoom location
+ * - **Bookmarking**: save a specific deep-zoom location with full precision
  * - **Sharing**: copy the URL to send someone to the exact same view
  * - **Browser navigation**: back/forward buttons restore previous views
  *
@@ -48,14 +52,14 @@ const VALID_ANTIALIAS_SAMPLES = new Set<AntialiasSamples>(ANTIALIAS_SAMPLES);
  * Encode a ViewState as a URL hash string.
  *
  * Precision choices:
- * - Coordinates (x, y): 15 significant digits — this is near the limit of
- *   IEEE 754 double-precision (~15.9 significant digits), preserving the
- *   maximum precision JavaScript can represent. This matters for deep zooms:
- *   at 10^14x magnification, a single digit of precision lost would shift
- *   the view by visible pixels.
+ * - Coordinates (x, y): uses arbitrary-precision strings (centerXHp/centerYHp)
+ *   when available for deep zoom. Falls back to 15 significant digits from
+ *   the double-precision values, which is near the IEEE 754 limit (~15.9
+ *   significant digits).
  *
- * - Zoom (z): 10 significant digits — zoom precision doesn't need to be as
- *   high because it's a scale factor, not a position.
+ * - Zoom (z): uses zoomHp when available, else 10 significant digits.
+ *   Zoom precision doesn't need to be as high because it's a scale factor,
+ *   not a position.
  */
 export function serializeToHash(state: ViewState): string {
   const params = new URLSearchParams();
@@ -71,8 +75,11 @@ export function serializeToHash(state: ViewState): string {
 /**
  * Parse a URL hash string back into a ViewState.
  * Returns null if the hash is empty, malformed, or contains invalid values.
- * Iteration count is clamped to [50, 50000] for safety (raised upper bound
- * for deep-zoom perturbation renders).
+ * Iteration count is clamped to [50, 10000] for safety.
+ *
+ * For deep-zoom URLs, coordinate strings longer than 16 chars (x/y) or 11
+ * chars (z) are preserved as high-precision strings in the Hp fields,
+ * enabling arbitrary-precision deep zoom from shared URLs.
  */
 export function deserializeFromHash(hash: string): ViewState | null {
   if (!hash || hash === "#") return null;

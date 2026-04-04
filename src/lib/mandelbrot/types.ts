@@ -1,11 +1,17 @@
 /**
- * Core type definitions for the Mandelbrot rendering pipeline.
+ * Core type definitions for both Mandelbrot rendering pipelines.
  *
- * These types define the contract between the main thread and the Web Worker
- * pool. Messages flow in two directions:
+ * The app runs two pipelines that share common output types:
  *
- *   Main thread ──► Worker:     RenderRequest (start/cancel a render)
- *   Worker ──► Main thread:     ChunkResult | RenderComplete (streaming output)
+ * **Standard pipeline** (zoom ≥ PRECISION_THRESHOLD):
+ *   Main thread ──► Worker:     RenderRequest (start/cancel)
+ *   Worker ──► Main thread:     ChunkResult | RenderComplete (streaming RGBA)
+ *
+ * **Perturbation pipeline** (zoom < PRECISION_THRESHOLD):
+ *   Main thread ──► RefWorker:   ReferenceOrbitRequest (BigFloat center)
+ *   RefWorker ──► Main thread:   ReferenceOrbitProgress | ReferenceOrbitComplete
+ *   Main thread ──► PertWorker:  PerturbationRenderRequest (ref orbit + zoom)
+ *   PertWorker ──► Main thread:  ChunkResult | RenderComplete (same output)
  */
 import type { ColorScheme } from "./color-schemes";
 
@@ -124,6 +130,10 @@ export type WorkerOutMessage = ChunkResult | RenderComplete;
 
 // ---------------------------------------------------------------------------
 // Perturbation pipeline message types
+//
+// Used when zoom < PRECISION_THRESHOLD. The perturbation pipeline computes
+// a single high-precision reference orbit (Phase 1) then renders all pixels
+// as deltas from that reference using native doubles (Phase 2).
 // ---------------------------------------------------------------------------
 
 /** Result of a high-precision reference orbit computation. */

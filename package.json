@@ -1,6 +1,6 @@
 {
   "name": "mandelbro",
-  "description": "Best-of-breed fullscreen Mandelbrot set explorer built with Astro and React.",
+  "description": "Immersive Mandelbrot set explorer with arbitrary-precision deep zoom via perturbation theory. Explore at 10^50× and beyond in the browser.",
   "type": "module",
   "version": "0.0.1",
   "private": true,

@@ -1,9 +1,8 @@
+import { sub, set_precision } from "bigfloat-esnext";
 import {
   add,
-  sub,
   mul,
   make,
-  set_precision,
   toDouble,
   truncateToPrecision,
   bfEscaped,
