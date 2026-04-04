@@ -62,6 +62,10 @@ export default defineConfig(
     },
   },
   {
+    files: ["**/*.{js,mjs,cjs}"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
     rules: {
       "@typescript-eslint/restrict-template-expressions": "off",
     },
