@@ -59,9 +59,9 @@ const VALID_ANTIALIAS_SAMPLES = new Set<AntialiasSamples>(ANTIALIAS_SAMPLES);
  */
 export function serializeToHash(state: ViewState): string {
   const params = new URLSearchParams();
-  params.set("x", state.centerX.toPrecision(15));
-  params.set("y", state.centerY.toPrecision(15));
-  params.set("z", state.zoom.toPrecision(10));
+  params.set("x", state.centerXHp ?? state.centerX.toPrecision(15));
+  params.set("y", state.centerYHp ?? state.centerY.toPrecision(15));
+  params.set("z", state.zoomHp ?? state.zoom.toPrecision(10));
   params.set("i", String(state.maxIter));
   params.set("c", state.colorScheme);
   params.set("aa", String(state.antialias));
@@ -71,15 +71,19 @@ export function serializeToHash(state: ViewState): string {
 /**
  * Parse a URL hash string back into a ViewState.
  * Returns null if the hash is empty, malformed, or contains invalid values.
- * Iteration count is clamped to [50, 5000] for safety.
+ * Iteration count is clamped to [50, 50000] for safety (raised upper bound
+ * for deep-zoom perturbation renders).
  */
 export function deserializeFromHash(hash: string): ViewState | null {
   if (!hash || hash === "#") return null;
 
   const params = new URLSearchParams(hash.slice(1));
-  const x = Number(params.get("x"));
-  const y = Number(params.get("y"));
-  const z = Number(params.get("z"));
+  const xStr = params.get("x");
+  const yStr = params.get("y");
+  const zStr = params.get("z");
+  const x = Number(xStr);
+  const y = Number(yStr);
+  const z = Number(zStr);
   const i = Number(params.get("i"));
   const c = params.get("c") as ColorScheme;
   const aaParam = params.get("aa");
@@ -99,11 +103,23 @@ export function deserializeFromHash(hash: string): ViewState | null {
     return null;
   }
 
+  const hasHpCoords =
+    (xStr != null && xStr.length > 16) ||
+    (yStr != null && yStr.length > 16) ||
+    (zStr != null && zStr.length > 11);
+
   return {
     centerX: x,
     centerY: y,
     zoom: z,
-    maxIter: Math.max(50, Math.min(5000, Math.round(i))),
+    ...(hasHpCoords
+      ? {
+          centerXHp: xStr ?? undefined,
+          centerYHp: yStr ?? undefined,
+          zoomHp: zStr ?? undefined,
+        }
+      : {}),
+    maxIter: Math.max(50, Math.min(10000, Math.round(i))),
     colorScheme: c,
     antialias: aa,
   };

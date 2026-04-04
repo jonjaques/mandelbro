@@ -40,6 +40,7 @@ const RAW_RUNTIME_STATE =
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["@yarnpkg/sdks", "npm:3.2.3"],\
           ["astro", "npm:6.1.3"],\
+          ["bigfloat-esnext", "npm:3.0.1"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
           ["d3-color", "npm:3.1.0"],\
@@ -6032,6 +6033,15 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["bigfloat-esnext", [\
+      ["npm:3.0.1", {\
+        "packageLocation": "../../.yarn/berry/cache/bigfloat-esnext-npm-3.0.1-8db78be4bc-10c0.zip/node_modules/bigfloat-esnext/",\
+        "packageDependencies": [\
+          ["bigfloat-esnext", "npm:3.0.1"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["body-parser", [\
       ["npm:2.2.2", {\
         "packageLocation": "../../.yarn/berry/cache/body-parser-npm-2.2.2-2aa532c1f4-10c0.zip/node_modules/body-parser/",\
@@ -10116,6 +10126,7 @@ const RAW_RUNTIME_STATE =
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["@yarnpkg/sdks", "npm:3.2.3"],\
           ["astro", "npm:6.1.3"],\
+          ["bigfloat-esnext", "npm:3.0.1"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
           ["d3-color", "npm:3.1.0"],\

@@ -7,6 +7,9 @@ export interface Favorite {
   centerX: number;
   centerY: number;
   zoom: number;
+  centerXHp?: string;
+  centerYHp?: string;
+  zoomHp?: string;
   maxIter: number;
   colorScheme: ColorScheme;
   antialias: AntialiasMode;
@@ -24,6 +27,9 @@ export function viewStateToFavorite(
     centerX: view.centerX,
     centerY: view.centerY,
     zoom: view.zoom,
+    ...(view.centerXHp != null ? { centerXHp: view.centerXHp } : {}),
+    ...(view.centerYHp != null ? { centerYHp: view.centerYHp } : {}),
+    ...(view.zoomHp != null ? { zoomHp: view.zoomHp } : {}),
     maxIter: view.maxIter,
     colorScheme: view.colorScheme,
     antialias: view.antialias,
@@ -36,6 +42,9 @@ export function favoriteToViewState(fav: Favorite): ViewState {
     centerX: fav.centerX,
     centerY: fav.centerY,
     zoom: fav.zoom,
+    ...(fav.centerXHp != null ? { centerXHp: fav.centerXHp } : {}),
+    ...(fav.centerYHp != null ? { centerYHp: fav.centerYHp } : {}),
+    ...(fav.zoomHp != null ? { zoomHp: fav.zoomHp } : {}),
     maxIter: fav.maxIter,
     colorScheme: fav.colorScheme,
     antialias: fav.antialias,

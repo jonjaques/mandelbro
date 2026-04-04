@@ -18,6 +18,14 @@ export type AntialiasMode = (typeof ANTIALIAS_MODES)[number];
 export type AntialiasSamples = (typeof ANTIALIAS_SAMPLES)[number];
 
 /**
+ * Zoom level below which we switch from the standard double-precision pipeline
+ * to the perturbation-based arbitrary-precision pipeline. At this threshold the
+ * pixel spacing approaches the limit of IEEE 754 doubles (~15.9 significant
+ * decimal digits).
+ */
+export const PRECISION_THRESHOLD = 1e-13;
+
+/**
  * The complete state of the fractal viewport. This is the single source of
  * truth for "what the user is looking at." It's persisted in the URL hash,
  * passed to workers for rendering, and displayed in the coordinates HUD.
@@ -28,11 +36,16 @@ export type AntialiasSamples = (typeof ANTIALIAS_SAMPLES)[number];
  * - maxIter: maximum escape-time iterations (higher = more detail but slower)
  * - colorScheme: which color palette to use
  * - antialias: anti-aliasing mode for committed renders
+ * - centerXHp/centerYHp/zoomHp: optional high-precision decimal strings used
+ *   when zoomed past PRECISION_THRESHOLD
  */
 export interface ViewState {
   centerX: number;
   centerY: number;
   zoom: number;
+  centerXHp?: string | undefined;
+  centerYHp?: string | undefined;
+  zoomHp?: string | undefined;
   maxIter: number;
   colorScheme: ColorScheme;
   antialias: AntialiasMode;
@@ -108,3 +121,87 @@ export interface RenderComplete {
 
 /** Discriminated union of all messages a worker can send to the main thread. */
 export type WorkerOutMessage = ChunkResult | RenderComplete;
+
+// ---------------------------------------------------------------------------
+// Perturbation pipeline message types
+// ---------------------------------------------------------------------------
+
+/** Result of a high-precision reference orbit computation. */
+export interface ReferenceOrbit {
+  re: Float64Array;
+  im: Float64Array;
+  iterations: number;
+  escaped: boolean;
+  cycleDetected: boolean;
+  cyclePeriod: number;
+  saCoeffAre?: Float64Array;
+  saCoeffAim?: Float64Array;
+  saCoeffBre?: Float64Array;
+  saCoeffBim?: Float64Array;
+  saCoeffCre?: Float64Array;
+  saCoeffCim?: Float64Array;
+}
+
+export interface ReferenceOrbitRequest {
+  type: "compute-reference";
+  requestId: number;
+  centerReStr: string;
+  centerImStr: string;
+  maxIter: number;
+  precisionDigits: number;
+  computeSACoefficients: boolean;
+}
+
+export interface ReferenceOrbitProgress {
+  type: "reference-progress";
+  requestId: number;
+  iteration: number;
+  maxIter: number;
+}
+
+export interface ReferenceOrbitComplete {
+  type: "reference-complete";
+  requestId: number;
+  refOrbitRe: Float64Array;
+  refOrbitIm: Float64Array;
+  iterations: number;
+  escaped: boolean;
+  cycleDetected: boolean;
+  cyclePeriod: number;
+  saCoeffAre?: Float64Array;
+  saCoeffAim?: Float64Array;
+  saCoeffBre?: Float64Array;
+  saCoeffBim?: Float64Array;
+  saCoeffCre?: Float64Array;
+  saCoeffCim?: Float64Array;
+}
+
+export type ReferenceWorkerIn = ReferenceOrbitRequest | CancelRequest;
+export type ReferenceWorkerOut =
+  | ReferenceOrbitProgress
+  | ReferenceOrbitComplete;
+
+export interface PerturbationRenderRequest {
+  type: "perturbation-render";
+  requestId: number;
+  width: number;
+  height: number;
+  refOrbitRe: Float64Array;
+  refOrbitIm: Float64Array;
+  refIterations: number;
+  zoom: number;
+  maxIter: number;
+  colorScheme: ColorScheme;
+  antialiasSamples: AntialiasSamples;
+  workerIndex?: number;
+  workerCount?: number;
+  saCoeffAre?: Float64Array;
+  saCoeffAim?: Float64Array;
+  saCoeffBre?: Float64Array;
+  saCoeffBim?: Float64Array;
+  saCoeffCre?: Float64Array;
+  saCoeffCim?: Float64Array;
+}
+
+export type PerturbationWorkerIn = PerturbationRenderRequest | CancelRequest;
+export type PerturbationWorkerOut = ChunkResult | RenderComplete;

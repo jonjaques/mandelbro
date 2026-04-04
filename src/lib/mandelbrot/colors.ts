@@ -255,15 +255,15 @@ export function mapToColors(
   iterations: Float64Array,
   maxIter: number,
   scheme: ColorScheme,
+  cyclePeriod = 256,
 ): Uint8ClampedArray {
   const len = iterations.length;
-  // 4 bytes per pixel: R, G, B, A
   const rgba = new Uint8ClampedArray(len * 4);
 
   for (let i = 0; i < len; i++) {
     const iter = iterations[i] ?? maxIter;
     const offset = i * 4;
-    const color = colorFromSmoothIteration(iter, maxIter, scheme);
+    const color = colorFromSmoothIteration(iter, maxIter, scheme, cyclePeriod);
     rgba[offset] = color[0];
     rgba[offset + 1] = color[1];
     rgba[offset + 2] = color[2];
@@ -277,14 +277,29 @@ export function colorFromSmoothIteration(
   iter: number,
   maxIter: number,
   scheme: ColorScheme,
+  cyclePeriod = 256,
 ): RGB {
   if (iter >= maxIter) {
     return [0, 0, 0];
   }
 
   const palette = PALETTES[scheme];
-  const t = (iter % 256) / 256;
+  const t = (iter % cyclePeriod) / cyclePeriod;
   return interpolatePalette(palette, t);
+}
+
+/**
+ * Compute a color cycle period appropriate for the current zoom level.
+ * At normal zoom the full 256-iteration cycle is used. At deep zoom,
+ * iteration counts are much higher and adjacent pixels differ by fewer
+ * iterations relative to the cycle length, washing out visible color
+ * variation. Shortening the cycle at deep zoom compresses more of the
+ * palette into the visible iteration range.
+ */
+export function zoomColorCyclePeriod(zoom: number): number {
+  if (zoom >= 1e-8) return 256;
+  const depth = Math.max(0, -Math.log10(zoom) - 8);
+  return Math.max(24, Math.round(256 / (1 + depth * 0.3)));
 }
 
 export const COLOR_SCHEME_NAMES: Record<ColorScheme, string> = {

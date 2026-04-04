@@ -26,15 +26,17 @@ const DEFAULT_ZOOM = 3.5;
  * boundary escape very slowly, and with too few iterations they'll be
  * misclassified as interior (black) instead of exterior (colored).
  *
- * The formula: 200 + 50 * log₂(3.5 / zoom), clamped to [200, 5000].
+ * The formula: 200 + 50 * log₂(3.5 / zoom), clamped to [200, 10000].
  * Each doubling of magnification adds 50 iterations. At the default view
  * (zoom=3.5), depth=0 so we get the base 200. At 1000x zoom we get ~700.
+ * At zoom 1e-50 we get ~8750. The 10000 cap balances detail vs compute
+ * cost — each pixel in the perturbation pipeline iterates up to maxIter
+ * times, and with thousands of pixels × thousands of iterations across
+ * multiple workers, higher caps can saturate all CPU cores.
  */
 export function autoIterations(zoom: number): number {
-  // log₂(DEFAULT_ZOOM / zoom) measures how many "doublings" deep we are.
-  // At default zoom this is 0; at 2x zoom it's 1; at 4x zoom it's 2, etc.
   const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));
-  return Math.round(Math.min(5000, Math.max(200, 200 + 50 * depth)));
+  return Math.round(Math.min(10000, Math.max(200, 200 + 50 * depth)));
 }
 
 /**

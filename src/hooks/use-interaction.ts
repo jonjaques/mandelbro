@@ -2,10 +2,37 @@ import { useCallback, useEffect, useRef } from "react";
 import type { ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
 import { trackEvent } from "@/lib/analytics";
+import {
+  add as bfAdd,
+  make as bfMake,
+  toString as bfToString,
+} from "@/lib/mandelbrot/bigfloat-utils";
 
 const DRAG_RENDER_DEBOUNCE_MS = 60;
 const WHEEL_RENDER_DEBOUNCE_MS = 140;
 const TOUCH_RENDER_DEBOUNCE_MS = 100;
+
+/**
+ * Update high-precision center coordinates by adding a small double offset.
+ * If the view already has Hp strings, we add the double delta via BigFloat
+ * arithmetic to preserve precision beyond what IEEE 754 doubles can hold.
+ * Otherwise, we leave the Hp fields undefined and let doubles handle it.
+ */
+function applyHpPan(
+  view: ViewState,
+  dxComplex: number,
+  dyComplex: number,
+): Pick<ViewState, "centerXHp" | "centerYHp"> {
+  if (!view.centerXHp && !view.centerYHp) return {};
+  return {
+    centerXHp: bfToString(
+      bfAdd(bfMake(view.centerXHp ?? String(view.centerX)), bfMake(dxComplex)),
+    ),
+    centerYHp: bfToString(
+      bfAdd(bfMake(view.centerYHp ?? String(view.centerY)), bfMake(dyComplex)),
+    ),
+  };
+}
 
 interface InteractionCallbacks {
   /**
@@ -182,15 +209,16 @@ export function useInteraction(
 
       lastPos.current = { x: e.clientX, y: e.clientY };
 
+      const dxComplex = -dxCss * scale;
+      const dyComplex = -dyCss * scale;
+
       const newView: ViewState = {
         ...view,
-        centerX: view.centerX - dxCss * scale,
-        centerY: view.centerY - dyCss * scale,
+        centerX: view.centerX + dxComplex,
+        centerY: view.centerY + dyComplex,
+        ...applyHpPan(view, dxComplex, dyComplex),
       };
 
-      // "skip" means: update the view state and URL, but don't trigger any
-      // render — the pixel-shift already provides the visual feedback.
-      // The scheduled full render will catch up when the user stops dragging.
       commitViewChange(newView, false);
       scheduleFullRender(newView, DRAG_RENDER_DEBOUNCE_MS, "pan_complete");
     };
@@ -255,12 +283,18 @@ export function useInteraction(
       const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
       const newZoom = view.zoom * factor;
 
+      const newCenterX = worldX - (mouseX - 0.5) * newZoom * aspectRatio;
+      const newCenterY = worldY - (mouseY - 0.5) * newZoom;
+      const dxComplex = newCenterX - view.centerX;
+      const dyComplex = newCenterY - view.centerY;
+
       const newView: ViewState = {
         ...view,
-        centerX: worldX - (mouseX - 0.5) * newZoom * aspectRatio,
-        centerY: worldY - (mouseY - 0.5) * newZoom,
+        centerX: newCenterX,
+        centerY: newCenterY,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
+        ...applyHpPan(view, dxComplex, dyComplex),
       };
 
       commitViewChange(newView, false);
@@ -288,18 +322,18 @@ export function useInteraction(
       const mouseY = (e.clientY - rect.top) / rect.height;
 
       const aspectRatio = rect.width / rect.height;
-      const newZoom = view.zoom / 2; // 2x magnification = half the zoom range
+      const newZoom = view.zoom / 2;
 
-      // New center = the complex-plane point under the cursor.
-      // This is the same worldX/worldY formula from wheel zoom, but we set
-      // it directly as the new center (no need to back-solve, because the
-      // click point BECOMES the center).
+      const dxComplex = (mouseX - 0.5) * view.zoom * aspectRatio;
+      const dyComplex = (mouseY - 0.5) * view.zoom;
+
       const newView: ViewState = {
         ...view,
-        centerX: view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio,
-        centerY: view.centerY + (mouseY - 0.5) * view.zoom,
+        centerX: view.centerX + dxComplex,
+        centerY: view.centerY + dyComplex,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
+        ...applyHpPan(view, dxComplex, dyComplex),
       };
 
       trackEvent("zoom_double_click", { zoom_level: newView.zoom });
@@ -436,10 +470,13 @@ export function useInteraction(
         const dxCss = touch.clientX - gesture.startTouch.x;
         const dyCss = touch.clientY - gesture.startTouch.y;
         const scale = gesture.startView.zoom / rect.height;
+        const dxComplex = -dxCss * scale;
+        const dyComplex = -dyCss * scale;
         const newView: ViewState = {
           ...gesture.startView,
-          centerX: gesture.startView.centerX - dxCss * scale,
-          centerY: gesture.startView.centerY - dyCss * scale,
+          centerX: gesture.startView.centerX + dxComplex,
+          centerY: gesture.startView.centerY + dyComplex,
+          ...applyHpPan(gesture.startView, dxComplex, dyComplex),
         };
         drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
         commitViewChange(newView, false);
@@ -480,12 +517,18 @@ export function useInteraction(
       const newZoom =
         gesture.startView.zoom * (gesture.startDistance / currentDistance);
 
+      const newCenterX = worldX - (currentMouseX - 0.5) * newZoom * aspectRatio;
+      const newCenterY = worldY - (currentMouseY - 0.5) * newZoom;
+      const dxComplex = newCenterX - gesture.startView.centerX;
+      const dyComplex = newCenterY - gesture.startView.centerY;
+
       const newView: ViewState = {
         ...gesture.startView,
-        centerX: worldX - (currentMouseX - 0.5) * newZoom * aspectRatio,
-        centerY: worldY - (currentMouseY - 0.5) * newZoom,
+        centerX: newCenterX,
+        centerY: newCenterY,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
+        ...applyHpPan(gesture.startView, dxComplex, dyComplex),
       };
       drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
       commitViewChange(newView, false);

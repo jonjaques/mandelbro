@@ -116,7 +116,8 @@ function ColorSwatch({ scheme }: { scheme: ColorScheme }) {
   );
 }
 
-function formatCoord(n: number): string {
+function formatCoord(n: number, hp?: string): string {
+  if (hp) return hp;
   if (Math.abs(n) < 0.0001) return n.toExponential(6);
   return n.toPrecision(12);
 }
@@ -171,8 +172,14 @@ export function SettingsPanel({
           <div className="space-y-2">
             <SectionHeader>Position</SectionHeader>
             <div className="flex flex-col -mx-2">
-              <CoordinateRow label="Re" value={formatCoord(view.centerX)} />
-              <CoordinateRow label="Im" value={formatCoord(view.centerY)} />
+              <CoordinateRow
+                label="Re"
+                value={formatCoord(view.centerX, view.centerXHp)}
+              />
+              <CoordinateRow
+                label="Im"
+                value={formatCoord(view.centerY, view.centerYHp)}
+              />
               <CoordinateRow label="Zoom" value={formatZoom(view.zoom)} />
               <CoordinateRow label="Iter" value={String(view.maxIter)} />
             </div>
@@ -211,7 +218,7 @@ export function SettingsPanel({
               <Slider
                 value={[view.maxIter]}
                 min={50}
-                max={5000}
+                max={10000}
                 step={50}
                 onValueCommit={([val]) => {
                   if (val === undefined) return;
@@ -224,7 +231,7 @@ export function SettingsPanel({
               />
               <div className="flex justify-between text-[10px] text-white/30">
                 <span>50</span>
-                <span>5000</span>
+                <span>10000</span>
               </div>
             </div>
 

@@ -28,7 +28,7 @@ import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { ViewState } from "@/lib/mandelbrot/types";
+import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 import { DEFAULT_VIEW } from "@/lib/mandelbrot/url-state";
 import {
   viewStateToFavorite,
@@ -36,6 +36,7 @@ import {
   type Favorite,
 } from "@/lib/mandelbrot/favorites";
 import { useMandelbrotWorker } from "@/hooks/use-mandelbrot-worker";
+import { usePerturbationRenderer } from "@/hooks/use-perturbation-renderer";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useInteraction } from "@/hooks/use-interaction";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
@@ -72,17 +73,47 @@ export function MandelbrotExplorer() {
     renameFavorite,
   } = useFavorites();
 
-  const { render, cancelRender, progress } = useMandelbrotWorker(canvasRef);
+  const {
+    render: stdRender,
+    cancelRender: stdCancel,
+    progress: stdProgress,
+  } = useMandelbrotWorker(canvasRef);
+  const {
+    render: pertRender,
+    cancelRender: pertCancel,
+    progress: pertProgress,
+  } = usePerturbationRenderer(canvasRef);
+
+  const [activeRenderer, setActiveRenderer] = useState<
+    "standard" | "perturbation"
+  >("standard");
+
+  const progress =
+    activeRenderer === "perturbation" ? pertProgress : stdProgress;
 
   const triggerRender = useCallback(
     (view: ViewState) => {
       const { width, height } = sizeRef.current;
       if (width === 0 || height === 0) return;
 
-      render(view, width, height);
+      const usePerturb = view.zoom < PRECISION_THRESHOLD;
+      setActiveRenderer(usePerturb ? "perturbation" : "standard");
+
+      if (usePerturb) {
+        stdCancel();
+        pertRender(view, width, height);
+      } else {
+        pertCancel();
+        stdRender(view, width, height);
+      }
     },
-    [render],
+    [stdRender, stdCancel, pertRender, pertCancel],
   );
+
+  const cancelRender = useCallback(() => {
+    stdCancel();
+    pertCancel();
+  }, [stdCancel, pertCancel]);
 
   // Called when the URL hash changes (e.g., browser back/forward button)
   const handleHashChange = useCallback(

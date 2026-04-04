@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "astro": "6.1.3",
+    "bigfloat-esnext": "^3.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3-color": "^3.1.0",

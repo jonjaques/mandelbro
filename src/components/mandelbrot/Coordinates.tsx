@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ViewState } from "@/lib/mandelbrot/types";
+import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 
 interface CoordinatesProps {
   view: ViewState;
   onRegisterActivity: (cb: () => void) => void;
 }
 
-function formatNum(n: number): string {
+function formatNum(n: number, hp?: string): string {
+  if (hp) {
+    const maxLen = 24;
+    return hp.length > maxLen ? hp.slice(0, maxLen) + "…" : hp;
+  }
   if (Math.abs(n) < 0.0001) return n.toExponential(4);
   return n.toFixed(8);
 }
@@ -63,14 +67,23 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
       }}
     >
       <div>
-        Re: <span className="tabular-nums">{formatNum(view.centerX)}</span>
+        Re:{" "}
+        <span className="tabular-nums">
+          {formatNum(view.centerX, view.centerXHp)}
+        </span>
       </div>
       <div>
-        Im: <span className="tabular-nums">{formatNum(view.centerY)}</span>
+        Im:{" "}
+        <span className="tabular-nums">
+          {formatNum(view.centerY, view.centerYHp)}
+        </span>
       </div>
       <div>
         Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span>
       </div>
+      {view.zoom < PRECISION_THRESHOLD && (
+        <div className="text-[10px] text-amber-400/70 mt-0.5">Deep zoom</div>
+      )}
     </div>
   );
 }
