@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { ViewState } from "@/lib/mandelbrot/types";
+import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -14,23 +14,27 @@ const TOUCH_RENDER_DEBOUNCE_MS = 100;
 
 /**
  * Update high-precision center coordinates by adding a small double offset.
- * If the view already has Hp strings, we add the double delta via BigFloat
- * arithmetic to preserve precision beyond what IEEE 754 doubles can hold.
- * Otherwise, we leave the Hp fields undefined and let doubles handle it.
+ * Automatically creates HP strings when zooming past PRECISION_THRESHOLD,
+ * bootstrapping from the current double-precision values.
  */
-function applyHpPan(
+function applyHpDelta(
   view: ViewState,
   dxComplex: number,
   dyComplex: number,
+  newZoom: number,
 ): Pick<ViewState, "centerXHp" | "centerYHp"> {
-  if (!view.centerXHp && !view.centerYHp) return {};
+  const needsHp =
+    newZoom < PRECISION_THRESHOLD ||
+    view.centerXHp != null ||
+    view.centerYHp != null;
+  if (!needsHp) return {};
+
+  const baseX = view.centerXHp ?? view.centerX.toPrecision(15);
+  const baseY = view.centerYHp ?? view.centerY.toPrecision(15);
+
   return {
-    centerXHp: bfToString(
-      bfAdd(bfMake(view.centerXHp ?? String(view.centerX)), bfMake(dxComplex)),
-    ),
-    centerYHp: bfToString(
-      bfAdd(bfMake(view.centerYHp ?? String(view.centerY)), bfMake(dyComplex)),
-    ),
+    centerXHp: bfToString(bfAdd(bfMake(baseX), bfMake(dxComplex))),
+    centerYHp: bfToString(bfAdd(bfMake(baseY), bfMake(dyComplex))),
   };
 }
 
@@ -58,6 +62,8 @@ interface TouchGestureState {
 interface WheelGestureState {
   startView: ViewState;
   snapshot: HTMLCanvasElement;
+  cursorCanvasX: number;
+  cursorCanvasY: number;
 }
 
 /**
@@ -216,7 +222,7 @@ export function useInteraction(
         ...view,
         centerX: view.centerX + dxComplex,
         centerY: view.centerY + dyComplex,
-        ...applyHpPan(view, dxComplex, dyComplex),
+        ...applyHpDelta(view, dxComplex, dyComplex, view.zoom),
       };
 
       commitViewChange(newView, false);
@@ -240,6 +246,8 @@ export function useInteraction(
       const rect = canvas.getBoundingClientRect();
       const view = getView();
 
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
       if (!wheelGesture.current) {
         onInteractionStart();
         const snapshot = snapshotCanvas();
@@ -247,6 +255,8 @@ export function useInteraction(
         wheelGesture.current = {
           startView: view,
           snapshot,
+          cursorCanvasX: (e.clientX - rect.left) * dpr,
+          cursorCanvasY: (e.clientY - rect.top) * dpr,
         };
       }
 
@@ -254,56 +264,53 @@ export function useInteraction(
       const mouseX = (e.clientX - rect.left) / rect.width;
       const mouseY = (e.clientY - rect.top) / rect.height;
 
-      // ── "Zoom toward cursor" math ─────────────────────────────
+      // ── "Zoom toward cursor" with algebraic delta ──────────────
       //
-      // Goal: after zooming, the complex-plane point under the cursor
-      // should still be under the cursor.
-      //
-      // Step 1: Find the complex-plane coordinates under the cursor.
-      //   The view center maps to screen fraction (0.5, 0.5).
-      //   The cursor is at (mouseX, mouseY), offset from center by
-      //   (mouseX - 0.5, mouseY - 0.5) in normalized screen coords.
-      //   Scale by viewport size in complex units:
-      //     worldX = centerX + (mouseX - 0.5) × zoom × aspectRatio
-      //     worldY = centerY + (mouseY - 0.5) × zoom
-      //
-      // Step 2: Apply the zoom factor.
-      //   Scroll up (deltaY < 0) → zoom in → smaller zoom value
-      //   Scroll down (deltaY > 0) → zoom out → larger zoom value
-      //   ±10% per wheel tick (factor = 1.1 or 1/1.1 ≈ 0.909)
-      //
-      // Step 3: Compute the new center so the cursor point stays fixed.
-      //   Rearranging the worldX formula for centerX:
-      //     newCenterX = worldX - (mouseX - 0.5) × newZoom × aspectRatio
-      //   Same for Y.
+      // Instead of computing worldX = center + offset then
+      // newCenter = worldX - offset' (which suffers catastrophic
+      // cancellation at deep zoom), we compute the center delta
+      // directly: delta = (mousePos - 0.5) * aspect * (zoom - newZoom).
+      // This avoids adding a tiny correction to a large coordinate.
       const aspectRatio = rect.width / rect.height;
-      const worldX = view.centerX + (mouseX - 0.5) * view.zoom * aspectRatio;
-      const worldY = view.centerY + (mouseY - 0.5) * view.zoom;
-
       const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
       const newZoom = view.zoom * factor;
 
-      const newCenterX = worldX - (mouseX - 0.5) * newZoom * aspectRatio;
-      const newCenterY = worldY - (mouseY - 0.5) * newZoom;
-      const dxComplex = newCenterX - view.centerX;
-      const dyComplex = newCenterY - view.centerY;
+      const zoomDelta = view.zoom - newZoom;
+      const dxComplex = (mouseX - 0.5) * aspectRatio * zoomDelta;
+      const dyComplex = (mouseY - 0.5) * zoomDelta;
 
       const newView: ViewState = {
         ...view,
-        centerX: newCenterX,
-        centerY: newCenterY,
+        centerX: view.centerX + dxComplex,
+        centerY: view.centerY + dyComplex,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
-        ...applyHpPan(view, dxComplex, dyComplex),
+        ...applyHpDelta(view, dxComplex, dyComplex, newZoom),
       };
 
       commitViewChange(newView, false);
-      drawViewPreview(
-        wheelGesture.current.snapshot,
-        wheelGesture.current.startView,
-        newView,
-        rect,
-      );
+
+      // Cursor-centered preview: scale snapshot around cursor position.
+      // This avoids using double-precision center coordinates which
+      // lose accuracy at deep zoom.
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (ctx) {
+        const { snapshot, cursorCanvasX: cx, cursorCanvasY: cy } =
+          wheelGesture.current;
+        const overallScale =
+          wheelGesture.current.startView.zoom / newView.zoom;
+        ctx.imageSmoothingEnabled = true;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(
+          snapshot,
+          cx * (1 - overallScale),
+          cy * (1 - overallScale),
+          snapshot.width * overallScale,
+          snapshot.height * overallScale,
+        );
+      }
+
       scheduleFullRender(newView, WHEEL_RENDER_DEBOUNCE_MS, "zoom_wheel");
     };
 
@@ -333,7 +340,7 @@ export function useInteraction(
         centerY: view.centerY + dyComplex,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
-        ...applyHpPan(view, dxComplex, dyComplex),
+        ...applyHpDelta(view, dxComplex, dyComplex, newZoom),
       };
 
       trackEvent("zoom_double_click", { zoom_level: newView.zoom });
@@ -476,7 +483,12 @@ export function useInteraction(
           ...gesture.startView,
           centerX: gesture.startView.centerX + dxComplex,
           centerY: gesture.startView.centerY + dyComplex,
-          ...applyHpPan(gesture.startView, dxComplex, dyComplex),
+          ...applyHpDelta(
+            gesture.startView,
+            dxComplex,
+            dyComplex,
+            gesture.startView.zoom,
+          ),
         };
         drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
         commitViewChange(newView, false);
@@ -508,27 +520,24 @@ export function useInteraction(
       const startMouseY = (gesture.startMidpoint.y - rect.top) / rect.height;
       const currentMouseX = (currentMidpoint.x - rect.left) / rect.width;
       const currentMouseY = (currentMidpoint.y - rect.top) / rect.height;
-      const worldX =
-        gesture.startView.centerX +
-        (startMouseX - 0.5) * gesture.startView.zoom * aspectRatio;
-      const worldY =
-        gesture.startView.centerY +
-        (startMouseY - 0.5) * gesture.startView.zoom;
       const newZoom =
         gesture.startView.zoom * (gesture.startDistance / currentDistance);
 
-      const newCenterX = worldX - (currentMouseX - 0.5) * newZoom * aspectRatio;
-      const newCenterY = worldY - (currentMouseY - 0.5) * newZoom;
-      const dxComplex = newCenterX - gesture.startView.centerX;
-      const dyComplex = newCenterY - gesture.startView.centerY;
+      // Algebraic delta avoids catastrophic cancellation at deep zoom
+      const dxComplex =
+        (startMouseX - 0.5) * gesture.startView.zoom * aspectRatio -
+        (currentMouseX - 0.5) * newZoom * aspectRatio;
+      const dyComplex =
+        (startMouseY - 0.5) * gesture.startView.zoom -
+        (currentMouseY - 0.5) * newZoom;
 
       const newView: ViewState = {
         ...gesture.startView,
-        centerX: newCenterX,
-        centerY: newCenterY,
+        centerX: gesture.startView.centerX + dxComplex,
+        centerY: gesture.startView.centerY + dyComplex,
         zoom: newZoom,
         maxIter: autoIterations(newZoom),
-        ...applyHpPan(gesture.startView, dxComplex, dyComplex),
+        ...applyHpDelta(gesture.startView, dxComplex, dyComplex, newZoom),
       };
       drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
       commitViewChange(newView, false);

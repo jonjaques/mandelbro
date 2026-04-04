@@ -87,7 +87,7 @@ export function computeReferenceOrbit(
   let tortRe = 0;
   let tortIm = 0;
   let power = 1;
-  let lambda = 1;
+  let lambda = 0;
   const cycleTolerance = 1e-12;
 
   let escaped = false;
@@ -213,6 +213,17 @@ export function computeReferenceOrbit(
     zIm = newZIm;
   }
 
+  // When the reference orbit is periodic, extend it to full length by
+  // repeating the cycle. Without this, perturbation is capped at the cycle
+  // detection point and changing maxIter has no visible effect.
+  if (cycleDetected && cyclePeriod > 0 && finalIter < clampedMaxIter) {
+    for (let m = finalIter + 1; m <= clampedMaxIter; m++) {
+      reArr[m] = reArr[m - cyclePeriod] ?? 0;
+      imArr[m] = imArr[m - cyclePeriod] ?? 0;
+    }
+    finalIter = clampedMaxIter;
+  }
+
   onProgress?.(finalIter, clampedMaxIter);
 
   const result: ReferenceOrbit = {
@@ -224,8 +235,12 @@ export function computeReferenceOrbit(
     cyclePeriod,
   };
 
+  // SA coefficients are only valid for non-cyclic orbits. For cyclic orbits
+  // the coefficients grow without bound past the detection point and can't
+  // be extended by simple repetition.
   if (
     computeSACoefficients &&
+    !cycleDetected &&
     saAre &&
     saAim &&
     saBre &&

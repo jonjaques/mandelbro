@@ -47,6 +47,7 @@ import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
 import { SaveFavoriteDialog } from "./SaveFavoriteDialog";
 import { Coordinates } from "./Coordinates";
+import { DeepZoomBanner } from "./DeepZoomBanner";
 import { RenderProgress } from "./RenderProgress";
 
 export function MandelbrotExplorer() {
@@ -244,6 +245,10 @@ export function MandelbrotExplorer() {
           onSave={handleSaveFavorite}
         />
         <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
+        <DeepZoomBanner
+          active={activeRenderer === "perturbation"}
+          zoom={viewForUI.zoom}
+        />
         <RenderProgress progress={progress} />
       </TooltipProvider>
     </StrictMode>

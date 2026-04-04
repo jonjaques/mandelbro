@@ -82,7 +82,10 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
         Zoom: <span className="tabular-nums">{formatZoom(view.zoom)}</span>
       </div>
       {view.zoom < PRECISION_THRESHOLD && (
-        <div className="text-[10px] text-amber-400/70 mt-0.5">Deep zoom</div>
+        <div className="text-[10px] text-amber-400/70 mt-0.5 flex items-center gap-1">
+          <span className="inline-block w-1 h-1 rounded-full bg-amber-400/70" />
+          Precision mode · {Math.floor(-Math.log10(view.zoom))}+ digits
+        </div>
       )}
     </div>
   );

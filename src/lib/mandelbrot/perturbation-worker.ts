@@ -6,7 +6,7 @@
  * perturbation formula instead of direct escape-time iteration.
  */
 import { perturbationBand } from "./perturbation";
-import { mapToColors, zoomColorCyclePeriod } from "./colors";
+import { mapToColors } from "./colors";
 import type {
   AntialiasSamples,
   PerturbationWorkerIn,
@@ -103,8 +103,7 @@ function processRequest(req: PerturbationRenderRequest) {
       saCoeffCim,
     );
 
-    const cyclePeriod = zoomColorCyclePeriod(zoom);
-    const rgba = mapToColors(iterations, maxIter, colorScheme, cyclePeriod);
+    const rgba = mapToColors(iterations, maxIter, colorScheme);
     const buffer = rgba.buffer as ArrayBuffer;
 
     const chunk: ChunkResult = {

@@ -18,9 +18,6 @@ const LOG2 = Math.log(2);
 
 const GLITCH_THRESHOLD = 1e3;
 
-const CHECK_PERIOD = 20;
-const PERIOD_TOLERANCE = 1e-18;
-
 export function perturbationEscapeTime(
   refRe: Float64Array,
   refIm: Float64Array,
@@ -36,10 +33,6 @@ export function perturbationEscapeTime(
   let dIm = startDeltaIm;
 
   const iterLimit = Math.min(refIterations, maxIter);
-
-  let savedRe = 0;
-  let savedIm = 0;
-  let checkCounter = 0;
 
   for (let n = startIter; n < iterLimit; n++) {
     const xn = refRe[n] ?? 0;
@@ -66,18 +59,6 @@ export function perturbationEscapeTime(
     const refMag2 = refNextRe * refNextRe + refNextIm * refNextIm;
     if (refMag2 > 0 && dMag2 > GLITCH_THRESHOLD * refMag2) {
       // Glitch detected — accepted for v1, future work adds multi-reference
-    }
-
-    checkCounter++;
-    if (checkCounter >= CHECK_PERIOD) {
-      checkCounter = 0;
-      const diffRe = zRe - savedRe;
-      const diffIm = zIm - savedIm;
-      if (diffRe * diffRe + diffIm * diffIm < PERIOD_TOLERANCE) {
-        return [maxIter, 0];
-      }
-      savedRe = zRe;
-      savedIm = zIm;
     }
   }
 
