@@ -480,6 +480,19 @@ When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). The 
 - Single-reference perturbation can produce visual glitches near mini-Mandelbrot copies (multi-reference not yet implemented)
 - `zoomHp` is present in the ViewState type but interaction handlers currently use double-precision zoom (sufficient because zoom is a scale factor, not a position)
 
+## Deployment
+
+The project is deployed on **Cloudflare Pages** via git-based CI (pushes to tracked branches auto-deploy).
+
+| Branch     | URL                                         | Purpose                        |
+| ---------- | ------------------------------------------- | ------------------------------ |
+| `main`     | https://mandelbro.jonjaques.com             | Production (standard pipeline) |
+| `bigfloat` | https://bigfloat.mandelbro.pages.dev/       | Preview (perturbation/bigfloat) |
+
+Both deployments share the same URL hash format, so any `#x=...&y=...&z=...` hash is compatible between branches. This enables cross-branch comparison by replacing the hostname while preserving the hash.
+
+A **Compare** button in the Toolbar (visible on both deployments) opens the same coordinates on the other branch in a new tab. This lets users visually compare the standard double-precision pipeline (production) against the arbitrary-precision perturbation pipeline (bigfloat) at the same location and zoom.
+
 ## References
 
 - K. I. Martin, ["Superfractalthing Maths"](https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf) — perturbation theory formulation

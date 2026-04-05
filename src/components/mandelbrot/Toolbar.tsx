@@ -7,6 +7,7 @@ import {
   Check,
   SquareCode,
   Star,
+  GitCompare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,14 @@ interface ToolbarProps {
 }
 
 const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
+const PRODUCTION_URL = "https://mandelbro.jonjaques.com";
+const PREVIEW_URL = "https://bigfloat.mandelbro.pages.dev";
+
+function getCompareUrl(): string {
+  const isProduction = window.location.hostname === "mandelbro.jonjaques.com";
+  const target = isProduction ? PREVIEW_URL : PRODUCTION_URL;
+  return target + window.location.hash;
+}
 
 type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void>;
@@ -242,6 +251,25 @@ export function Toolbar({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">View Source</TooltipContent>
+      </Tooltip>
+
+      <div className="h-px bg-white/10" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={btnClass}
+            aria-label="Compare this view on the other branch"
+            onClick={() => {
+              window.open(getCompareUrl(), "_blank", "noreferrer");
+            }}
+          >
+            <GitCompare className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Compare Branch</TooltipContent>
       </Tooltip>
 
       <div className="h-px bg-white/10" />
