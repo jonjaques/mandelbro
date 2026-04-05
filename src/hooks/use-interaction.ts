@@ -107,6 +107,12 @@ export function useInteraction(
   const touchGesture = useRef<TouchGestureState | null>(null);
   const wheelGesture = useRef<WheelGestureState | null>(null);
   const activityRef = useRef<(() => void) | null>(null);
+  // Tracks the last single-tap for double-tap detection. We implement our own
+  // because e.preventDefault() in touchstart (required to prevent touchcancel
+  // on iOS) suppresses the synthetic dblclick that browsers generate from touch.
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
+    null,
+  );
 
   // Expose an activity callback for external use (the Coordinates HUD uses
   // this to show itself and reset its auto-hide timer on any interaction)
@@ -459,6 +465,11 @@ export function useInteraction(
     const handleTouchStart = (e: TouchEvent) => {
       activityRef.current?.();
       if (e.touches.length === 1 || e.touches.length === 2) {
+        // Prevent the browser from claiming this gesture for elastic-scroll or
+        // pinch-zoom. Without this, iOS fires touchcancel when it decides to
+        // handle the touch itself, which clears touchGesture.current and makes
+        // all subsequent touchmove events no-ops → "frozen" canvas on mobile.
+        e.preventDefault();
         startTouchGesture(e.touches);
       } else {
         touchGesture.current = null;
@@ -558,6 +569,71 @@ export function useInteraction(
       if (!touchGesture.current) return;
       const finishedGesture = touchGesture.current;
       touchGesture.current = null;
+
+      // ── Double-tap detection ─────────────────────────────────────────
+      //
+      // e.preventDefault() in touchstart prevents the browser from generating
+      // synthetic dblclick events from touch. We implement double-tap ourselves:
+      // two taps within 300ms within 30px of each other, with minimal movement
+      // during each tap (< 15px drift means it was a tap, not a pan).
+      if (finishedGesture.mode === "pan" && e.changedTouches.length === 1) {
+        const touch = e.changedTouches.item(0);
+        if (touch) {
+          const now = Date.now();
+          const last = lastTapRef.current;
+          const tapDrift =
+            finishedGesture.startTouch != null
+              ? Math.hypot(
+                  touch.clientX - finishedGesture.startTouch.x,
+                  touch.clientY - finishedGesture.startTouch.y,
+                )
+              : Infinity;
+          const isTap = tapDrift < 15;
+
+          if (
+            isTap &&
+            last != null &&
+            now - last.time < 300 &&
+            Math.abs(touch.clientX - last.x) < 30 &&
+            Math.abs(touch.clientY - last.y) < 30
+          ) {
+            // Double-tap: zoom in 2× toward tap position (same as dblclick)
+            lastTapRef.current = null;
+            if (idleTimer.current) {
+              clearTimeout(idleTimer.current);
+              idleTimer.current = null;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (touch.clientX - rect.left) / rect.width;
+            const mouseY = (touch.clientY - rect.top) / rect.height;
+            const view = getView();
+            const aspectRatio = rect.width / rect.height;
+            const newZoom = view.zoom / 2;
+            const dxComplex = (mouseX - 0.5) * view.zoom * aspectRatio;
+            const dyComplex = (mouseY - 0.5) * view.zoom;
+            const newView: ViewState = {
+              ...view,
+              centerX: view.centerX + dxComplex,
+              centerY: view.centerY + dyComplex,
+              zoom: newZoom,
+              maxIter: autoIterations(newZoom),
+              ...applyHpDelta(view, dxComplex, dyComplex, newZoom),
+            };
+            trackEvent("zoom_double_tap", { zoom_level: newView.zoom });
+            commitViewChange(newView, true);
+            return;
+          }
+
+          lastTapRef.current = isTap
+            ? { time: now, x: touch.clientX, y: touch.clientY }
+            : null;
+        }
+      } else {
+        // Pinch or multi-touch: reset tap state so a subsequent single tap
+        // doesn't accidentally trigger double-tap zoom.
+        lastTapRef.current = null;
+      }
+
       scheduleFullRender(
         getView(),
         finishedGesture.mode === "pinch"
@@ -575,7 +651,7 @@ export function useInteraction(
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("dblclick", handleDblClick);
     canvas.addEventListener("touchstart", handleTouchStart, {
-      passive: true,
+      passive: false, // Must be non-passive to allow e.preventDefault() which prevents touchcancel on iOS
     });
     canvas.addEventListener("touchmove", handleTouchMove, {
       passive: false, // Need to call preventDefault to block native zoom

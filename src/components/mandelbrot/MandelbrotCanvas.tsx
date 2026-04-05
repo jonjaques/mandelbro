@@ -70,6 +70,12 @@ export const MandelbrotCanvas = forwardRef<
       const pixelWidth = Math.round(width * dpr);
       const pixelHeight = Math.round(height * dpr);
 
+      // Guard: setting canvas.width/height clears the buffer even if the
+      // value is unchanged. Skip if dimensions are the same to avoid
+      // wiping in-progress renders (especially during touch gestures where
+      // the visualViewport can fire spurious resize events on iOS).
+      if (canvas.width === pixelWidth && canvas.height === pixelHeight) return;
+
       canvas.width = pixelWidth;
       canvas.height = pixelHeight;
 

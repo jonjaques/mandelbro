@@ -131,6 +131,7 @@
     height: var(--app-cover-height);
     min-height: var(--app-cover-height);
     background: #000;
+    overflow: hidden;
     overscroll-behavior: none;
   }
   body {

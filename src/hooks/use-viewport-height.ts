@@ -29,8 +29,11 @@ export function useViewportHeight(): void {
     window.addEventListener("resize", requestSync);
     window.addEventListener("orientationchange", requestSync);
     window.addEventListener("pageshow", requestSync);
+    // visualViewport "resize" fires when browser chrome (URL bar) shows/hides.
+    // We intentionally omit "scroll" here: it fires on every touch pan gesture
+    // on iOS, which causes unnecessary --app-height updates mid-gesture and can
+    // trigger the ResizeObserver → canvas clear cycle during active interaction.
     window.visualViewport?.addEventListener("resize", requestSync);
-    window.visualViewport?.addEventListener("scroll", requestSync);
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -38,7 +41,6 @@ export function useViewportHeight(): void {
       window.removeEventListener("orientationchange", requestSync);
       window.removeEventListener("pageshow", requestSync);
       window.visualViewport?.removeEventListener("resize", requestSync);
-      window.visualViewport?.removeEventListener("scroll", requestSync);
     };
   }, []);
 }
