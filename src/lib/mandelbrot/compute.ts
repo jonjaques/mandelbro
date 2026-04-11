@@ -1,22 +1,6 @@
 import type { AntialiasMode, AntialiasSamples } from "./types";
-
-/**
- * Higher bailout values produce smoother color gradients at the escape boundary
- * because they let |z|² grow larger before we declare "escaped," giving the
- * smooth-coloring log-log formula more dynamic range to work with. The classic
- * bailout is 4 (radius 2), but 256 (radius 16) is used here for much smoother
- * color transitions at virtually no extra cost per pixel.
- */
-const BAILOUT = 256;
-const LOG2 = Math.log(2);
-
-/**
- * The default zoom level of 3.5 corresponds to the "standard view" of the
- * Mandelbrot set: a viewport ~3.5 units wide on the complex plane, centered
- * at (-0.5, 0), which frames the full set with a little padding. The zoom
- * value represents the height of the visible region in complex-plane units.
- */
-const DEFAULT_ZOOM = 3.5;
+import { BAILOUT, DEFAULT_ZOOM } from "./constants";
+import { smoothColor } from "./worker-utils";
 
 /**
  * Auto-calculate iteration count based on zoom depth.
@@ -132,32 +116,6 @@ export function escapeTime(
   return [i, x2 + y2];
 }
 
-/**
- * Smooth (fractional) iteration count, eliminating the visible "banding"
- * that occurs with integer iteration counts.
- *
- * The raw integer iteration count produces discrete color bands. To get a
- * continuous value, we use the "normalized iteration count" formula:
- *
- *   smoothed = iter + 1 - log₂(log₂(|z|))
- *            = iter + 1 - log(log(√(x²+y²))) / log(2)
- *            = iter + 1 - log(½ · log(x²+y²)) / log(2)
- *
- * Intuition: when z escapes, |z|² might be anywhere from BAILOUT to much
- * larger. Two pixels with the same integer iteration count but different
- * final |z|² values are at different "fractional progress" toward the next
- * iteration. The double-logarithm maps this residual magnitude to a smooth
- * [0,1) fraction, giving gradient-like color transitions instead of bands.
- *
- * For interior points (|z|² ≤ BAILOUT after maxIter), we return the raw
- * iteration count, which maps to solid black via the color palette.
- */
-export function smoothColor(iterations: number, zMag2: number): number {
-  if (zMag2 <= BAILOUT) return iterations; // Interior point — didn't escape
-  // Math.sqrt(zMag2) = |z|, then double-log normalizes the residual escape
-  return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
-}
-
 export function computePixelSample(
   x0: number,
   y0: number,
@@ -236,41 +194,6 @@ export function computeBand(
 
     for (let px = 0; px < width; px++) {
       // Map pixel column to real axis coordinate
-      const x0 = xMin + px * pixelWidth;
-      result[rowOffset + px] = computePixelSample(x0, y0, maxIter);
-    }
-  }
-
-  return result;
-}
-
-/**
- * Compute the entire Mandelbrot frame at once (non-streaming variant).
- * Same coordinate mapping as computeBand, but processes the full canvas
- * in a single pass. Used as a simpler entry point when streaming is not needed.
- */
-export function computeFrame(
-  width: number,
-  height: number,
-  centerX: number,
-  centerY: number,
-  zoom: number,
-  maxIter: number,
-): Float64Array {
-  const result = new Float64Array(width * height);
-  const aspectRatio = width / height;
-  const halfZoom = zoom / 2;
-
-  const xMin = centerX - halfZoom * aspectRatio;
-  const yMin = centerY - halfZoom;
-  const pixelWidth = (zoom * aspectRatio) / width;
-  const pixelHeight = zoom / height;
-
-  for (let py = 0; py < height; py++) {
-    const y0 = yMin + py * pixelHeight;
-    const rowOffset = py * width;
-
-    for (let px = 0; px < width; px++) {
       const x0 = xMin + px * pixelWidth;
       result[rowOffset + px] = computePixelSample(x0, y0, maxIter);
     }

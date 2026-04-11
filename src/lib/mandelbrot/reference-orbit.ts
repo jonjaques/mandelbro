@@ -11,10 +11,10 @@ import {
 } from "./bigfloat-utils";
 import type { ReferenceOrbit } from "./types";
 
+import { BAILOUT, MAX_SAFE_ITERATIONS } from "./constants";
+
 const PROGRESS_INTERVAL = 200;
-const MAX_SAFE_ITERATIONS = 10000;
 const PROBE_GRID = 9;
-const BAILOUT = 256;
 
 export interface ReferenceOrbitOptions {
   computeSACoefficients?: boolean;

@@ -38,6 +38,7 @@
  */
 import { computeBand, computePixelSample } from "./compute";
 import { colorFromSmoothIteration, mapToColors } from "./colors";
+import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
   AntialiasSamples,
   WorkerInMessage,
@@ -46,12 +47,7 @@ import type {
   RenderComplete,
 } from "./types";
 
-interface WorkerContext {
-  onmessage: ((e: MessageEvent<WorkerInMessage>) => void) | null;
-  postMessage: (message: unknown, transfer?: Transferable[]) => void;
-}
-
-const workerSelf = self as unknown as WorkerContext;
+const workerSelf = self as unknown as WorkerContext<WorkerInMessage>;
 
 /**
  * The ID of the most recently received request. Used for cancellation:
@@ -60,13 +56,6 @@ const workerSelf = self as unknown as WorkerContext;
  * and bail out.
  */
 let currentRequestId = -1;
-
-/**
- * Baseline height of each horizontal band in pixels. The actual height is
- * reduced for expensive renders so the first chunk arrives sooner and stale
- * work can be cancelled with lower latency.
- */
-const BASE_BAND_HEIGHT = 32;
 
 workerSelf.onmessage = (e: MessageEvent<WorkerInMessage>) => {
   const msg = e.data;
@@ -188,16 +177,6 @@ function hashFloat01(seed: number): number {
   value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
   const hashed = (value ^ (value >>> 14)) >>> 0;
   return hashed / 4294967296;
-}
-
-function getBandHeight(
-  maxIter: number,
-  antialiasSamples: AntialiasSamples,
-): number {
-  if (antialiasSamples >= 4 || maxIter >= 2000) return 4;
-  if (antialiasSamples >= 2 || maxIter >= 800) return 8;
-  if (maxIter >= 400) return 16;
-  return BASE_BAND_HEIGHT;
 }
 
 function computeSupersampledBand(

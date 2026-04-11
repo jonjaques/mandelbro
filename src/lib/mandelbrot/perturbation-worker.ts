@@ -7,24 +7,17 @@
  */
 import { perturbationBand } from "./perturbation";
 import { mapToColors, zoomColorCyclePeriod } from "./colors";
+import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
-  AntialiasSamples,
   PerturbationWorkerIn,
   PerturbationRenderRequest,
   ChunkResult,
   RenderComplete,
 } from "./types";
 
-interface WorkerContext {
-  onmessage: ((e: MessageEvent<PerturbationWorkerIn>) => void) | null;
-  postMessage: (message: unknown, transfer?: Transferable[]) => void;
-}
-
-const workerSelf = self as unknown as WorkerContext;
+const workerSelf = self as unknown as WorkerContext<PerturbationWorkerIn>;
 
 let currentRequestId = -1;
-
-const BASE_BAND_HEIGHT = 32;
 
 workerSelf.onmessage = (e: MessageEvent<PerturbationWorkerIn>) => {
   const msg = e.data;
@@ -34,16 +27,6 @@ workerSelf.onmessage = (e: MessageEvent<PerturbationWorkerIn>) => {
 
   processRequest(msg);
 };
-
-function getBandHeight(
-  maxIter: number,
-  antialiasSamples: AntialiasSamples,
-): number {
-  if (antialiasSamples >= 4 || maxIter >= 2000) return 4;
-  if (antialiasSamples >= 2 || maxIter >= 800) return 8;
-  if (maxIter >= 400) return 16;
-  return BASE_BAND_HEIGHT;
-}
 
 function processRequest(req: PerturbationRenderRequest) {
   const {

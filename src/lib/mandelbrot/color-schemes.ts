@@ -1,4 +1,4 @@
-export const BUILTIN_COLOR_SCHEMES = [
+const BUILTIN_COLOR_SCHEMES = [
   "classic",
   "fire",
   "ocean",
@@ -8,9 +8,9 @@ export const BUILTIN_COLOR_SCHEMES = [
   "neon",
 ] as const;
 
-export const D3_CYCLICAL_COLOR_SCHEMES = ["rainbow", "sinebow"] as const;
+const D3_CYCLICAL_COLOR_SCHEMES = ["rainbow", "sinebow"] as const;
 
-export const D3_DIVERGING_COLOR_SCHEMES = [
+const D3_DIVERGING_COLOR_SCHEMES = [
   "brbg",
   "prgn",
   "piyg",
@@ -22,7 +22,7 @@ export const D3_DIVERGING_COLOR_SCHEMES = [
   "spectral",
 ] as const;
 
-export const D3_SEQUENTIAL_COLOR_SCHEMES = [
+const D3_SEQUENTIAL_COLOR_SCHEMES = [
   "blues",
   "bugn",
   "bupu",

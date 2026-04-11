@@ -20,8 +20,8 @@
  * @see https://mathr.co.uk/blog/2021-05-14_deep_zoom_theory_and_practice.html
  */
 
-const BAILOUT = 256;
-const LOG2 = Math.log(2);
+import { BAILOUT } from "./constants";
+import { smoothColor } from "./worker-utils";
 
 const GLITCH_THRESHOLD = 1e3;
 
@@ -99,16 +99,6 @@ export function perturbationEscapeTime(
   }
 
   return [maxIter, 0];
-}
-
-/**
- * Normalized iteration count (removes visible color bands vs raw `n`).
- *
- * @see https://en.wikipedia.org/wiki/Mandelbrot_set#Continuous_(smooth)_coloring
- */
-export function smoothColor(iterations: number, zMag2: number): number {
-  if (zMag2 <= BAILOUT) return iterations;
-  return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
 }
 
 /**

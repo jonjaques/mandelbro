@@ -13,8 +13,10 @@ import {
 export type { IBigFloat } from "bigfloat-esnext";
 export { add, mul, make, string as bfToString };
 
+import { BAILOUT } from "./constants";
+
 const ZERO = make(0);
-const BAILOUT_BF = make(256);
+const BAILOUT_BF = make(BAILOUT);
 
 export { ZERO, BAILOUT_BF };
 

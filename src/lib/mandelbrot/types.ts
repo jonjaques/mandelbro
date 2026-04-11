@@ -94,14 +94,6 @@ export interface CancelRequest {
 
 export type WorkerInMessage = RenderRequest | CancelRequest;
 
-/** Legacy non-streaming result type (retained for compatibility) */
-export interface RenderResult {
-  requestId: number;
-  width: number;
-  height: number;
-  buffer: ArrayBuffer;
-}
-
 // --- Streaming protocol types ---
 
 /**

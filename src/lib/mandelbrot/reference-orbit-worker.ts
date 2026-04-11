@@ -12,19 +12,14 @@
  */
 import { computeReferenceOrbit, findBestReference } from "./reference-orbit";
 import { toString as bfToString, make, add } from "./bigfloat-utils";
+import type { WorkerContext } from "./worker-utils";
 import type {
   ReferenceWorkerIn,
   ReferenceOrbitProgress,
   ReferenceOrbitComplete,
-  CancelRequest,
 } from "./types";
 
-interface WorkerContext {
-  onmessage: ((e: MessageEvent<ReferenceWorkerIn>) => void) | null;
-  postMessage: (message: unknown, transfer?: Transferable[]) => void;
-}
-
-const workerSelf = self as unknown as WorkerContext;
+const workerSelf = self as unknown as WorkerContext<ReferenceWorkerIn>;
 
 let currentRequestId = -1;
 
@@ -156,5 +151,3 @@ workerSelf.onmessage = (e: MessageEvent<ReferenceWorkerIn>) => {
 
   workerSelf.postMessage(complete, transferables);
 };
-
-void (undefined as unknown as CancelRequest);
