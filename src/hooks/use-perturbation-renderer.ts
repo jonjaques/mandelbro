@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type {
   CancelRequest,
   PerturbationRenderRequest,
   ViewState,
-  ChunkResult,
   ReferenceWorkerOut,
   PerturbationWorkerOut,
   ReferenceOrbitRequest,
@@ -11,6 +10,7 @@ import type {
 } from "@/lib/mandelbrot/types";
 import { resolveAntialiasSamples } from "@/lib/mandelbrot/compute";
 import { requiredPrecision } from "@/lib/mandelbrot/bigfloat-utils";
+import { useChunkRenderer } from "@/hooks/use-chunk-renderer";
 
 /**
  * Perturbation workers are more CPU-intensive per pixel than the standard
@@ -40,39 +40,22 @@ export function usePerturbationRenderer(
 ) {
   const refWorkerRef = useRef<Worker | null>(null);
   const pertWorkersRef = useRef<Worker[]>([]);
-  const requestIdRef = useRef(0);
-  const pendingChunksRef = useRef<ChunkResult[]>([]);
-  const rafIdRef = useRef(0);
-  const pixelsReceivedRef = useRef(0);
-  const totalPixelsRef = useRef(0);
-  const completedWorkersRef = useRef(0);
-  const [progress, setProgress] = useState<number | null>(null);
+  const {
+    requestIdRef,
+    progress,
+    handleChunkMessage,
+    armPixelPhase,
+    clearChunkQueueAndPixelCounters,
+    setChunkProgress,
+    cancelBase,
+    cancelPendingRaf,
+  } = useChunkRenderer(canvasRef);
 
   // Reference orbit cache: reuse when center hasn't changed
   const cachedOrbitRef = useRef<{
     centerKey: string;
     orbit: ReferenceOrbitComplete;
   } | null>(null);
-
-  const paintChunks = useCallback(() => {
-    rafIdRef.current = 0;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) return;
-
-    const chunks = pendingChunksRef.current;
-    pendingChunksRef.current = [];
-    const currentId = requestIdRef.current;
-
-    for (const chunk of chunks) {
-      if (chunk.requestId !== currentId) continue;
-      const clamped = new Uint8ClampedArray(chunk.buffer);
-      const imgData = new ImageData(clamped, chunk.width, chunk.height);
-      ctx.putImageData(imgData, 0, chunk.y);
-    }
-  }, [canvasRef]);
 
   useEffect(() => {
     const refWorker = new Worker(
@@ -89,28 +72,7 @@ export function usePerturbationRenderer(
       );
 
       worker.onmessage = (e: MessageEvent<PerturbationWorkerOut>) => {
-        const msg = e.data;
-        if (msg.type === "chunk") {
-          if (msg.requestId !== requestIdRef.current) return;
-          pendingChunksRef.current.push(msg);
-          if (!rafIdRef.current) {
-            rafIdRef.current = requestAnimationFrame(paintChunks);
-          }
-          pixelsReceivedRef.current += msg.width * msg.height;
-          const total = totalPixelsRef.current;
-          if (total > 0) {
-            // Phase 2 progress: 10-100% (phase 1 is 0-10%)
-            setProgress(
-              Math.min(100, 10 + (pixelsReceivedRef.current / total) * 90),
-            );
-          }
-        } else {
-          if (msg.requestId !== requestIdRef.current) return;
-          completedWorkersRef.current++;
-          if (completedWorkersRef.current >= PERTURBATION_WORKER_COUNT) {
-            setProgress(null);
-          }
-        }
+        handleChunkMessage(e.data, PERTURBATION_WORKER_COUNT, 10, 90);
       };
 
       pertWorkers.push(worker);
@@ -124,32 +86,19 @@ export function usePerturbationRenderer(
         w.terminate();
       }
       pertWorkersRef.current = [];
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = 0;
-      }
+      cancelPendingRaf();
     };
-  }, [paintChunks]);
+  }, [handleChunkMessage, cancelPendingRaf]);
 
   const cancelRender = useCallback(() => {
-    const id = ++requestIdRef.current;
-    pendingChunksRef.current = [];
-    pixelsReceivedRef.current = 0;
-    totalPixelsRef.current = 0;
-    completedWorkersRef.current = 0;
-    setProgress(null);
-
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-    }
+    const id = cancelBase();
 
     const cancelMessage: CancelRequest = { type: "cancel", requestId: id };
     refWorkerRef.current?.postMessage(cancelMessage);
     for (const w of pertWorkersRef.current) {
       w.postMessage(cancelMessage);
     }
-  }, []);
+  }, [cancelBase]);
 
   const dispatchPerturbationRender = useCallback(
     (
@@ -162,10 +111,7 @@ export function usePerturbationRenderer(
       const workers = pertWorkersRef.current;
       if (workers.length === 0) return;
 
-      totalPixelsRef.current = width * height;
-      pixelsReceivedRef.current = 0;
-      completedWorkersRef.current = 0;
-      pendingChunksRef.current = [];
+      armPixelPhase(width * height);
 
       for (let i = 0; i < workers.length; i++) {
         const worker = workers[i];
@@ -198,7 +144,7 @@ export function usePerturbationRenderer(
         worker.postMessage(request);
       }
     },
-    [],
+    [armPixelPhase],
   );
 
   const render = useCallback(
@@ -207,8 +153,8 @@ export function usePerturbationRenderer(
       if (!refWorker || width === 0 || height === 0) return;
 
       const id = ++requestIdRef.current;
-      setProgress(0);
-      pendingChunksRef.current = [];
+      clearChunkQueueAndPixelCounters();
+      setChunkProgress(0);
 
       const centerReStr = view.centerXHp ?? view.centerX.toPrecision(15);
       const centerImStr = view.centerYHp ?? view.centerY.toPrecision(15);
@@ -216,7 +162,7 @@ export function usePerturbationRenderer(
 
       const cached = cachedOrbitRef.current;
       if (cached?.centerKey === centerKey) {
-        setProgress(10);
+        setChunkProgress(10);
         dispatchPerturbationRender(cached.orbit, view, width, height, id);
         return;
       }
@@ -231,13 +177,13 @@ export function usePerturbationRenderer(
         if (msg.type === "reference-progress") {
           const refProgress =
             msg.maxIter > 0 ? (msg.iteration / msg.maxIter) * 10 : 0;
-          setProgress(Math.min(10, refProgress));
+          setChunkProgress(Math.min(10, refProgress));
           return;
         }
 
         const orbit = msg;
         cachedOrbitRef.current = { centerKey, orbit };
-        setProgress(10);
+        setChunkProgress(10);
 
         if (requestIdRef.current !== id) return;
         dispatchPerturbationRender(orbit, view, width, height, id);
@@ -258,7 +204,12 @@ export function usePerturbationRenderer(
 
       refWorker.postMessage(refRequest);
     },
-    [dispatchPerturbationRender],
+    [
+      dispatchPerturbationRender,
+      clearChunkQueueAndPixelCounters,
+      setChunkProgress,
+      requestIdRef,
+    ],
   );
 
   return { render, cancelRender, progress };
