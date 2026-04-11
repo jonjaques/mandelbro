@@ -38,7 +38,11 @@ import { trackEvent } from "@/lib/analytics";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
-import { DEFAULT_VIEW } from "@/lib/mandelbrot/url-state";
+import {
+  DEFAULT_VIEW,
+  flushHashState,
+  stripHpFieldsWhenShallow,
+} from "@/lib/mandelbrot/url-state";
 import {
   viewStateToFavorite,
   favoriteToViewState,
@@ -130,9 +134,10 @@ export function MandelbrotExplorer() {
   // Called when the URL hash changes (e.g., browser back/forward button)
   const handleHashChange = useCallback(
     (view: ViewState) => {
-      viewRef.current = view;
-      setViewForUI(view);
-      triggerRender(view); // Full quality for navigation events
+      const normalized = stripHpFieldsWhenShallow(view);
+      viewRef.current = normalized;
+      setViewForUI(normalized);
+      triggerRender(normalized); // Full quality for navigation events
     },
     [triggerRender],
   );
@@ -144,7 +149,7 @@ export function MandelbrotExplorer() {
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    const initial = getInitialView();
+    const initial = stripHpFieldsWhenShallow(getInitialView());
     viewRef.current = initial;
     if (initial !== DEFAULT_VIEW) {
       // Defer to avoid React batching issues with state set during mount
@@ -162,11 +167,18 @@ export function MandelbrotExplorer() {
    */
   const handleViewChange = useCallback(
     (view: ViewState, commitRender: boolean) => {
-      viewRef.current = view;
-      setViewForUI(view);
-      syncToUrl(view);
+      const normalized = stripHpFieldsWhenShallow(view);
+      viewRef.current = normalized;
+      setViewForUI(normalized);
+      // Debounce URL during preview-only updates; flush immediately on commit so
+      // the hash matches the rendered view (and copy/paste stays faithful).
       if (commitRender) {
-        triggerRender(view);
+        flushHashState(normalized);
+      } else {
+        syncToUrl(normalized);
+      }
+      if (commitRender) {
+        triggerRender(normalized);
       }
     },
     [syncToUrl, triggerRender],
@@ -174,6 +186,13 @@ export function MandelbrotExplorer() {
 
   // Synchronous getter for the current view — used by interaction handlers
   const getView = useCallback(() => viewRef.current, []);
+
+  /** Full URL for sharing: always reflects `viewRef` and updates the hash first. */
+  const getShareUrl = useCallback(() => {
+    const v = stripHpFieldsWhenShallow(viewRef.current);
+    flushHashState(v);
+    return window.location.href;
+  }, []);
 
   const { onActivity } = useInteraction(canvasRef, {
     onViewChange: handleViewChange,
@@ -237,10 +256,12 @@ export function MandelbrotExplorer() {
           onReferenceOpen={() => {
             setReferenceOpen(true);
           }}
+          getShareUrl={getShareUrl}
         />
         <SettingsPanel
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
+          getShareUrl={getShareUrl}
           view={viewForUI}
           onViewChange={handleSettingsChange}
           onReset={handleReset}

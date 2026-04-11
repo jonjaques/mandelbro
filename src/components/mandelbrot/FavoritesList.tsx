@@ -3,6 +3,7 @@ import { MapPin, Pencil, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Favorite } from "@/lib/mandelbrot/favorites";
+import { formatMagnification } from "@/lib/mandelbrot/format";
 import { COLOR_SCHEME_NAMES, getSwatchColors } from "@/lib/mandelbrot/colors";
 
 interface FavoritesListProps {
@@ -26,14 +27,6 @@ function MiniSwatch({ scheme }: { scheme: Favorite["colorScheme"] }) {
       ))}
     </div>
   );
-}
-
-function formatMagnification(zoom: number): string {
-  const mag = 3.5 / zoom;
-  if (mag >= 1e6) return `${mag.toExponential(1)}×`;
-  if (mag >= 1000) return `${Math.round(mag).toLocaleString()}×`;
-  if (mag >= 10) return `${String(Math.round(mag))}×`;
-  return `${mag.toFixed(1)}×`;
 }
 
 function FavoriteItem({

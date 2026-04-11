@@ -1,26 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatCoord, formatZoom } from "@/lib/mandelbrot/format";
 import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 
 interface CoordinatesProps {
   view: ViewState;
   onRegisterActivity: (cb: () => void) => void;
-}
-
-function formatNum(n: number, hp?: string): string {
-  if (hp) {
-    const maxLen = 24;
-    return hp.length > maxLen ? hp.slice(0, maxLen) + "…" : hp;
-  }
-  if (Math.abs(n) < 0.0001) return n.toExponential(4);
-  return n.toFixed(8);
-}
-
-function formatZoom(zoom: number): string {
-  const magnification = 3.5 / zoom;
-  if (magnification >= 1e6) return magnification.toExponential(2) + "x";
-  if (magnification >= 1000)
-    return Math.round(magnification).toLocaleString() + "x";
-  return magnification.toFixed(1) + "x";
 }
 
 export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
@@ -69,13 +53,13 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
       <div>
         Re:{" "}
         <span className="tabular-nums">
-          {formatNum(view.centerX, view.centerXHp)}
+          {formatCoord(view.centerX, view.centerXHp, 24)}
         </span>
       </div>
       <div>
         Im:{" "}
         <span className="tabular-nums">
-          {formatNum(view.centerY, view.centerYHp)}
+          {formatCoord(view.centerY, view.centerYHp, 24)}
         </span>
       </div>
       <div>

@@ -20,6 +20,7 @@
 import {
   ANTIALIAS_MODES,
   ANTIALIAS_SAMPLES,
+  PRECISION_THRESHOLD,
   type AntialiasMode,
   COLOR_SCHEMES,
   type AntialiasSamples,
@@ -77,9 +78,10 @@ export function serializeToHash(state: ViewState): string {
  * Returns null if the hash is empty, malformed, or contains invalid values.
  * Iteration count is clamped to [50, 10000] for safety.
  *
- * For deep-zoom URLs, coordinate strings longer than 16 chars (x/y) or 11
- * chars (z) are preserved as high-precision strings in the Hp fields,
- * enabling arbitrary-precision deep zoom from shared URLs.
+ * Past `PRECISION_THRESHOLD`, coordinate strings longer than 16 chars
+ * (x/y) or 11 chars (z) are preserved as high-precision strings in the Hp
+ * fields. Shallow-zoom URLs use the same length for `toPrecision` fragments
+ * only; those are not stored as Hp so they cannot override live doubles.
  */
 export function deserializeFromHash(hash: string): ViewState | null {
   if (!hash || hash === "#") return null;
@@ -110,10 +112,14 @@ export function deserializeFromHash(hash: string): ViewState | null {
     return null;
   }
 
+  // Only keep arbitrary-precision strings past the perturbation threshold.
+  // Shallow URLs still use long `toPrecision` fragments; those are not HP
+  // fields and must not shadow live double coordinates after pan/zoom.
   const hasHpCoords =
-    (xStr != null && xStr.length > 16) ||
-    (yStr != null && yStr.length > 16) ||
-    (zStr != null && zStr.length > 11);
+    z < PRECISION_THRESHOLD &&
+    ((xStr != null && xStr.length > 16) ||
+      (yStr != null && yStr.length > 16) ||
+      (zStr != null && zStr.length > 11));
 
   return {
     centerX: x,
@@ -147,9 +153,37 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 export function pushHashState(state: ViewState): void {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
+    debounceTimer = null;
     const hash = serializeToHash(state);
     if (window.location.hash !== hash) {
       history.replaceState(null, "", hash);
     }
   }, 200);
+}
+
+/**
+ * Write the hash immediately and cancel any pending debounced update from
+ * {@link pushHashState}. Used when the view is committed so the URL matches
+ * what is rendered, and before copying a shareable link.
+ */
+export function flushHashState(state: ViewState): void {
+  if (typeof window === "undefined") return;
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  const hash = serializeToHash(state);
+  if (window.location.hash !== hash) {
+    history.replaceState(null, "", hash);
+  }
+}
+
+/** Drop HP string fields when using the standard (double) pipeline. */
+export function stripHpFieldsWhenShallow(view: ViewState): ViewState {
+  if (view.zoom < PRECISION_THRESHOLD) return view;
+  const { centerXHp, centerYHp, zoomHp, ...rest } = view;
+  void centerXHp;
+  void centerYHp;
+  void zoomHp;
+  return rest;
 }

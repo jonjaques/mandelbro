@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { useClipboardFeedback } from "@/hooks/use-clipboard-feedback";
 import { Copy, Check, Share2 } from "lucide-react";
 import {
   Sheet,
@@ -30,12 +31,14 @@ import {
   autoIterations,
   resolveAntialiasSamples,
 } from "@/lib/mandelbrot/compute";
+import { formatCoord, formatZoom } from "@/lib/mandelbrot/format";
 import type { Favorite } from "@/lib/mandelbrot/favorites";
 import { FavoritesList } from "./FavoritesList";
 
 interface SettingsPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  getShareUrl: () => string;
   view: ViewState;
   onViewChange: (view: ViewState) => void;
   onReset: () => void;
@@ -65,18 +68,12 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 }
 
 function CoordinateRow({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { copied, copy } = useClipboardFeedback(1500);
 
   const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(value);
+    copy(value);
     trackEvent("coordinates_copy", { label });
-    setCopied(true);
-    if (timeout.current) clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => {
-      setCopied(false);
-    }, 1500);
-  }, [value, label]);
+  }, [copy, value, label]);
 
   return (
     <button
@@ -116,23 +113,10 @@ function ColorSwatch({ scheme }: { scheme: ColorScheme }) {
   );
 }
 
-function formatCoord(n: number, hp?: string): string {
-  if (hp) return hp;
-  if (Math.abs(n) < 0.0001) return n.toExponential(6);
-  return n.toPrecision(12);
-}
-
-function formatZoom(zoom: number): string {
-  const magnification = 3.5 / zoom;
-  if (magnification >= 1e6) return magnification.toExponential(2) + "x";
-  if (magnification >= 1000)
-    return Math.round(magnification).toLocaleString() + "x";
-  return magnification.toFixed(1) + "x";
-}
-
 export function SettingsPanel({
   open,
   onOpenChange,
+  getShareUrl,
   view,
   onViewChange,
   onReset,
@@ -142,18 +126,12 @@ export function SettingsPanel({
   onRemoveFavorite,
   onRenameFavorite,
 }: SettingsPanelProps) {
-  const [shareCopied, setShareCopied] = useState(false);
-  const shareTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { copied: shareCopied, copy: copyShare } = useClipboardFeedback();
 
   const handleShare = useCallback(() => {
-    void navigator.clipboard.writeText(window.location.href);
+    copyShare(getShareUrl());
     trackEvent("share_url_copy");
-    setShareCopied(true);
-    if (shareTimeout.current) clearTimeout(shareTimeout.current);
-    shareTimeout.current = setTimeout(() => {
-      setShareCopied(false);
-    }, 2000);
-  }, []);
+  }, [copyShare, getShareUrl]);
 
   const isAuto = view.maxIter === autoIterations(view.zoom);
 

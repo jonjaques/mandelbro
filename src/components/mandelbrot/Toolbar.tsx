@@ -16,14 +16,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { useClipboardFeedback } from "@/hooks/use-clipboard-feedback";
 
 interface ToolbarProps {
   onSettingsToggle: () => void;
   onReset: () => void;
   onSaveFavorite: () => void;
   onReferenceOpen: () => void;
+  getShareUrl: () => string;
 }
 
 const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
@@ -67,12 +69,12 @@ export function Toolbar({
   onReset,
   onSaveFavorite,
   onReferenceOpen,
+  getShareUrl,
 }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [supportsFullscreen, setSupportsFullscreen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { copied, copy } = useClipboardFeedback();
 
   useEffect(() => {
     const doc = document as FullscreenDocument;
@@ -150,20 +152,9 @@ export function Toolbar({
   }, []);
 
   const handleShare = useCallback(() => {
-    void navigator.clipboard.writeText(window.location.href);
+    copy(getShareUrl());
     trackEvent("share_url_copy");
-    setCopied(true);
-    if (copyTimeout.current) clearTimeout(copyTimeout.current);
-    copyTimeout.current = setTimeout(() => {
-      setCopied(false);
-    }, 2000);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeout.current) clearTimeout(copyTimeout.current);
-    };
-  }, []);
+  }, [copy, getShareUrl]);
 
   const btnClass =
     "text-white/70 hover:text-white hover:bg-white/10 rounded-none first:rounded-t-lg last:rounded-b-lg";

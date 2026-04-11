@@ -289,8 +289,10 @@ export function useInteraction(
       const dxComplex = (mouseX - 0.5) * aspectRatio * zoomDelta;
       const dyComplex = (mouseY - 0.5) * zoomDelta;
 
+      const { zoomHp, ...viewBase } = view;
+      void zoomHp;
       const newView: ViewState = {
-        ...view,
+        ...viewBase,
         centerX: view.centerX + dxComplex,
         centerY: view.centerY + dyComplex,
         zoom: newZoom,
@@ -346,8 +348,10 @@ export function useInteraction(
       const dxComplex = (mouseX - 0.5) * view.zoom * aspectRatio;
       const dyComplex = (mouseY - 0.5) * view.zoom;
 
+      const { zoomHp, ...viewBase } = view;
+      void zoomHp;
       const newView: ViewState = {
-        ...view,
+        ...viewBase,
         centerX: view.centerX + dxComplex,
         centerY: view.centerY + dyComplex,
         zoom: newZoom,
@@ -548,8 +552,10 @@ export function useInteraction(
         (startMouseY - 0.5) * gesture.startView.zoom -
         (currentMouseY - 0.5) * newZoom;
 
+      const { zoomHp, ...startBase } = gesture.startView;
+      void zoomHp;
       const newView: ViewState = {
-        ...gesture.startView,
+        ...startBase,
         centerX: gesture.startView.centerX + dxComplex,
         centerY: gesture.startView.centerY + dyComplex,
         zoom: newZoom,
@@ -611,8 +617,10 @@ export function useInteraction(
             const newZoom = view.zoom / 2;
             const dxComplex = (mouseX - 0.5) * view.zoom * aspectRatio;
             const dyComplex = (mouseY - 0.5) * view.zoom;
+            const { zoomHp, ...viewBase } = view;
+            void zoomHp;
             const newView: ViewState = {
-              ...view,
+              ...viewBase,
               centerX: view.centerX + dxComplex,
               centerY: view.centerY + dyComplex,
               zoom: newZoom,
