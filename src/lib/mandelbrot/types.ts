@@ -160,6 +160,10 @@ export interface ReferenceOrbitRequest {
   maxIter: number;
   precisionDigits: number;
   computeSACoefficients: boolean;
+  /** View dimensions needed for reference point selection when center escapes */
+  width: number;
+  height: number;
+  zoom: number;
 }
 
 export interface ReferenceOrbitProgress {
@@ -178,6 +182,9 @@ export interface ReferenceOrbitComplete {
   escaped: boolean;
   cycleDetected: boolean;
   cyclePeriod: number;
+  /** Offset of actual reference point from view center (complex-plane coords) */
+  refOffsetRe: number;
+  refOffsetIm: number;
   saCoeffAre?: Float64Array;
   saCoeffAim?: Float64Array;
   saCoeffBre?: Float64Array;
@@ -203,6 +210,9 @@ export interface PerturbationRenderRequest {
   maxIter: number;
   colorScheme: ColorScheme;
   antialiasSamples: AntialiasSamples;
+  /** Offset of reference point from view center (complex-plane coords) */
+  refOffsetRe: number;
+  refOffsetIm: number;
   workerIndex?: number;
   workerCount?: number;
   saCoeffAre?: Float64Array;

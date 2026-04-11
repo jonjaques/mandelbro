@@ -8,10 +8,18 @@
  * the perturbation render workers. Optionally computes Series Approximation
  * coefficients (A, B, C) alongside the orbit for iteration skipping.
  *
+ * When the center orbit escapes before maxIter, the worker probes a grid
+ * of candidate points to find a better (non-escaping) reference, then
+ * re-computes the BigFloat orbit at that point.
+ *
  * Streams progress updates during computation and supports cancellation
  * via requestId checking between iteration batches.
  */
-import { computeReferenceOrbit } from "./reference-orbit";
+import {
+  computeReferenceOrbit,
+  findBestReference,
+} from "./reference-orbit";
+import { toString as bfToString, make, add } from "./bigfloat-utils";
 import type {
   ReferenceWorkerIn,
   ReferenceOrbitProgress,
@@ -34,30 +42,83 @@ workerSelf.onmessage = (e: MessageEvent<ReferenceWorkerIn>) => {
 
   if (msg.type === "cancel") return;
 
-  const orbit = computeReferenceOrbit(
+  const progressCb = (iteration: number, maxIter: number) => {
+    if (currentRequestId !== msg.requestId) return;
+    const progress: ReferenceOrbitProgress = {
+      type: "reference-progress",
+      requestId: msg.requestId,
+      iteration,
+      maxIter,
+    };
+    workerSelf.postMessage(progress);
+  };
+
+  const isCancelled = () => currentRequestId !== msg.requestId;
+
+  // Phase 1a: compute orbit at view center
+  let orbit = computeReferenceOrbit(
     msg.centerReStr,
     msg.centerImStr,
     msg.maxIter,
     msg.precisionDigits,
     {
       computeSACoefficients: msg.computeSACoefficients,
-      onProgress(iteration, maxIter) {
-        if (currentRequestId !== msg.requestId) return;
-        const progress: ReferenceOrbitProgress = {
-          type: "reference-progress",
-          requestId: msg.requestId,
-          iteration,
-          maxIter,
-        };
-        workerSelf.postMessage(progress);
-      },
-      isCancelled() {
-        return currentRequestId !== msg.requestId;
-      },
+      onProgress: progressCb,
+      isCancelled,
     },
   );
 
-  if (currentRequestId !== msg.requestId) return;
+  if (isCancelled()) return;
+
+  let refOffsetRe = 0;
+  let refOffsetIm = 0;
+
+  // Iterative reference deepening: when the current reference escapes,
+  // probe for a better candidate using the orbit we have, compute a new
+  // BigFloat orbit there, and repeat. Each round has strictly more orbit
+  // data to probe with, converging toward a non-escaping reference.
+  const MAX_DEEPENING_ROUNDS = 3;
+
+  for (let round = 0; round < MAX_DEEPENING_ROUNDS; round++) {
+    if (!orbit.escaped || orbit.iterations >= msg.maxIter) break;
+    if (isCancelled()) return;
+
+    const best = findBestReference(
+      orbit.re,
+      orbit.im,
+      orbit.iterations,
+      msg.width,
+      msg.height,
+      msg.zoom,
+      msg.maxIter,
+      refOffsetRe,
+      refOffsetIm,
+    );
+
+    if (!best) break;
+    if (isCancelled()) return;
+
+    // best.offsetRe/Im is absolute offset from view center
+    refOffsetRe = best.offsetRe;
+    refOffsetIm = best.offsetIm;
+
+    const refReStr = bfToString(add(make(msg.centerReStr), make(refOffsetRe)));
+    const refImStr = bfToString(add(make(msg.centerImStr), make(refOffsetIm)));
+
+    orbit = computeReferenceOrbit(
+      refReStr,
+      refImStr,
+      msg.maxIter,
+      msg.precisionDigits,
+      {
+        computeSACoefficients: msg.computeSACoefficients,
+        onProgress: progressCb,
+        isCancelled,
+      },
+    );
+
+    if (isCancelled()) return;
+  }
 
   const transferables: Transferable[] = [
     orbit.re.buffer as ArrayBuffer,
@@ -73,6 +134,8 @@ workerSelf.onmessage = (e: MessageEvent<ReferenceWorkerIn>) => {
     escaped: orbit.escaped,
     cycleDetected: orbit.cycleDetected,
     cyclePeriod: orbit.cyclePeriod,
+    refOffsetRe,
+    refOffsetIm,
   };
 
   if (
@@ -102,5 +165,4 @@ workerSelf.onmessage = (e: MessageEvent<ReferenceWorkerIn>) => {
   workerSelf.postMessage(complete, transferables);
 };
 
-// Suppress unused variable for cancel message typing
 void (undefined as unknown as CancelRequest);

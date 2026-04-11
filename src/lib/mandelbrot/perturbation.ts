@@ -62,6 +62,32 @@ export function perturbationEscapeTime(
     }
   }
 
+  // When the reference orbit ran out (escaped) but this pixel hasn't,
+  // fall back to direct double-precision iteration from the current Z
+  // value. At the transition point |X_n| ≈ 16 and |delta| is similar
+  // magnitude, so Z = X + delta retains ~14 significant digits.
+  if (iterLimit < maxIter) {
+    let zRe = (refRe[iterLimit] ?? 0) + dRe;
+    let zIm = (refIm[iterLimit] ?? 0) + dIm;
+    // c_pixel = c_center + epsilon; c_center = refRe[1] since z_1 = 0²+c = c
+    const cRe = (refRe[1] ?? 0) + epsilonRe;
+    const cIm = (refIm[1] ?? 0) + epsilonIm;
+
+    for (let n = iterLimit; n < maxIter; n++) {
+      const zReSq = zRe * zRe;
+      const zImSq = zIm * zIm;
+      const zMag2 = zReSq + zImSq;
+
+      if (zMag2 > BAILOUT) {
+        return [n + 1, zMag2];
+      }
+
+      const newZIm = 2 * zRe * zIm + cIm;
+      zRe = zReSq - zImSq + cRe;
+      zIm = newZIm;
+    }
+  }
+
   return [maxIter, 0];
 }
 
@@ -146,6 +172,8 @@ export function perturbationBand(
   refIterations: number,
   zoom: number,
   maxIter: number,
+  refOffsetRe = 0,
+  refOffsetIm = 0,
   saAre?: Float64Array,
   saAim?: Float64Array,
   saBre?: Float64Array,
@@ -168,11 +196,12 @@ export function perturbationBand(
 
   for (let localY = 0; localY < bandHeight; localY++) {
     const py = startY + localY;
-    const epsIm = (py - fullHeight / 2) * pixelHeight;
+    // epsilon = pixel_offset_from_center - reference_offset_from_center
+    const epsIm = (py - fullHeight / 2) * pixelHeight - refOffsetIm;
     const rowOffset = localY * width;
 
     for (let px = 0; px < width; px++) {
-      const epsRe = (px - width / 2) * pixelWidth;
+      const epsRe = (px - width / 2) * pixelWidth - refOffsetRe;
 
       let startIter = 0;
       let startDRe = 0;

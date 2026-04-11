@@ -182,6 +182,8 @@ export function usePerturbationRenderer(
           maxIter: view.maxIter,
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
+          refOffsetRe: orbit.refOffsetRe,
+          refOffsetIm: orbit.refOffsetIm,
           workerIndex: i,
           workerCount: workers.length,
           ...(orbit.saCoeffAre != null ? { saCoeffAre: orbit.saCoeffAre } : {}),
@@ -209,7 +211,7 @@ export function usePerturbationRenderer(
 
       const centerReStr = view.centerXHp ?? view.centerX.toPrecision(15);
       const centerImStr = view.centerYHp ?? view.centerY.toPrecision(15);
-      const centerKey = `${centerReStr}|${centerImStr}|${view.maxIter}`;
+      const centerKey = `${centerReStr}|${centerImStr}|${view.maxIter}|${width}x${height}`;
 
       const cached = cachedOrbitRef.current;
       if (cached?.centerKey === centerKey) {
@@ -248,6 +250,9 @@ export function usePerturbationRenderer(
         maxIter: view.maxIter,
         precisionDigits: precDigits,
         computeSACoefficients: true,
+        width,
+        height,
+        zoom: view.zoom,
       };
 
       refWorker.postMessage(refRequest);

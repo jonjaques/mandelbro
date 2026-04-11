@@ -13,6 +13,8 @@ import type { ReferenceOrbit } from "./types";
 
 const PROGRESS_INTERVAL = 200;
 const MAX_SAFE_ITERATIONS = 10000;
+const PROBE_GRID = 9;
+const BAILOUT = 256;
 
 export interface ReferenceOrbitOptions {
   computeSACoefficients?: boolean;
@@ -212,16 +214,26 @@ export function computeReferenceOrbit(
     zIm = newZIm;
   }
 
-  // When the reference orbit is periodic, extend it to full length by
-  // repeating the cycle. Without this, perturbation is capped at the cycle
-  // detection point and changing maxIter has no visible effect.
+  // ── Extend cyclic orbits to full length ──
+  //
+  // For cycle-detected orbits, perturbation workers need data for the full
+  // iteration range. Repeat the detected cycle pattern cheaply.
   if (cycleDetected && cyclePeriod > 0 && finalIter < clampedMaxIter) {
+    // Interior point: extend orbit to maxIter by repeating the cycle.
+    // Perturbation workers need data for the full iteration range; without
+    // this, they'd be capped at the detection point.
     for (let m = finalIter + 1; m <= clampedMaxIter; m++) {
       reArr[m] = reArr[m - cyclePeriod] ?? 0;
       imArr[m] = imArr[m - cyclePeriod] ?? 0;
     }
     finalIter = clampedMaxIter;
   }
+
+  // NOTE: Escaped orbits are intentionally NOT extended. Extending in
+  // double precision causes catastrophic cancellation when perturbation
+  // computes Z = X + delta with huge X and delta ≈ -X. Instead, the
+  // perturbation function falls back to direct iteration from Z_N when
+  // the reference runs out.
 
   onProgress?.(finalIter, clampedMaxIter);
 
@@ -234,9 +246,6 @@ export function computeReferenceOrbit(
     cyclePeriod,
   };
 
-  // SA coefficients are only valid for non-cyclic orbits. For cyclic orbits
-  // the coefficients grow without bound past the detection point and can't
-  // be extended by simple repetition.
   if (
     computeSACoefficients &&
     !cycleDetected &&
@@ -256,4 +265,137 @@ export function computeReferenceOrbit(
   }
 
   return result;
+}
+
+/**
+ * When the center orbit escapes, probe candidate points using multi-pass
+ * grid refinement to find one that survives longer (ideally interior).
+ *
+ * Pass 1: coarse grid across the full view
+ * Pass 2+: progressively finer grids centered on the best candidate,
+ *          converging toward the Mandelbrot boundary (and the interior
+ *          region just beyond it).
+ *
+ * Returns the best candidate's offset from center in complex-plane
+ * coordinates, or null if no better candidate exists.
+ */
+/**
+ * @param currentRefOffsetRe offset of the current reference orbit from the
+ *   view center (complex-plane coords). The probed epsilon is computed as
+ *   candidate_offset_from_center - currentRefOffset so perturbation works
+ *   correctly relative to the orbit.
+ * @returns offset of the best candidate from the VIEW CENTER (absolute),
+ *   or null if no improvement over the current reference was found.
+ */
+export function findBestReference(
+  refOrbitRe: Float64Array,
+  refOrbitIm: Float64Array,
+  refIterations: number,
+  width: number,
+  height: number,
+  zoom: number,
+  maxIter: number,
+  currentRefOffsetRe = 0,
+  currentRefOffsetIm = 0,
+): { offsetRe: number; offsetIm: number } | null {
+  const aspectRatio = width / height;
+  const pixelWidth = (zoom * aspectRatio) / width;
+  const pixelHeight = zoom / height;
+
+  let bestIter = refIterations;
+  // Best candidate offset from VIEW CENTER
+  let bestOffsetRe = currentRefOffsetRe;
+  let bestOffsetIm = currentRefOffsetIm;
+  let found = false;
+
+  // Start search centered on view center, spanning the full viewport
+  let searchCenterRe = 0;
+  let searchCenterIm = 0;
+  let searchRadiusRe = (width / 2) * pixelWidth;
+  let searchRadiusIm = (height / 2) * pixelHeight;
+
+  const MAX_PASSES = 5;
+
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    let passImproved = false;
+
+    for (let gy = 0; gy < PROBE_GRID; gy++) {
+      for (let gx = 0; gx < PROBE_GRID; gx++) {
+        const fx = (gx + 0.5) / PROBE_GRID - 0.5;
+        const fy = (gy + 0.5) / PROBE_GRID - 0.5;
+
+        // Candidate position relative to view center
+        const candRe = searchCenterRe + fx * 2 * searchRadiusRe;
+        const candIm = searchCenterIm + fy * 2 * searchRadiusIm;
+
+        // Perturbation epsilon = candidate offset from REFERENCE ORBIT
+        const epsRe = candRe - currentRefOffsetRe;
+        const epsIm = candIm - currentRefOffsetIm;
+
+        const iter = probePoint(
+          refOrbitRe,
+          refOrbitIm,
+          refIterations,
+          epsRe,
+          epsIm,
+        );
+
+        if (iter > bestIter) {
+          bestIter = iter;
+          bestOffsetRe = candRe;
+          bestOffsetIm = candIm;
+          found = true;
+          passImproved = true;
+          if (iter >= maxIter) break;
+        }
+      }
+      if (bestIter >= maxIter) break;
+    }
+    if (bestIter >= maxIter) break;
+    if (!passImproved) break;
+
+    searchCenterRe = bestOffsetRe;
+    searchCenterIm = bestOffsetIm;
+    searchRadiusRe /= PROBE_GRID / 2;
+    searchRadiusIm /= PROBE_GRID / 2;
+  }
+
+  return found ? { offsetRe: bestOffsetRe, offsetIm: bestOffsetIm } : null;
+}
+
+/**
+ * Run perturbation from the center orbit for a single candidate point.
+ * Returns the iteration at which the candidate escapes, or
+ * refIterations if it survives the full reference orbit.
+ */
+function probePoint(
+  refRe: Float64Array,
+  refIm: Float64Array,
+  refIterations: number,
+  epsRe: number,
+  epsIm: number,
+): number {
+  let dRe = 0;
+  let dIm = 0;
+
+  for (let n = 0; n < refIterations; n++) {
+    const xn = refRe[n] ?? 0;
+    const yn = refIm[n] ?? 0;
+
+    const newDRe =
+      2 * (xn * dRe - yn * dIm) + (dRe * dRe - dIm * dIm) + epsRe;
+    const newDIm = 2 * (xn * dIm + yn * dRe) + 2 * dRe * dIm + epsIm;
+
+    dRe = newDRe;
+    dIm = newDIm;
+
+    const zRe = (refRe[n + 1] ?? 0) + dRe;
+    const zIm = (refIm[n + 1] ?? 0) + dIm;
+
+    if (zRe * zRe + zIm * zIm > BAILOUT) {
+      return n + 1;
+    }
+  }
+
+  return refIterations;
 }
