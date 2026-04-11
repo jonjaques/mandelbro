@@ -1,3 +1,7 @@
+/**
+ * Controlled Dialog: shadcn composition + scrollable body pattern
+ * (https://ui.shadcn.com/docs/components/dialog#scrollable-content).
+ */
 import {
   Dialog,
   DialogContent,
@@ -15,19 +19,16 @@ interface ReferenceDialogProps {
 export function ReferenceDialog({ open, onOpenChange }: ReferenceDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton
-        className="glass flex max-h-[min(85vh,calc(100dvh-2rem))] max-w-[calc(100%-2rem)] flex-col gap-0 border-white/8 p-0 text-white sm:max-w-xl"
-      >
-        <DialogHeader className="shrink-0 border-b border-white/10 px-6 py-5 text-left">
-          <DialogTitle className="text-lg text-white">Reference</DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-white/60">
+      <DialogContent className="glass text-white border-white/8 sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="text-white">Reference</DialogTitle>
+          <DialogDescription className="text-white/60">
             Algorithms and publications this explorer builds on. External sites
             open in a new tab.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+        <div className="-mx-4 max-h-[min(60vh,calc(100dvh-14rem))] overflow-y-auto overscroll-contain px-4">
           <ul className="flex flex-col gap-8">
             {REFERENCE_SECTIONS.map((section) => (
               <li key={section.heading}>
