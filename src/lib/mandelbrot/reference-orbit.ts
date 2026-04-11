@@ -23,16 +23,21 @@ export interface ReferenceOrbitOptions {
 }
 
 /**
- * Compute a reference orbit at the given center using arbitrary-precision
- * arithmetic (bigfloat-esnext). The orbit values are stored as doubles for
- * consumption by perturbation workers.
+ * Compute a **reference orbit** X_n at c (one high-precision Mandelbrot
+ * iteration). Workers store X_n as doubles; every screen pixel reuses this
+ * orbit and only integrates a double-precision delta (see `perturbation.ts`).
  *
- * Includes Brent's cycle detection for early termination when the reference
- * point is interior to the Mandelbrot set.
+ * - **Escape:** stops when |z|² exceeds bailout (same threshold as workers).
+ * - **Interior:** Brent-style cycle detection on the double shadow of the
+ *   orbit stops BigFloat work once the sequence repeats; the orbit is then
+ *   tiled out to `maxIter` so perturbation still has an X_n at every n.
+ * - **Series approximation:** optional (A,B,C) coefficients for iteration
+ *   skipping, updated from the double-precision X_n values each step.
  *
- * Optionally computes Series Approximation coefficients (A, B, C) alongside
- * the orbit. These are computed using double-precision reference orbit values
- * and add negligible cost.
+ * @see Martin (perturbation + deep zoom context):
+ *   https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf
+ * @see Brent's cycle-finding strategy (tortoise jumps by powers of two):
+ *   https://en.wikipedia.org/wiki/Cycle_detection#Brent's_algorithm
  */
 export function computeReferenceOrbit(
   centerReStr: string,
@@ -75,8 +80,8 @@ export function computeReferenceOrbit(
   reArr[0] = 0;
   imArr[0] = 0;
 
-  // SA: A_0 = 0, B_0 = 0, C_0 = 0 (epsilon_0 = 0 for all pixels)
-  // A_1 = 1, which gets set in the first iteration below
+  // Series approximation (SA): delta_n ≈ A_n·ε + B_n·ε² + C_n·ε³ in ε = c - c_ref.
+  // Init: A_0=B_0=C_0=0; first nontrivial step sets A_1 = 1 (see n===0 branch).
   let aRe = 0;
   let aIm = 0;
   let bRe = 0;
@@ -84,7 +89,8 @@ export function computeReferenceOrbit(
   let cReCoeff = 0;
   let cImCoeff = 0;
 
-  // Brent's cycle detection state
+  // Brent's algorithm state: `tort` is the tortoise orbit sample; `lambda`
+  // counts steps since last tortoise advance; `power` gates exponential moves.
   let tortRe = 0;
   let tortIm = 0;
   let power = 1;
@@ -192,7 +198,8 @@ export function computeReferenceOrbit(
       break;
     }
 
-    // Brent's cycle detection on the double-precision orbit values
+    // Equality test on doubles (not BigFloat): interior detection only needs
+    // to spot repetition; full precision is unnecessary and much slower.
     const dRe = newReD - tortRe;
     const dIm = newImD - tortIm;
     if (dRe * dRe + dIm * dIm < cycleTolerance) {
@@ -268,24 +275,21 @@ export function computeReferenceOrbit(
 }
 
 /**
- * When the center orbit escapes, probe candidate points using multi-pass
- * grid refinement to find one that survives longer (ideally interior).
+ * When the reference orbit at the view center **escapes**, search nearby c
+ * values for a longer-lived orbit (preferably interior) so Phase 2 has more
+ * valid X_n samples before bailout.
  *
- * Pass 1: coarse grid across the full view
- * Pass 2+: progressively finer grids centered on the best candidate,
- *          converging toward the Mandelbrot boundary (and the interior
- *          region just beyond it).
+ * Uses a multi-pass grid: wide probe, then refinement around the best
+ * candidate. Each probe runs the same delta recurrence as `perturbation.ts`
+ * (`probePoint`) with epsilon = (candidate − viewCenter) − currentRefOffset.
  *
- * Returns the best candidate's offset from center in complex-plane
- * coordinates, or null if no better candidate exists.
- */
-/**
- * @param currentRefOffsetRe offset of the current reference orbit from the
- *   view center (complex-plane coords). The probed epsilon is computed as
- *   candidate_offset_from_center - currentRefOffset so perturbation works
- *   correctly relative to the orbit.
- * @returns offset of the best candidate from the VIEW CENTER (absolute),
- *   or null if no improvement over the current reference was found.
+ * @param currentRefOffsetRe - Reference point minus view center. Epsilon sent
+ *   to `probePoint` is `(candidate offset from center) − this`, matching how
+ *   workers subtract `refOffsetRe/Im` from pixel epsilon.
+ * @returns Best candidate offset from the **view center** (absolute), or
+ *   `null` if no grid point beat the current reference lifetime.
+ *
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
  */
 export function findBestReference(
   refOrbitRe: Float64Array,
@@ -364,9 +368,8 @@ export function findBestReference(
 }
 
 /**
- * Run perturbation from the center orbit for a single candidate point.
- * Returns the iteration at which the candidate escapes, or
- * refIterations if it survives the full reference orbit.
+ * Escape-time for c = c_ref + epsilon using the reference orbit (cheap
+ * double loop shared with `perturbationEscapeTime` logic).
  */
 function probePoint(
   refRe: Float64Array,
@@ -382,8 +385,7 @@ function probePoint(
     const xn = refRe[n] ?? 0;
     const yn = refIm[n] ?? 0;
 
-    const newDRe =
-      2 * (xn * dRe - yn * dIm) + (dRe * dRe - dIm * dIm) + epsRe;
+    const newDRe = 2 * (xn * dRe - yn * dIm) + (dRe * dRe - dIm * dIm) + epsRe;
     const newDIm = 2 * (xn * dIm + yn * dRe) + 2 * dRe * dIm + epsIm;
 
     dRe = newDRe;

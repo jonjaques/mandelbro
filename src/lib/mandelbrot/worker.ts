@@ -2,8 +2,10 @@
  * Standard Web Worker for Mandelbrot set computation.
  *
  * This is the **standard pipeline** worker, used when zoom ≥ PRECISION_THRESHOLD
- * (1e-13). For deeper zooms, the perturbation-worker.ts takes over with
- * arbitrary-precision reference orbit support.
+ * (1e-13). For deeper zooms, `perturbation-worker.ts` takes over (reference orbit
+ * in arbitrary precision, per-pixel native doubles).
+ *
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
  *
  * This runs in a separate thread, off the main UI thread. It receives
  * RenderRequest messages and streams back ChunkResult messages (one per

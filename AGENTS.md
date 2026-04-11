@@ -42,7 +42,7 @@ No test framework is currently configured.
 - `src/components/mandelbrot/` — React components for the explorer UI
   - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, dual rendering pipelines, interaction, URL sync, UI overlays, and the `StrictMode` wrapper
   - `MandelbrotCanvas.tsx` — Full-viewport `<canvas>` with ResizeObserver, DPR-aware (capped at 2x)
-  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL, reset view, fullscreen toggle; brand mark with palette-adaptive gradient + glow
+  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL, reset view, fullscreen toggle; **Reference** opens a modal of prior-art citations; brand mark with palette-adaptive gradient + glow
   - `SettingsPanel.tsx` — shadcn Sheet with iterations slider, color scheme selector, coordinate display with copy-to-clipboard, share URL, and reset
   - `Coordinates.tsx` — Bottom-left HUD showing Re/Im/zoom with full-precision display for deep zoom; auto-hides after 3s of inactivity, reappears on interaction or view change; shows "Precision mode" badge with digit count when past the precision threshold
   - `DeepZoomBanner.tsx` — Top-center banner that appears when the perturbation pipeline activates; shows zoom depth milestones (e.g., "10^30×") and fades after 4s
@@ -484,10 +484,10 @@ When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). The 
 
 The project is deployed on **Cloudflare Pages** via git-based CI (pushes to tracked branches auto-deploy).
 
-| Branch     | URL                                         | Purpose                        |
-| ---------- | ------------------------------------------- | ------------------------------ |
-| `main`     | https://mandelbro.jonjaques.com             | Production (standard pipeline) |
-| `bigfloat` | https://bigfloat.mandelbro.pages.dev/       | Preview (perturbation/bigfloat) |
+| Branch     | URL                                   | Purpose                         |
+| ---------- | ------------------------------------- | ------------------------------- |
+| `main`     | https://mandelbro.jonjaques.com       | Production (standard pipeline)  |
+| `bigfloat` | https://bigfloat.mandelbro.pages.dev/ | Preview (perturbation/bigfloat) |
 
 Both deployments share the same URL hash format, so any `#x=...&y=...&z=...` hash is compatible between branches. This enables cross-branch comparison by replacing the hostname while preserving the hash.
 

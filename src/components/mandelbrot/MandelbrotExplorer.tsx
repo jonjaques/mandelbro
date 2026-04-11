@@ -55,6 +55,7 @@ import { BrandMark } from "./BrandMark";
 import { Toolbar } from "./Toolbar";
 import { SettingsPanel } from "./SettingsPanel";
 import { SaveFavoriteDialog } from "./SaveFavoriteDialog";
+import { ReferenceDialog } from "./ReferenceDialog";
 import { Coordinates } from "./Coordinates";
 import { DeepZoomBanner } from "./DeepZoomBanner";
 import { RenderProgress } from "./RenderProgress";
@@ -72,6 +73,7 @@ export function MandelbrotExplorer() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saveFavoriteOpen, setSaveFavoriteOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
   // Mirror of viewRef as React state, driving UI re-renders
   const [viewForUI, setViewForUI] = useState(DEFAULT_VIEW);
 
@@ -232,6 +234,9 @@ export function MandelbrotExplorer() {
           onSaveFavorite={() => {
             setSaveFavoriteOpen(true);
           }}
+          onReferenceOpen={() => {
+            setReferenceOpen(true);
+          }}
         />
         <SettingsPanel
           open={settingsOpen}
@@ -253,6 +258,7 @@ export function MandelbrotExplorer() {
           onOpenChange={setSaveFavoriteOpen}
           onSave={handleSaveFavorite}
         />
+        <ReferenceDialog open={referenceOpen} onOpenChange={setReferenceOpen} />
         <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
         <DeepZoomBanner
           active={activeRenderer === "perturbation"}

@@ -19,10 +19,14 @@ const BAILOUT_BF = make(256);
 export { ZERO, BAILOUT_BF };
 
 /**
- * Determine how many decimal digits of precision are needed for a given zoom
- * level. At zoom = 1e-50, pixels are spaced ~1e-53 apart (zoom / screenHeight),
- * so we need ~55+ digits to distinguish adjacent pixels. The +10 margin covers
- * accumulated rounding during iteration.
+ * Decimal digits for the **reference-orbit** BigFloat iteration at this zoom.
+ * Pixel spacing in the complex plane is about `zoom / height`; when that is
+ * far below ~1e-15, doubles cannot represent distinct pixel c values, so the
+ * reference orbit must be computed in arbitrary precision (see
+ * `PRECISION_THRESHOLD` in `types.ts`). The +10 margin covers accumulated
+ * rounding while iterating z² + c.
+ *
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set
  */
 export function requiredPrecision(zoom: number): number {
   if (zoom >= 1e-13) return 16;
@@ -32,11 +36,10 @@ export function requiredPrecision(zoom: number): number {
 /**
  * Truncate a BigFloat to at most `digits` significant decimal digits.
  *
- * bigfloat-esnext's mul() produces exact results (BigInt coefficients grow
- * without bound). After each Mandelbrot squaring step the coefficient roughly
- * doubles in length. Without truncation the computation becomes exponentially
- * slower. This function sheds excess digits while preserving the required
- * precision.
+ * `bigfloat-esnext` multiplication is exact (coefficients grow without bound).
+ * Each Mandelbrot squaring roughly doubles coefficient length, so without
+ * periodic truncation the reference orbit would slow exponentially while still
+ * exceeding the useful precision dictated by `requiredPrecision(zoom)`.
  */
 export function truncateToPrecision(bf: IBigFloat, digits: number): IBigFloat {
   const n = normalize(bf);

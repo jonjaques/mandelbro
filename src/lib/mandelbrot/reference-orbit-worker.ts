@@ -1,24 +1,16 @@
 /**
- * Web Worker for computing the high-precision reference orbit (Phase 1 of
- * the perturbation pipeline).
+ * Web Worker — **Phase 1** of the perturbation pipeline: high-precision
+ * reference orbit at c (and optional SA coefficients), then `postMessage` with
+ * transferred `Float64Array` buffers for Phase 2 workers.
  *
- * Receives a center point as arbitrary-precision decimal strings, computes
- * the Mandelbrot orbit using BigFloat arithmetic (bigfloat-esnext), and
- * transfers the orbit values back as Float64Arrays for consumption by
- * the perturbation render workers. Optionally computes Series Approximation
- * coefficients (A, B, C) alongside the orbit for iteration skipping.
+ * If the center escapes early, runs `findBestReference` + a fresh BigFloat
+ * orbit at an improved c (up to a few rounds) so zooms centered on filaments
+ * still get a usable reference.
  *
- * When the center orbit escapes before maxIter, the worker probes a grid
- * of candidate points to find a better (non-escaping) reference, then
- * re-computes the BigFloat orbit at that point.
- *
- * Streams progress updates during computation and supports cancellation
- * via requestId checking between iteration batches.
+ * @see `computeReferenceOrbit` in `reference-orbit.ts` (same literature links).
+ * @see https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf
  */
-import {
-  computeReferenceOrbit,
-  findBestReference,
-} from "./reference-orbit";
+import { computeReferenceOrbit, findBestReference } from "./reference-orbit";
 import { toString as bfToString, make, add } from "./bigfloat-utils";
 import type {
   ReferenceWorkerIn,

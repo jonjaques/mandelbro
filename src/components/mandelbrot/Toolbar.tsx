@@ -8,6 +8,7 @@ import {
   SquareCode,
   Star,
   GitCompare,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ interface ToolbarProps {
   onSettingsToggle: () => void;
   onReset: () => void;
   onSaveFavorite: () => void;
+  onReferenceOpen: () => void;
 }
 
 const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
@@ -64,6 +66,7 @@ export function Toolbar({
   onSettingsToggle,
   onReset,
   onSaveFavorite,
+  onReferenceOpen,
 }: ToolbarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -251,6 +254,26 @@ export function Toolbar({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">View Source</TooltipContent>
+      </Tooltip>
+
+      <div className="h-px bg-white/10" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={btnClass}
+            onClick={() => {
+              trackEvent("reference_open");
+              onReferenceOpen();
+            }}
+            aria-label="Open reference and prior art"
+          >
+            <BookOpen className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Reference</TooltipContent>
       </Tooltip>
 
       <div className="h-px bg-white/10" />

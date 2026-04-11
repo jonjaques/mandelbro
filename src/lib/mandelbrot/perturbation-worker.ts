@@ -1,9 +1,9 @@
 /**
- * Web Worker for perturbation-based Mandelbrot rendering.
+ * Web Worker — **Phase 2** of the perturbation pipeline: per-pixel deltas from
+ * the reference orbit (`perturbationBand` / `perturbation.ts`), same band
+ * streaming and cancellation pattern as `worker.ts`.
  *
- * Uses the same band-streaming, round-robin distribution, and cancellation
- * architecture as the standard worker.ts, but computes pixels via the
- * perturbation formula instead of direct escape-time iteration.
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
  */
 import { perturbationBand } from "./perturbation";
 import { mapToColors, zoomColorCyclePeriod } from "./colors";

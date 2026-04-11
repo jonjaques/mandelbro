@@ -24,10 +24,13 @@ export type AntialiasMode = (typeof ANTIALIAS_MODES)[number];
 export type AntialiasSamples = (typeof ANTIALIAS_SAMPLES)[number];
 
 /**
- * Zoom level below which we switch from the standard double-precision pipeline
- * to the perturbation-based arbitrary-precision pipeline. At this threshold the
- * pixel spacing approaches the limit of IEEE 754 doubles (~15.9 significant
- * decimal digits).
+ * Zoom level below which we switch from per-pixel double iteration to
+ * perturbation: one arbitrary-precision reference orbit, then per-pixel
+ * deltas in double. Below ~1e-13, adjacent pixel c values differ by less than
+ * can be represented in IEEE 754 (~15–16 decimal digits), so a shared
+ * high-precision reference is required for correct deep zoom.
+ *
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set
  */
 export const PRECISION_THRESHOLD = 1e-13;
 
@@ -131,9 +134,9 @@ export type WorkerOutMessage = ChunkResult | RenderComplete;
 // ---------------------------------------------------------------------------
 // Perturbation pipeline message types
 //
-// Used when zoom < PRECISION_THRESHOLD. The perturbation pipeline computes
-// a single high-precision reference orbit (Phase 1) then renders all pixels
-// as deltas from that reference using native doubles (Phase 2).
+// Used when zoom < PRECISION_THRESHOLD. Phase 1: one BigFloat reference orbit;
+// Phase 2: all pixels as native-double perturbation deltas (Martin / SFT maths).
+// https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf
 // ---------------------------------------------------------------------------
 
 /** Result of a high-precision reference orbit computation. */

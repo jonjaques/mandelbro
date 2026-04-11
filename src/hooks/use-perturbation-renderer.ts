@@ -27,12 +27,13 @@ const PERTURBATION_WORKER_COUNT =
       );
 
 /**
- * Hook that manages the two-phase perturbation rendering pipeline:
- *   Phase 1: Compute a high-precision reference orbit (single worker)
- *   Phase 2: Compute per-pixel perturbation deltas (worker pool)
+ * Two-phase **perturbation** render: one `reference-orbit-worker` (BigFloat
+ * c_ref + optional SA coeffs), then a pool of `perturbation-worker`s that share
+ * the same orbit buffers. Matches `useMandelbrotWorker`'s outward API so
+ * `MandelbrotExplorer` can route by `view.zoom` alone.
  *
- * Exposes the same API as useMandelbrotWorker so the Explorer can
- * swap between them transparently.
+ * @see https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf
+ * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
  */
 export function usePerturbationRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,

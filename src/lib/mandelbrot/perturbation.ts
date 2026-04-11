@@ -2,15 +2,22 @@
  * Perturbation-based Mandelbrot escape-time computation.
  *
  * Instead of iterating z_{n+1} = z_n^2 + c at full precision for every pixel,
- * we iterate the *delta* from a pre-computed high-precision reference orbit:
+ * we iterate the *delta* from a pre-computed high-precision reference orbit.
+ * Write Z_n = X_n + delta_n where X_n is the reference orbit at c_ref; then
+ * expanding (X_n + delta_n)^2 + (c_ref + epsilon) and subtracting the
+ * identity for X_n leaves the first-order update plus a quadratic correction:
  *
  *   delta_{n+1} = 2 * X_n * delta_n + delta_n^2 + epsilon
  *
- * where X_n is the reference orbit value (stored as a double), delta_n is
- * the perturbation (a small double), and epsilon = c_pixel - c_reference
- * is the pixel's offset from the reference point.
+ * where X_n is stored as a double, delta_n stays small near c_ref, and
+ * epsilon = c_pixel - c_reference is the pixel offset. All arithmetic here
+ * is native IEEE 754 double-precision.
  *
- * All arithmetic in this module is native IEEE 754 double-precision.
+ * @see K. I. Martin, "Superfractalthing Maths" (perturbation formulation):
+ *   https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf
+ * @see Overview (perturbation + series approximation):
+ *   https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
+ * @see https://mathr.co.uk/blog/2021-05-14_deep_zoom_theory_and_practice.html
  */
 
 const BAILOUT = 256;
@@ -58,7 +65,10 @@ export function perturbationEscapeTime(
     const refNextIm = refIm[n + 1] ?? 0;
     const refMag2 = refNextRe * refNextRe + refNextIm * refNextIm;
     if (refMag2 > 0 && dMag2 > GLITCH_THRESHOLD * refMag2) {
-      // Glitch detected — accepted for v1, future work adds multi-reference
+      // |delta| has blown up relative to |X|: first-order perturbation is
+      // unreliable (classic "glitch" artifact). v1 only flags this; a
+      // production fix is re-referencing / multi-reference (see Wikipedia link
+      // in file header).
     }
   }
 
@@ -91,16 +101,26 @@ export function perturbationEscapeTime(
   return [maxIter, 0];
 }
 
+/**
+ * Normalized iteration count (removes visible color bands vs raw `n`).
+ *
+ * @see https://en.wikipedia.org/wiki/Mandelbrot_set#Continuous_(smooth)_coloring
+ */
 export function smoothColor(iterations: number, zMag2: number): number {
   if (zMag2 <= BAILOUT) return iterations;
   return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
 }
 
 /**
- * Determine how many iterations can be skipped for a given pixel using
- * the Series Approximation. Returns [skipIter, deltaRe, deltaIm] where
- * skipIter is the iteration to start the perturbation loop from and
- * deltaRe/deltaIm are the pre-computed perturbation values at that point.
+ * Series approximation (SA): treat delta_n as a truncated power series in
+ * epsilon — delta ≈ A_n·ε + B_n·ε² + C_n·ε³ — with coefficients (A,B,C)
+ * depending only on the reference orbit. For tiny |epsilon| at deep zoom,
+ * evaluating the series at n skips iterating 0..n-1 in the perturbation loop.
+ *
+ * Returns `[skipIter, deltaRe, deltaIm]` to resume `perturbationEscapeTime`
+ * at iteration `skipIter` with the series-evaluated delta.
+ *
+ * @see Same Wikipedia section as file header (series approximation).
  */
 export function seriesApproximationSkip(
   saAre: Float64Array,
