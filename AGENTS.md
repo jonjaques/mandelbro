@@ -10,6 +10,16 @@ The app supports **arbitrary-precision deep zoom** via perturbation theory, enab
 
 Every technical decision serves one UX principle: **the user should never wait for the math to catch up with their hands.**
 
+## Canonical sources (read these first when changing code)
+
+- **Bibliography & algorithms** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS` (curated links and short summaries). The in-app **Reference** dialog reads the same data. Use it when you need authoritative context for perturbation theory, series approximation, Brent cycle detection, smooth coloring, or plotting shortcuts instead of guessing from memory.
+- **Shared numeric literals** — `src/lib/mandelbrot/constants.ts` (`BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS`, …). Workers and math modules import from here so bailout, default zoom, band height, and iteration caps are not duplicated.
+- **Worker-only helpers** — `src/lib/mandelbrot/worker-utils.ts` (`smoothColor`, `getBandHeight`, `WorkerContext`). Standard, perturbation, and reference workers share this; `compute.ts` / `perturbation.ts` re-export `smoothColor` where a public surface is needed.
+- **Coordinate / zoom display strings** — `src/lib/mandelbrot/format.ts` (`formatCoord`, `formatZoom`, `formatMagnification`) for HUD, settings, and favorites.
+- **Touch pinch/pan preview (canvas only)** — `src/lib/mandelbrot/canvas-preview.ts` (`snapshotCanvas`, `drawViewPreview`); consumed by `use-interaction.ts`.
+- **Chunk queue + rAF painting + pixel progress** — `src/hooks/use-chunk-renderer.ts`; composed by `use-mandelbrot-worker.ts` and `use-perturbation-renderer.ts` (standard progress 0–100%, perturbation phase 2 maps pixels to 10–100% via `progressOffset` / `progressScale`).
+- **Clipboard UX** — `src/hooks/use-clipboard-feedback.ts` for share / coordinate copy feedback in toolbar and settings.
+
 ## Build & Development Commands
 
 ```sh
@@ -42,23 +52,31 @@ No test framework is currently configured.
 - `src/components/mandelbrot/` — React components for the explorer UI
   - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, dual rendering pipelines, interaction, URL sync, UI overlays, and the `StrictMode` wrapper
   - `MandelbrotCanvas.tsx` — Full-viewport `<canvas>` with ResizeObserver, DPR-aware (capped at 2x)
-  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL, reset view, fullscreen toggle; **Reference** opens a modal of prior-art citations; brand mark with palette-adaptive gradient + glow
+  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL (via `getShareUrl()` from explorer: flushes hash then copies), reset view, fullscreen toggle; **Reference** opens `ReferenceDialog` (content from `references.ts`); `BrandMark` adapts text color to canvas luminance
   - `SettingsPanel.tsx` — shadcn Sheet with iterations slider, color scheme selector, coordinate display with copy-to-clipboard, share URL, and reset
   - `Coordinates.tsx` — Bottom-left HUD showing Re/Im/zoom with full-precision display for deep zoom; auto-hides after 3s of inactivity, reappears on interaction or view change; shows "Precision mode" badge with digit count when past the precision threshold
   - `DeepZoomBanner.tsx` — Top-center banner that appears when the perturbation pipeline activates; shows zoom depth milestones (e.g., "10^30×") and fades after 4s
   - `RenderProgress.tsx` — Bottom-right circular SVG progress indicator (stroke-dashoffset animation), appears with 300ms delay during renders; in perturbation mode, 0–10% reflects reference orbit computation, 10–100% reflects pixel rendering
 - `src/components/ui/` — shadcn/ui React components (generated via `yarn dlx shadcn` or `yarn shadcn` CLI)
-- `src/hooks/` — React hooks (the core interaction and rendering logic lives here)
-  - `use-mandelbrot-worker.ts` — Standard multi-worker pool lifecycle, progressive chunk rendering, and rAF paint batching for full-resolution renders (used when zoom ≥ 1e-13)
-  - `use-perturbation-renderer.ts` — Two-phase perturbation rendering pipeline: Phase 1 computes a high-precision reference orbit (single worker), Phase 2 dispatches per-pixel perturbation deltas to a worker pool. Includes reference orbit caching. Used when zoom < 1e-13
-  - `use-url-state.ts` — Two-way sync between ViewState and URL hash (debounced 200ms); supports arbitrary-precision coordinate strings
-  - `use-interaction.ts` — Pointer drag (with pixel-shifting), wheel zoom, pinch-to-zoom, double-click; snapshot-based interaction previews with deferred commit renders; uses BigFloat arithmetic for high-precision pan/zoom deltas past the precision threshold
-- `src/lib/mandelbrot/` — Core computation library
-  - `types.ts` — ViewState (with optional high-precision `centerXHp`/`centerYHp`/`zoomHp` string fields), `PRECISION_THRESHOLD`, RenderRequest, ChunkResult, RenderComplete, ColorScheme, plus perturbation pipeline types: ReferenceOrbit, ReferenceOrbitRequest/Complete, PerturbationRenderRequest
-  - `colors.ts` — 7 color palettes with linear RGB interpolation (cycling every 256 iterations); palette swatch generation; brand gradient/glow color extraction; shared `mapToColors()` used by both standard and perturbation workers
-  - `url-state.ts` — URL hash serialization with arbitrary-precision support: uses `centerXHp`/`centerYHp`/`zoomHp` strings when available for deep-zoom shareability; debounced replaceState; DEFAULT_VIEW definition
-  - `compute.ts` — Standard escape-time algorithm with cardioid/period-2 bulb skip, smooth coloring via double-log normalization, band-based and full-frame computation; `autoIterations` scales up to 10,000 for deep zoom
-  - `worker.ts` — Standard Web Worker: band-based streaming RGBA output with zero-copy ArrayBuffer transfer, multi-worker round-robin distribution
+- `src/hooks/` — React hooks (interaction + rendering orchestration)
+  - `use-chunk-renderer.ts` — Shared chunk queue, `requestAnimationFrame` paint batching, `requestIdRef`, and progress math for both pipelines
+  - `use-mandelbrot-worker.ts` — Standard worker pool + dispatch; uses `useChunkRenderer` (used when `zoom ≥ PRECISION_THRESHOLD`, i.e. ≥ 1e-13)
+  - `use-perturbation-renderer.ts` — Two-phase perturbation (reference worker + perturbation pool + orbit cache); uses `useChunkRenderer` with 10–100% pixel phase (used when `zoom < PRECISION_THRESHOLD`)
+  - `use-url-state.ts` — Thin wrapper: `getInitialView`, `syncToUrl` → `pushHashState` (debounced)
+  - `use-interaction.ts` — Pointer drag, wheel zoom, pinch, double-click / double-tap; previews via canvas shifts + `canvas-preview` helpers; `applyHpDelta` for BigFloat centers past threshold; defers full renders with gesture-specific debounce
+  - `use-clipboard-feedback.ts` — Copy-to-clipboard + timed “copied” UI state
+  - `use-canvas-luminance.ts`, `use-favorites.ts`, `use-viewport-height.ts` — Supporting hooks
+- `src/lib/mandelbrot/` — Core computation library (worker-safe unless noted)
+  - `types.ts` — `ViewState`, `PRECISION_THRESHOLD`, render/message unions, color scheme types
+  - `constants.ts` — Single source for `BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS` (imported by compute, perturbation, reference orbit, workers, `bigfloat-utils`)
+  - `worker-utils.ts` — `smoothColor`, `getBandHeight`, `WorkerContext` shared by worker modules
+  - `format.ts` — URL/HUD-facing coordinate and magnification string formatters
+  - `canvas-preview.ts` — `snapshotCanvas`, `drawViewPreview` for touch (and wheel snapshot source)
+  - `references.ts` — Curated `REFERENCE_SECTIONS` for the Reference dialog and for human/agent lookup
+  - `colors.ts` — Palettes, swatches, `mapToColors()` for workers
+  - `url-state.ts` — `serializeToHash` / `deserializeFromHash`, `DEFAULT_VIEW`, `pushHashState` (200ms debounce), `flushHashState`, `stripHpFieldsWhenShallow`
+  - `compute.ts` — Standard escape-time + cardioid/bulb skip + smooth coloring; `autoIterations` uses `DEFAULT_ZOOM` from `constants`
+  - `worker.ts` — Standard Web Worker: band streaming, zero-copy `ChunkResult` transfer, round-robin bands
   - `bigfloat-utils.ts` — Utility module wrapping `bigfloat-esnext` for Mandelbrot-specific use: `requiredPrecision(zoom)` maps zoom depth to needed decimal digits, `truncateToPrecision()` prevents coefficient explosion during BigFloat iteration, plus conversion helpers
   - `reference-orbit.ts` — Computes a single high-precision reference orbit at the view center using BigFloat arithmetic; stores orbit values as Float64Arrays for consumption by perturbation workers; includes Brent's cycle detection for interior point early termination; optionally computes Series Approximation (SA) coefficients alongside the orbit
   - `reference-orbit-worker.ts` — Web Worker wrapper that runs `computeReferenceOrbit` off the main thread, streaming progress updates and transferring Float64Array results
@@ -100,7 +118,7 @@ The core UX innovation is a **preview/commit rendering strategy** that decouples
 - During pan/drag: existing canvas pixels are **shifted in-place** via `ctx.drawImage(canvas, dx, dy)` for instant feedback with zero compute
 - During wheel zoom and pinch-to-zoom: the app snapshots the current canvas once, then scales/translates that cached image during the gesture
 - Preview frames are intentionally blurry or pixelated when zoomed because they reuse already-rendered pixels instead of recalculating the fractal
-- During preview, only the view state and URL are updated; no worker render is dispatched yet
+- During preview, view state updates immediately; the URL hash is updated via **debounced** `pushHashState` (200ms). On **commit**, `flushHashState` runs so the hash matches the rendered view; **Share** uses `getShareUrl()` which flushes from `viewRef` before copying. No worker render is dispatched during continuous preview
 - At deep zoom, coordinate updates during interaction use BigFloat arithmetic (`applyHpDelta`) to maintain precision past the double-precision limit
 
 ### Commit Phase (after interaction)
@@ -121,7 +139,7 @@ The core UX innovation is a **preview/commit rendering strategy** that decouples
 
 ### Auto-Iterations
 
-`autoIterations(zoom)` scales max iterations with zoom depth: `200 + 50 × log₂(3.5/zoom)`, clamped to [200, 10000]. Each doubling of magnification adds 50 iterations. Deeper zooms automatically get more detail without user intervention. The 10,000 cap balances detail against compute cost in the perturbation pipeline, where each pixel iterates up to maxIter times across multiple workers.
+`autoIterations(zoom)` scales max iterations with zoom depth: `200 + 50 × log₂(DEFAULT_ZOOM / zoom)` with `DEFAULT_ZOOM` from `constants.ts` (3.5), clamped to `[200, MAX_SAFE_ITERATIONS]`. Each doubling of magnification adds 50 iterations. The upper cap balances detail against compute cost in the perturbation pipeline, where each pixel iterates up to `maxIter` times across workers.
 
 ## Dual Rendering Pipeline
 
@@ -152,8 +170,7 @@ Each worker, for each assigned band:
     │
     ▼
 Main Thread receives chunks (from all workers)
-    │ queues in pendingChunksRef
-    │ paints via requestAnimationFrame (batched, one flush per frame)
+    │ useChunkRenderer queues + paints via requestAnimationFrame (one flush per frame)
     │ full chunks: putImageData directly at correct y offset
     │
     ▼
@@ -197,9 +214,8 @@ Phase 2: Perturbation Render (worker pool)
     │   3. smoothColor() → mapToColors() → RGBA buffer
     │
     ▼
-Main Thread (same chunk painting as standard pipeline)
-    │ Progress: 10-100% as pixel chunks arrive
-    │ Canvas putImageData, rAF batching
+Main Thread (same useChunkRenderer path as standard; progress 10–100% for pixels)
+    │ Reference phase 0–10% is driven separately via setChunkProgress in the hook
 ```
 
 ### Pipeline Switching
@@ -287,7 +303,7 @@ The cursor point stays fixed on screen after zooming. At deep zoom, the implemen
 
 ### Standard Escape-Time Algorithm (`compute.ts`)
 
-The Mandelbrot set is the set of complex numbers `c` for which the iteration `z_{n+1} = z_n² + c` (starting from `z₀ = 0`) does not diverge. In practice, we iterate up to `maxIter` times and check if `|z|²` exceeds a **bailout value** of 256 (radius 16).
+The Mandelbrot set is the set of complex numbers `c` for which the iteration `z_{n+1} = z_n² + c` (starting from `z₀ = 0`) does not diverge. In practice, we iterate up to `maxIter` times and check if `|z|²` exceeds **`BAILOUT`** from `constants.ts` (256, i.e. escape radius 16).
 
 The iteration is written in optimized form to avoid redundant multiplications:
 
@@ -339,7 +355,7 @@ smoothed = iter + 1 - log₂(log₂(|z|))
          = iter + 1 - log(log(√(x²+y²))) / log(2)
 ```
 
-The double-logarithm maps the residual escape magnitude to a smooth fractional value, producing gradient-like transitions. The high bailout value of 256 (instead of the minimal 4) gives the double-log formula more dynamic range.
+The double-logarithm maps the residual escape magnitude to a smooth fractional value, producing gradient-like transitions. The high **`BAILOUT`** (see `constants.ts`) gives the double-log formula more dynamic range than a minimal radius-2 test.
 
 ### Cardioid / Period-2 Bulb Skip
 
@@ -363,44 +379,45 @@ The modulo-256 cycling creates repeating color "contour lines" that prevent the 
 
 ## Performance Optimizations
 
-| Technique                | Where                             | Impact                                                          |
-| ------------------------ | --------------------------------- | --------------------------------------------------------------- | --- | ---------------------------- |
-| DPR capping at 2×        | MandelbrotCanvas                  | Prevents 3×+ oversampling on mobile (2.25× memory savings)      |
-| Canvas pixel shifting    | use-interaction.ts                | Instant pan feedback, zero compute                              |
-| Snapshot preview scaling | use-interaction.ts                | Smooth wheel/pinch zoom feedback without recomputing fractals   |
-| Multi-worker pool        | use-mandelbrot-worker.ts          | Parallel computation across all CPU cores (round-robin bands)   |
-| Band streaming (4–32px)  | worker.ts, perturbation-worker.ts | Interruptible renders, progressive display                      |
-| Zero-copy transfer       | worker.ts postMessage             | No serialization cost or GC pressure on main thread             |
-| Cardioid/bulb detection  | compute.ts                        | Skips ~25% of interior point iterations (geometrically exact)   |
-| Smooth coloring          | compute.ts, perturbation.ts       | `iter + 1 - log₂(log₂(                                          | z   | ))` eliminates color banding |
-| High bailout (256)       | compute.ts, perturbation.ts       | More dynamic range for smooth coloring at negligible cost       |
-| rAF paint batching       | use-mandelbrot-worker.ts          | Single DOM flush per frame regardless of chunk arrival rate     |
-| Debounced URL sync       | url-state.ts (200ms)              | Prevents history spam during smooth panning                     |
-| Deferred commit renders  | use-interaction.ts                | Avoids redundant recomputation while gestures are in flight     |
-| Perturbation theory      | perturbation.ts                   | Eliminates BigFloat cost for all but 1 reference point          |
-| Series Approximation     | perturbation.ts                   | Skips 50–90% of early iterations per pixel at deep zoom         |
-| Brent's cycle detection  | reference-orbit.ts                | Early-terminates interior reference points                      |
-| Reference orbit caching  | use-perturbation-renderer.ts      | Reuses orbit when only zoom changes (center unchanged)          |
-| Algebraic delta zoom     | use-interaction.ts                | Avoids catastrophic cancellation at deep zoom coordinates       |
-| BigFloat truncation      | bigfloat-utils.ts                 | Prevents coefficient explosion during reference orbit iteration |
-| Adaptive band height     | perturbation-worker.ts            | Smaller bands (4px) at high maxIter for responsive cancellation |
+| Technique                | Where                                     | Impact                                                                        |
+| ------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------- |
+| DPR capping at 2×        | MandelbrotCanvas                          | Prevents 3×+ oversampling on mobile (2.25× memory savings)                    |
+| Canvas pixel shifting    | use-interaction.ts                        | Instant pan feedback, zero compute                                            |
+| Snapshot preview scaling | `canvas-preview.ts`, `use-interaction.ts` | Smooth touch pinch/pan preview; wheel uses inline cursor-centered `drawImage` |
+| Multi-worker pool        | `use-mandelbrot-worker.ts`                | Parallel computation across CPU cores (round-robin bands)                     |
+| Band streaming (4–32px)  | `worker.ts`, `perturbation-worker.ts`     | Interruptible renders; `getBandHeight` from `worker-utils.ts`                 |
+| Zero-copy transfer       | `worker.ts` `postMessage`                 | No serialization cost or GC pressure on main thread                           |
+| Cardioid/bulb detection  | `compute.ts`                              | Skips ~25% of interior iterations (standard pipeline)                         |
+| Smooth coloring          | `compute.ts`, `perturbation.ts`           | Double-log smooth iteration (`smoothColor` in `worker-utils`)                 |
+| High bailout             | `constants.ts` → `BAILOUT`                | Shared bailout radius² used by standard + perturbation paths                  |
+| rAF paint batching       | `use-chunk-renderer.ts`                   | Single canvas flush per frame for chunk streams                               |
+| Debounced URL sync       | `url-state.ts` (`pushHashState`)          | 200ms debounce during preview-only moves                                      |
+| Flush URL on commit      | `flushHashState` + `getShareUrl`          | Hash matches committed view and share clipboard                               |
+| Deferred commit renders  | `use-interaction.ts`                      | Gesture-specific debounce before `triggerRender`                              |
+| Perturbation theory      | perturbation.ts                           | Eliminates BigFloat cost for all but 1 reference point                        |
+| Series Approximation     | perturbation.ts                           | Skips 50–90% of early iterations per pixel at deep zoom                       |
+| Brent's cycle detection  | reference-orbit.ts                        | Early-terminates interior reference points                                    |
+| Reference orbit caching  | use-perturbation-renderer.ts              | Reuses orbit when only zoom changes (center unchanged)                        |
+| Algebraic delta zoom     | use-interaction.ts                        | Avoids catastrophic cancellation at deep zoom coordinates                     |
+| BigFloat truncation      | bigfloat-utils.ts                         | Prevents coefficient explosion during reference orbit iteration               |
+| Adaptive band height     | perturbation-worker.ts                    | Smaller bands (4px) at high maxIter for responsive cancellation               |
 
 ## URL State & Shareability
 
-Views are persisted in the URL hash: `#x=-0.5&y=0&z=3.5&i=200&c=classic&aa=auto`
+Views are persisted in the URL hash, e.g. `#x=-0.5&y=0&z=3.5&i=200&c=classic&aa=auto` (see `serializeToHash` / `deserializeFromHash` in `url-state.ts`).
 
-- **Arbitrary-precision coordinates**: when `centerXHp`/`centerYHp`/`zoomHp` strings are present (deep zoom), the full-precision decimal strings are serialized directly, preserving every digit. This enables sharing deep-zoom locations far beyond double-precision limits.
-- **15-digit precision** for standard coordinates (near IEEE 754 double-precision limit, supports 10^14+ magnification)
-- **10-digit precision** for zoom (sufficient for scale factor representation)
-- **Debounced** at 200ms using `replaceState` (not `pushState`) to avoid history bloat
-- **Two-way sync**: hash changes (back/forward buttons, manual URL edits) restore the view; high-precision strings detected by coordinate length (>16 chars for x/y, >11 chars for z)
-- Copy the URL to share a specific deep-zoom location with anyone
+- **Shallow zoom (`zoom ≥ PRECISION_THRESHOLD`)**: serialize uses `centerX`/`centerY`/`zoom` via `toPrecision` (15 / 15 / 10 significant digits). `deserializeFromHash` does **not** attach `*Hp` string fields in this regime, so long `toPrecision` fragments in the hash are never treated as arbitrary-precision overlays that could **shadow** live doubles after pan/zoom.
+- **Deep zoom (`zoom < PRECISION_THRESHOLD`)**: when URL fragments are long enough to imply true HP, `centerXHp` / `centerYHp` / `zoomHp` are restored for perturbation and exact sharing.
+- **`stripHpFieldsWhenShallow`**: `MandelbrotExplorer` normalizes in-memory `ViewState` so optional HP fields are dropped whenever `zoom` is at or above the threshold (guards against stale `zoomHp` after wheel zoom, etc.).
+- **Debounced outbound hash**: `pushHashState` — 200ms debounce, `history.replaceState` (not `pushState`) to avoid history spam during drag/wheel preview.
+- **Immediate hash on commit**: `flushHashState` on committed view changes so address bar, paste, and render agree; **Share** builds the URL via `getShareUrl()` (flush + `window.location.href`).
+- **Two-way sync**: `hashchange` → `deserializeFromHash` → `handleHashChange`; outbound via `syncToUrl` / `flushHashState` from `handleViewChange`.
 
 ## Color Palettes
 
-7 palettes (classic, fire, ocean, grayscale, psychedelic, ice, neon), each defined as 5 RGB color stops with linear interpolation cycling every 256 iterations. Interior points (in-set) always render black.
+Seven palettes (classic, fire, ocean, grayscale, psychedelic, ice, neon), each with five RGB stops and linear interpolation; smooth iteration maps through `mapToColors()` in `colors.ts`. Interior points (in-set) render black.
 
-The `getBrandColors()` function samples a palette's bright inner range (15%–85%) to generate a CSS linear gradient and glow color used for the "mandelbro" brand mark in the toolbar. The brand automatically adapts to the active color scheme.
+The **BrandMark** wordmark (`BrandMark.tsx`) picks light or dark text (and outline) from sampled **canvas luminance** under the label (`use-canvas-luminance.ts`), not from the active palette.
 
 ## PWA & Mobile
 
@@ -454,7 +471,7 @@ This pattern avoids the classic React issue where `useState` values captured in 
 ViewState carries optional `centerXHp`, `centerYHp`, and `zoomHp` string fields for arbitrary-precision coordinates. These are:
 
 - Created automatically by `applyHpDelta()` in `use-interaction.ts` when zooming past `PRECISION_THRESHOLD`
-- Serialized to/from the URL hash by `url-state.ts`
+- Serialized to/from the URL hash by `url-state.ts` (HP fields only in the deep-zoom regime; see **URL State & Shareability**)
 - Passed to the perturbation renderer for reference orbit computation
 - Displayed in the coordinates HUD with truncated precision for readability
 
@@ -472,13 +489,13 @@ ViewState carries optional `centerXHp`, `centerYHp`, and `zoomHp` string fields 
 
 ### Glitch Handling
 
-When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). The `GLITCH_THRESHOLD` (1e3) detects this condition. For v1, glitched pixels render with potentially inaccurate colors. Future work: automatic re-referencing near glitched regions.
+When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). `GLITCH_THRESHOLD` in `perturbation.ts` (1e3) detects this. For v1, glitched pixels may render with inaccurate colors. Future work: automatic re-referencing near glitched regions.
 
 ### Known Limitations
 
-- Reference orbit computation is capped at 10,000 iterations (`MAX_SAFE_ITERATIONS`) to bound BigFloat computation time
+- Reference orbit computation is capped at **`MAX_SAFE_ITERATIONS`** in `constants.ts` (10,000) to bound BigFloat computation time
 - Single-reference perturbation can produce visual glitches near mini-Mandelbrot copies (multi-reference not yet implemented)
-- `zoomHp` is present in the ViewState type but interaction handlers currently use double-precision zoom (sufficient because zoom is a scale factor, not a position)
+- Interaction updates **`zoom`** as a double; **`zoomHp`** is cleared when zoom changes during gestures so stale strings cannot override the live scale in the URL. Deep-zoom URLs still carry long `z` strings when deserialized below **`PRECISION_THRESHOLD`**
 
 ## Deployment
 
@@ -495,6 +512,10 @@ A **Compare** button in the Toolbar (visible on both deployments) opens the same
 
 ## References
 
-- K. I. Martin, ["Superfractalthing Maths"](https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf) — perturbation theory formulation
-- [Plotting algorithms for the Mandelbrot set (Wikipedia)](https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set) — perturbation, series approximation, periodicity checking
-- [Cycle detection (Wikipedia)](https://en.wikipedia.org/wiki/Cycle_detection#Brent's_algorithm) — Brent's algorithm
+**Primary in-repo list** — `src/lib/mandelbrot/references.ts` (`REFERENCE_SECTIONS`): same links and summaries as the **Reference** dialog in the app. Extend that file when adding a new algorithm or citation so agents and the UI stay aligned.
+
+Quick anchors (also in `references.ts`):
+
+- K. I. Martin — [Superfractalthing Maths (PDF, archived)](https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf) — perturbation formulation
+- Wikipedia — [Plotting algorithms for the Mandelbrot set](https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set) — perturbation, series approximation, cardioid/bulb checking
+- Wikipedia — [Cycle detection (Brent)](https://en.wikipedia.org/wiki/Cycle_detection#Brent's_algorithm)

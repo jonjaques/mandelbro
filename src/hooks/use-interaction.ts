@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
+import {
+  drawViewPreview,
+  snapshotCanvas,
+} from "@/lib/mandelbrot/canvas-preview";
 import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 import { autoIterations } from "@/lib/mandelbrot/compute";
 import { trackEvent } from "@/lib/analytics";
@@ -260,7 +264,7 @@ export function useInteraction(
 
       if (!wheelGesture.current) {
         onInteractionStart();
-        const snapshot = snapshotCanvas();
+        const snapshot = snapshotCanvas(canvas);
         if (!snapshot) return;
         wheelGesture.current = {
           startView: view,
@@ -380,54 +384,10 @@ export function useInteraction(
       wheelGesture.current = null;
     };
 
-    const snapshotCanvas = () => {
-      const snapshot = document.createElement("canvas");
-      snapshot.width = canvas.width;
-      snapshot.height = canvas.height;
-      const snapshotCtx = snapshot.getContext("2d", { alpha: false });
-      if (!snapshotCtx) return null;
-      snapshotCtx.drawImage(canvas, 0, 0);
-      return snapshot;
-    };
-
-    const drawViewPreview = (
-      snapshot: HTMLCanvasElement,
-      fromView: ViewState,
-      toView: ViewState,
-      rect: DOMRect,
-    ) => {
-      const ctx = canvas.getContext("2d", { alpha: false });
-      if (!ctx) return;
-
-      const aspectRatio = rect.width / rect.height;
-      const fromWidth = fromView.zoom * aspectRatio;
-      const toWidth = toView.zoom * aspectRatio;
-      const fromXMin = fromView.centerX - fromWidth / 2;
-      const fromYMin = fromView.centerY - fromView.zoom / 2;
-      const toXMin = toView.centerX - toWidth / 2;
-      const toYMin = toView.centerY - toView.zoom / 2;
-      const scaleX = fromWidth / toWidth;
-      const scaleY = fromView.zoom / toView.zoom;
-      const translateX = ((fromXMin - toXMin) / toWidth) * canvas.width;
-      const translateY = ((fromYMin - toYMin) / toView.zoom) * canvas.height;
-
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(
-        snapshot,
-        translateX,
-        translateY,
-        snapshot.width * scaleX,
-        snapshot.height * scaleY,
-      );
-    };
-
     const startTouchGesture = (touches: TouchList) => {
       clearScheduledRender();
       onInteractionStart();
-      const snapshot = snapshotCanvas();
+      const snapshot = snapshotCanvas(canvas);
       if (!snapshot) return;
 
       const startView = getView();
@@ -511,7 +471,13 @@ export function useInteraction(
             gesture.startView.zoom,
           ),
         };
-        drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
+        drawViewPreview(
+          canvas,
+          gesture.snapshot,
+          gesture.startView,
+          newView,
+          rect,
+        );
         commitViewChange(newView, false);
         return;
       }
@@ -562,7 +528,13 @@ export function useInteraction(
         maxIter: autoIterations(newZoom),
         ...applyHpDelta(gesture.startView, dxComplex, dyComplex, newZoom),
       };
-      drawViewPreview(gesture.snapshot, gesture.startView, newView, rect);
+      drawViewPreview(
+        canvas,
+        gesture.snapshot,
+        gesture.startView,
+        newView,
+        rect,
+      );
       commitViewChange(newView, false);
     };
 

@@ -1,6 +1,11 @@
 /**
  * Curated citations for algorithms used in Mandelbro (shown in Reference UI).
  * URLs are stable primary sources where possible (archive.org for Martin PDF).
+ *
+ * **For coding agents:** extend this list when you add a new technique or need
+ * an authoritative link; `AGENTS.md` → "References" points here so docs and UI
+ * stay aligned. Do not scatter one-off paper URLs across the codebase when
+ * they belong in `REFERENCE_SECTIONS`.
  */
 export interface ReferenceLink {
   label: string;
