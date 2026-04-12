@@ -94,7 +94,10 @@ export function useCanvasLuminance(
         let offscreen = offscreenRef.current;
         if (!offscreen) {
           const c = document.createElement("canvas");
-          const ctx = c.getContext("2d", { willReadFrequently: true });
+          const ctx = c.getContext("2d", {
+            willReadFrequently: true,
+            alpha: false,
+          });
           if (!ctx) return;
           offscreen = { canvas: c, ctx };
           offscreenRef.current = offscreen;

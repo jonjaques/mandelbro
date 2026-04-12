@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   ANTIALIAS_MODES,
   COLOR_SCHEMES,
@@ -47,6 +48,9 @@ interface SettingsPanelProps {
   onNavigateToFavorite: (favorite: Favorite) => void;
   onRemoveFavorite: (id: string) => void;
   onRenameFavorite: (id: string, name: string) => void;
+  wideGamut: boolean;
+  wideGamutSupported: boolean;
+  onWideGamutChange: (enabled: boolean) => void;
 }
 
 const SCHEMES = COLOR_SCHEMES;
@@ -98,8 +102,14 @@ function CoordinateRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ColorSwatch({ scheme }: { scheme: ColorScheme }) {
-  const colors = getSwatchColors(scheme);
+function ColorSwatch({
+  scheme,
+  wideGamut,
+}: {
+  scheme: ColorScheme;
+  wideGamut: boolean;
+}) {
+  const colors = getSwatchColors(scheme, wideGamut);
   return (
     <div className="flex gap-0.5">
       {colors.map((color, i) => (
@@ -125,6 +135,9 @@ export function SettingsPanel({
   onNavigateToFavorite,
   onRemoveFavorite,
   onRenameFavorite,
+  wideGamut,
+  wideGamutSupported,
+  onWideGamutChange,
 }: SettingsPanelProps) {
   const { copied: shareCopied, copy: copyShare } = useClipboardFeedback();
 
@@ -233,7 +246,7 @@ export function SettingsPanel({
                       className="text-white focus:bg-white/20 focus:text-white"
                     >
                       <div className="flex items-center gap-2">
-                        <ColorSwatch scheme={scheme} />
+                        <ColorSwatch scheme={scheme} wideGamut={wideGamut} />
                         <span>{COLOR_SCHEME_NAMES[scheme]}</span>
                       </div>
                     </SelectItem>
@@ -283,6 +296,44 @@ export function SettingsPanel({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="h-px bg-white/6" />
+
+          {/* Display */}
+          <div className="space-y-4">
+            <SectionHeader>Display</SectionHeader>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-white/80">
+                    Wide Gamut
+                  </p>
+                  {wideGamutSupported && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-500/20 to-cyan-500/20 border border-white/10 text-white/60">
+                      P3
+                    </span>
+                  )}
+                </div>
+                <Switch
+                  checked={wideGamut}
+                  onCheckedChange={onWideGamutChange}
+                  disabled={!wideGamutSupported}
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-fuchsia-500 data-[state=checked]:to-cyan-500"
+                />
+              </div>
+              {!wideGamutSupported && (
+                <p className="text-[11px] text-white/30">
+                  Not available on this display
+                </p>
+              )}
+              {wideGamutSupported && (
+                <p className="text-[11px] text-white/30">
+                  Renders in the display-p3 color space for more vivid colors
+                </p>
+              )}
             </div>
           </div>
 

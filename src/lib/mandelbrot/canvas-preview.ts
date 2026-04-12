@@ -1,15 +1,17 @@
 import type { ViewState } from "@/lib/mandelbrot/types";
+import { getContext2D } from "@/lib/mandelbrot/hdr";
 
 /**
  * Copy the current canvas pixels into an offscreen buffer for gesture previews.
  */
 export function snapshotCanvas(
   canvas: HTMLCanvasElement,
+  wideGamut: boolean,
 ): HTMLCanvasElement | null {
   const snapshot = document.createElement("canvas");
   snapshot.width = canvas.width;
   snapshot.height = canvas.height;
-  const snapshotCtx = snapshot.getContext("2d", { alpha: false });
+  const snapshotCtx = getContext2D(snapshot, wideGamut);
   if (!snapshotCtx) return null;
   snapshotCtx.drawImage(canvas, 0, 0);
   return snapshot;
@@ -25,8 +27,9 @@ export function drawViewPreview(
   fromView: ViewState,
   toView: ViewState,
   rect: DOMRect,
+  wideGamut: boolean,
 ): void {
-  const ctx = canvas.getContext("2d", { alpha: false });
+  const ctx = getContext2D(canvas, wideGamut);
   if (!ctx) return;
 
   const aspectRatio = rect.width / rect.height;

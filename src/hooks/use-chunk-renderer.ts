@@ -1,14 +1,22 @@
 import { useCallback, useRef, useState } from "react";
 import type { ChunkResult, RenderComplete } from "@/lib/mandelbrot/types";
+import { getContext2D, imageDataSettings } from "@/lib/mandelbrot/hdr";
+import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
 
 type ChunkPipelineMessage = ChunkResult | RenderComplete;
 
 /**
  * Shared progressive chunk queue, rAF-batched painting, and progress tracking
  * for Mandelbrot worker pools (standard + perturbation phase 2).
+ *
+ * Supports two painting backends:
+ * - **2D canvas** (default): `putImageData` with optional display-p3 colorSpace
+ * - **WebGL2** (HDR): uploads Float32 chunk data to an RGBA16F texture
  */
 export function useChunkRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  wideGamutRef: React.RefObject<boolean>,
+  glPainterRef?: React.RefObject<WebGLPainter | null>,
 ) {
   const requestIdRef = useRef(0);
   const pendingChunksRef = useRef<ChunkResult[]>([]);
@@ -23,20 +31,40 @@ export function useChunkRenderer(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) return;
-
     const chunks = pendingChunksRef.current;
     pendingChunksRef.current = [];
     const currentId = requestIdRef.current;
+    const painter = glPainterRef?.current;
 
-    for (const chunk of chunks) {
-      if (chunk.requestId !== currentId) continue;
-      const clamped = new Uint8ClampedArray(chunk.buffer);
-      const imgData = new ImageData(clamped, chunk.width, chunk.height);
-      ctx.putImageData(imgData, 0, chunk.y);
+    if (painter) {
+      for (const chunk of chunks) {
+        if (chunk.requestId !== currentId) continue;
+        if (chunk.hdr) {
+          painter.paintChunk(chunk.buffer, chunk.width, chunk.y, chunk.height);
+        } else {
+          painter.paintChunk(chunk.buffer, chunk.width, chunk.y, chunk.height);
+        }
+      }
+      painter.flush();
+    } else {
+      const wg = wideGamutRef.current;
+      const ctx = getContext2D(canvas, wg);
+      if (!ctx) return;
+      const settings = imageDataSettings(wg);
+
+      for (const chunk of chunks) {
+        if (chunk.requestId !== currentId) continue;
+        const clamped = new Uint8ClampedArray(chunk.buffer);
+        const imgData = new ImageData(
+          clamped,
+          chunk.width,
+          chunk.height,
+          settings,
+        );
+        ctx.putImageData(imgData, 0, chunk.y);
+      }
     }
-  }, [canvasRef]);
+  }, [canvasRef, wideGamutRef, glPainterRef]);
 
   const handleChunkMessage = useCallback(
     (
