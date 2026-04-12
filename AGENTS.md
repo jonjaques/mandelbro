@@ -19,6 +19,7 @@ Every technical decision serves one UX principle: **the user should never wait f
 - **Touch pinch/pan preview (canvas only)** — `src/lib/mandelbrot/canvas-preview.ts` (`snapshotCanvas`, `drawViewPreview`); consumed by `use-interaction.ts`.
 - **Chunk queue + rAF painting + pixel progress** — `src/hooks/use-chunk-renderer.ts`; composed by `use-mandelbrot-worker.ts` and `use-perturbation-renderer.ts` (standard progress 0–100%, perturbation phase 2 maps pixels to 10–100% via `progressOffset` / `progressScale`).
 - **Clipboard UX** — `src/hooks/use-clipboard-feedback.ts` for share / coordinate copy feedback in toolbar and settings.
+- **Site identity & URLs** — `src/lib/site-config.ts` (`PRODUCTION_HOSTNAME`, `PRODUCTION_URL`, `PAGES_DOMAIN`, `SOURCE_CODE_URL`, `WIKIPEDIA_URL`, `getCompareUrl`, `isPreviewDeployment`). All external-facing URLs live here; Toolbar, settings, and sharing code import from this file. `astro.config.mjs` reads `CF_PAGES_URL` for the same production-vs-preview logic at build time.
 
 ## Build & Development Commands
 
@@ -52,7 +53,7 @@ No test framework is currently configured.
 - `src/components/mandelbrot/` — React components for the explorer UI
   - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, dual rendering pipelines, interaction, URL sync, UI overlays, and the `StrictMode` wrapper
   - `MandelbrotCanvas.tsx` — Full-viewport `<canvas>` with ResizeObserver, DPR-aware (capped at 2x)
-  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL (via `getShareUrl()` from explorer: flushes hash then copies), reset view, fullscreen toggle; **Reference** opens `ReferenceDialog` (content from `references.ts`); `BrandMark` adapts text color to canvas luminance
+  - `Toolbar.tsx` — Floating glass-morphism buttons: settings, share URL (via `getShareUrl()` from explorer: flushes hash then copies), reset view, fullscreen toggle; **Reference** opens `ReferenceDialog` (content from `references.ts`); **Compare** (preview deployments only) opens the same view on production; `BrandMark` adapts text color to canvas luminance. All URLs imported from `site-config.ts`
   - `SettingsPanel.tsx` — shadcn Sheet with iterations slider, color scheme selector, coordinate display with copy-to-clipboard, share URL, and reset
   - `Coordinates.tsx` — Bottom-left HUD showing Re/Im/zoom with full-precision display for deep zoom; auto-hides after 3s of inactivity, reappears on interaction or view change; shows "Precision mode" badge with digit count when past the precision threshold
   - `DeepZoomBanner.tsx` — Top-center banner that appears when the perturbation pipeline activates; shows zoom depth milestones (e.g., "10^30×") and fades after 4s
@@ -501,21 +502,39 @@ When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). `GLI
 
 The project is deployed on **Cloudflare Pages** via git-based CI (pushes to tracked branches auto-deploy).
 
-| Branch     | URL                                   | Purpose                         |
-| ---------- | ------------------------------------- | ------------------------------- |
-| `main`     | https://mandelbro.jonjaques.com       | Production (standard pipeline)  |
-| `bigfloat` | https://bigfloat.mandelbro.pages.dev/ | Preview (perturbation/bigfloat) |
+| Environment | URL pattern                            | Notes                                         |
+| ----------- | -------------------------------------- | --------------------------------------------- |
+| Production  | `https://mandelbro.jonjaques.com`      | Custom domain, `main` branch                  |
+| Preview     | `https://<branch>.mandelbro.pages.dev` | Auto-deployed for every non-production branch |
 
-Both deployments share the same URL hash format, so any `#x=...&y=...&z=...` hash is compatible between branches. This enables cross-branch comparison by replacing the hostname while preserving the hash.
+Cloudflare Pages provides `CF_PAGES_URL` and `CF_PAGES_BRANCH` at build time. `astro.config.mjs` reads `CF_PAGES_URL` so the Astro `site` (canonical URLs, OG tags, sitemaps) matches each deployment automatically. When building locally or on `main`, it falls back to `https://mandelbro.jonjaques.com`.
 
-A **Compare** button in the Toolbar (visible on both deployments) opens the same coordinates on the other branch in a new tab. This lets users visually compare the standard double-precision pipeline (production) against the arbitrary-precision perturbation pipeline (bigfloat) at the same location and zoom.
+### URL compatibility
 
-## References
+All deployments share the same URL hash format (`#x=...&y=...&z=...`), so any hash is portable between production and any preview branch.
 
-**Primary in-repo list** — `src/lib/mandelbrot/references.ts` (`REFERENCE_SECTIONS`): same links and summaries as the **Reference** dialog in the app. Extend that file when adding a new algorithm or citation so agents and the UI stay aligned.
+### Compare button
 
-Quick anchors (also in `references.ts`):
+A **Compare** button appears in the Toolbar on preview deployments only (detected at runtime via hostname). It opens the same coordinates on production in a new tab, letting users visually compare a feature branch against production.
 
+### Site identity — single source of truth
+
+`src/lib/site-config.ts` exports `PRODUCTION_HOSTNAME`, `PRODUCTION_URL`, `PAGES_DOMAIN`, `SOURCE_CODE_URL`, plus runtime helpers (`isProductionHost`, `isPreviewDeployment`, `getCompareUrl`). Toolbar, settings, and any future sharing/social features should import from there rather than hardcoding URLs.
+
+## References & Literature
+
+**Single source of truth** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS`. The in-app **Reference** dialog renders the same data. When you need an authoritative link for an algorithm, look there first.
+
+### Rules for agents
+
+1. **Never duplicate citations.** If you need to cite a paper or Wikipedia section, add it to `REFERENCE_SECTIONS` in `references.ts` — do not scatter one-off URLs in code comments, markdown files, or other modules.
+2. **Never copy Wikipedia content into the repo.** Link to the canonical page instead. The repo previously contained a manually converted `mandelbrot-reference.md`; it was removed in favor of the link in `REFERENCE_SECTIONS`.
+3. **Keep summaries short.** Each section gets a one- or two-sentence `summary` and one or more `links`. The Reference dialog is meant to be a curated bibliography, not a textbook.
+4. **Prefer stable URLs.** Use `archive.org` when the original is fragile; use Wikipedia section anchors when targeting a specific topic.
+
+### Quick anchors (also in `references.ts`)
+
+- Wikipedia — [Mandelbrot set](https://en.wikipedia.org/wiki/Mandelbrot_set) — background and formal definition
 - K. I. Martin — [Superfractalthing Maths (PDF, archived)](https://web.archive.org/web/20140628114658/http://www.superfractalthing.co.nf/sft_maths.pdf) — perturbation formulation
 - Wikipedia — [Plotting algorithms for the Mandelbrot set](https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set) — perturbation, series approximation, cardioid/bulb checking
 - Wikipedia — [Cycle detection (Brent)](https://en.wikipedia.org/wiki/Cycle_detection#Brent's_algorithm)

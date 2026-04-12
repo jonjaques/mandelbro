@@ -43,6 +43,7 @@ export default defineConfig(
   },
   {
     files: ["**/*.{tsx,jsx}"],
+    ...reactHooks.configs.flat["recommended-latest"],
     plugins: {
       react,
       "react-hooks": reactHooks,
@@ -56,7 +57,7 @@ export default defineConfig(
     rules: {
       ...react.configs.recommended.rules,
       ...react.configs["jsx-runtime"].rules,
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat["recommended-latest"].rules,
       ...jsxA11y.configs.recommended.rules,
       "react/prop-types": "off",
     },

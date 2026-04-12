@@ -20,6 +20,17 @@ export interface ReferenceSection {
 
 export const REFERENCE_SECTIONS: readonly ReferenceSection[] = [
   {
+    heading: "The Mandelbrot set",
+    summary:
+      "The set of complex numbers c for which the iteration z_{n+1} = z_n² + c (starting from z₀ = 0) does not diverge. First visualized by Benoit Mandelbrot in 1980, its boundary is a fractal of Hausdorff dimension 2.",
+    links: [
+      {
+        label: "Wikipedia — Mandelbrot set",
+        href: "https://en.wikipedia.org/wiki/Mandelbrot_set",
+      },
+    ],
+  },
+  {
     heading: "Perturbation theory",
     summary:
       "Deep zoom renders one high-precision reference orbit at c_ref, then integrates each pixel as a small double-precision delta from that orbit—far cheaper than arbitrary precision per pixel.",

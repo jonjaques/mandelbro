@@ -40,6 +40,7 @@ const RAW_RUNTIME_STATE =
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["@yarnpkg/sdks", "npm:3.2.3"],\
           ["astro", "npm:6.1.5"],\
+          ["babel-plugin-react-compiler", "npm:1.0.0"],\
           ["bigfloat-esnext", "npm:3.0.1"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
@@ -6050,6 +6051,16 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["babel-plugin-react-compiler", [\
+      ["npm:1.0.0", {\
+        "packageLocation": "../../.yarn/berry/cache/babel-plugin-react-compiler-npm-1.0.0-5beba4221c-10c0.zip/node_modules/babel-plugin-react-compiler/",\
+        "packageDependencies": [\
+          ["@babel/types", "npm:7.29.0"],\
+          ["babel-plugin-react-compiler", "npm:1.0.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["bail", [\
       ["npm:2.0.2", {\
         "packageLocation": "../../.yarn/berry/cache/bail-npm-2.0.2-42130cb251-10c0.zip/node_modules/bail/",\
@@ -10177,6 +10188,7 @@ const RAW_RUNTIME_STATE =
           ["@types/react-dom", "virtual:9d9d867d482151f543c8450337733f00017e6a068c3730713c893d29b11ec046abc5561e4513658aa6786de2d77cc59525e81e4c35f45fb110aff1c96146d9b6#npm:19.2.3"],\
           ["@yarnpkg/sdks", "npm:3.2.3"],\
           ["astro", "npm:6.1.5"],\
+          ["babel-plugin-react-compiler", "npm:1.0.0"],\
           ["bigfloat-esnext", "npm:3.0.1"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\

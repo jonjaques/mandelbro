@@ -6,7 +6,7 @@ Mandelbro is an immersive, fullscreen Mandelbrot set explorer built for the mode
 
 Powered by **perturbation theory** and **arbitrary-precision arithmetic**, Mandelbro breaks through the double-precision barrier to support deep zooms far beyond 10^14×. Explore miniature Mandelbrot copies, spiral formations, and fractal structures at magnifications of **10^50× and beyond** — all running in your browser.
 
-**[Try it live →](https://mandelbro.app)** · [GitHub](https://github.com/jonjaques/mandelbro)
+**[Try it live →](https://mandelbro.jonjaques.com)** · [GitHub](https://github.com/jonjaques/mandelbro)
 
 ---
 
