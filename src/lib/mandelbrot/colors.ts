@@ -51,13 +51,22 @@ const SWATCH_SAMPLE_COUNT = 5;
  * expanded into 256-sample LUTs so the custom and D3-derived schemes share the
  * same runtime representation.
  */
-const BUILTIN_STOP_PALETTES = {
+type BuiltinStopKey =
+  | "classic"
+  | "fire"
+  | "ocean"
+  | "grayscale"
+  | "psychedelic"
+  | "ice"
+  | "neon";
+
+const BUILTIN_STOP_PALETTES: Record<BuiltinStopKey, readonly RGB[]> = {
   classic: [
-    [0, 7, 100], // Deep blue (Ultra Fractal "classic" inspired)
-    [32, 107, 203], // Medium blue
-    [237, 255, 255], // Near-white cyan
-    [255, 170, 0], // Warm orange
-    [0, 2, 0], // Near-black green (wraps back toward start)
+    [0, 7, 100],
+    [32, 107, 203],
+    [237, 255, 255],
+    [255, 170, 0],
+    [0, 2, 0],
   ],
   fire: [
     [0, 0, 0],
@@ -78,7 +87,7 @@ const BUILTIN_STOP_PALETTES = {
     [128, 128, 128],
     [255, 255, 255],
     [128, 128, 128],
-    [0, 0, 0], // Symmetric: wraps cleanly back to black
+    [0, 0, 0],
   ],
   psychedelic: [
     [255, 0, 100],
@@ -101,7 +110,59 @@ const BUILTIN_STOP_PALETTES = {
     [255, 255, 0],
     [0, 255, 0],
   ],
-} satisfies Partial<Record<ColorScheme, readonly RGB[]>>;
+};
+
+/**
+ * P3-optimized palette stops. In display-p3, [255, 0, 0] is the P3 red primary
+ * which is substantially more saturated than sRGB red. These stops push into
+ * P3's extended gamut territory — more saturated primaries, deeper darks, and
+ * purer hues that are impossible in sRGB.
+ */
+const BUILTIN_STOP_PALETTES_P3: Record<BuiltinStopKey, readonly RGB[]> = {
+  classic: [
+    [0, 0, 120], // Deeper blue — P3 blues are richer
+    [10, 100, 220], // Saturated azure, pushing blue primary
+    [220, 255, 255], // Vivid cyan highlight
+    [255, 150, 0], // Hotter orange — P3 red/orange extends further
+    [0, 2, 0],
+  ],
+  fire: [
+    [0, 0, 0],
+    [160, 0, 0], // Deeper crimson — P3 reds are much more saturated
+    [255, 30, 0], // Scorching red-orange
+    [255, 180, 0], // Vivid amber
+    [255, 255, 180], // Hot white core
+  ],
+  ocean: [
+    [0, 0, 50], // Deeper abyss
+    [0, 30, 130], // Rich deep blue
+    [0, 110, 220], // Vivid cerulean
+    [60, 200, 255], // Electric cyan
+    [180, 240, 255],
+  ],
+  grayscale: BUILTIN_STOP_PALETTES.grayscale,
+  psychedelic: [
+    [255, 0, 80], // P3 hot pink — beyond sRGB
+    [255, 255, 0], // Pure P3 yellow
+    [0, 255, 60], // Electric green — P3's biggest gamut advantage
+    [0, 60, 255], // Deep electric blue
+    [220, 0, 255], // Vivid violet
+  ],
+  ice: [
+    [0, 0, 60], // Darker abyss
+    [30, 60, 180], // Deeper sapphire
+    [100, 170, 240], // Vivid sky
+    [190, 230, 255],
+    [255, 255, 255],
+  ],
+  neon: [
+    [0, 0, 0],
+    [255, 0, 255], // P3 magenta — already at gamut boundary, stunning
+    [0, 255, 255], // P3 cyan — electric
+    [255, 255, 0], // P3 yellow — blazing
+    [0, 255, 0], // P3 green — the biggest visual leap from sRGB
+  ],
+};
 
 /**
  * Linear interpolation (lerp) between two RGB colors.
@@ -185,55 +246,78 @@ function createPaletteLutFromInterpolator(
   return palette;
 }
 
-const PALETTES = {
-  classic: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.classic),
-  fire: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.fire),
-  ocean: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.ocean),
-  grayscale: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.grayscale),
-  psychedelic: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.psychedelic),
-  ice: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.ice),
-  neon: createPaletteLutFromStops(BUILTIN_STOP_PALETTES.neon),
-  rainbow: createPaletteLutFromInterpolator(interpolateRainbow),
-  sinebow: createPaletteLutFromInterpolator(interpolateSinebow),
-  brbg: createPaletteLutFromInterpolator(interpolateBrBG),
-  prgn: createPaletteLutFromInterpolator(interpolatePRGn),
-  piyg: createPaletteLutFromInterpolator(interpolatePiYG),
-  puor: createPaletteLutFromInterpolator(interpolatePuOr),
-  rdbu: createPaletteLutFromInterpolator(interpolateRdBu),
-  rdgy: createPaletteLutFromInterpolator(interpolateRdGy),
-  rdylbu: createPaletteLutFromInterpolator(interpolateRdYlBu),
-  rdylgn: createPaletteLutFromInterpolator(interpolateRdYlGn),
-  spectral: createPaletteLutFromInterpolator(interpolateSpectral),
-  blues: createPaletteLutFromInterpolator(interpolateBlues),
-  bugn: createPaletteLutFromInterpolator(interpolateBuGn),
-  bupu: createPaletteLutFromInterpolator(interpolateBuPu),
-  cividis: createPaletteLutFromInterpolator(interpolateCividis),
-  cool: createPaletteLutFromInterpolator(interpolateCool),
-  "cubehelix-default": createPaletteLutFromInterpolator(
-    interpolateCubehelixDefault,
-  ),
-  gnbu: createPaletteLutFromInterpolator(interpolateGnBu),
-  greens: createPaletteLutFromInterpolator(interpolateGreens),
-  greys: createPaletteLutFromInterpolator(interpolateGreys),
-  inferno: createPaletteLutFromInterpolator(interpolateInferno),
-  magma: createPaletteLutFromInterpolator(interpolateMagma),
-  orrd: createPaletteLutFromInterpolator(interpolateOrRd),
-  oranges: createPaletteLutFromInterpolator(interpolateOranges),
-  plasma: createPaletteLutFromInterpolator(interpolatePlasma),
-  pubu: createPaletteLutFromInterpolator(interpolatePuBu),
-  pubugn: createPaletteLutFromInterpolator(interpolatePuBuGn),
-  purd: createPaletteLutFromInterpolator(interpolatePuRd),
-  purples: createPaletteLutFromInterpolator(interpolatePurples),
-  rdpu: createPaletteLutFromInterpolator(interpolateRdPu),
-  reds: createPaletteLutFromInterpolator(interpolateReds),
-  turbo: createPaletteLutFromInterpolator(interpolateTurbo),
-  viridis: createPaletteLutFromInterpolator(interpolateViridis),
-  warm: createPaletteLutFromInterpolator(interpolateWarm),
-  ylgn: createPaletteLutFromInterpolator(interpolateYlGn),
-  ylgnbu: createPaletteLutFromInterpolator(interpolateYlGnBu),
-  ylorbr: createPaletteLutFromInterpolator(interpolateYlOrBr),
-  ylorrd: createPaletteLutFromInterpolator(interpolateYlOrRd),
-} satisfies Record<ColorScheme, RGB[]>;
+function buildD3Palettes(): Record<
+  Exclude<ColorScheme, BuiltinStopKey>,
+  RGB[]
+> {
+  return {
+    rainbow: createPaletteLutFromInterpolator(interpolateRainbow),
+    sinebow: createPaletteLutFromInterpolator(interpolateSinebow),
+    brbg: createPaletteLutFromInterpolator(interpolateBrBG),
+    prgn: createPaletteLutFromInterpolator(interpolatePRGn),
+    piyg: createPaletteLutFromInterpolator(interpolatePiYG),
+    puor: createPaletteLutFromInterpolator(interpolatePuOr),
+    rdbu: createPaletteLutFromInterpolator(interpolateRdBu),
+    rdgy: createPaletteLutFromInterpolator(interpolateRdGy),
+    rdylbu: createPaletteLutFromInterpolator(interpolateRdYlBu),
+    rdylgn: createPaletteLutFromInterpolator(interpolateRdYlGn),
+    spectral: createPaletteLutFromInterpolator(interpolateSpectral),
+    blues: createPaletteLutFromInterpolator(interpolateBlues),
+    bugn: createPaletteLutFromInterpolator(interpolateBuGn),
+    bupu: createPaletteLutFromInterpolator(interpolateBuPu),
+    cividis: createPaletteLutFromInterpolator(interpolateCividis),
+    cool: createPaletteLutFromInterpolator(interpolateCool),
+    "cubehelix-default": createPaletteLutFromInterpolator(
+      interpolateCubehelixDefault,
+    ),
+    gnbu: createPaletteLutFromInterpolator(interpolateGnBu),
+    greens: createPaletteLutFromInterpolator(interpolateGreens),
+    greys: createPaletteLutFromInterpolator(interpolateGreys),
+    inferno: createPaletteLutFromInterpolator(interpolateInferno),
+    magma: createPaletteLutFromInterpolator(interpolateMagma),
+    orrd: createPaletteLutFromInterpolator(interpolateOrRd),
+    oranges: createPaletteLutFromInterpolator(interpolateOranges),
+    plasma: createPaletteLutFromInterpolator(interpolatePlasma),
+    pubu: createPaletteLutFromInterpolator(interpolatePuBu),
+    pubugn: createPaletteLutFromInterpolator(interpolatePuBuGn),
+    purd: createPaletteLutFromInterpolator(interpolatePuRd),
+    purples: createPaletteLutFromInterpolator(interpolatePurples),
+    rdpu: createPaletteLutFromInterpolator(interpolateRdPu),
+    reds: createPaletteLutFromInterpolator(interpolateReds),
+    turbo: createPaletteLutFromInterpolator(interpolateTurbo),
+    viridis: createPaletteLutFromInterpolator(interpolateViridis),
+    warm: createPaletteLutFromInterpolator(interpolateWarm),
+    ylgn: createPaletteLutFromInterpolator(interpolateYlGn),
+    ylgnbu: createPaletteLutFromInterpolator(interpolateYlGnBu),
+    ylorbr: createPaletteLutFromInterpolator(interpolateYlOrBr),
+    ylorrd: createPaletteLutFromInterpolator(interpolateYlOrRd),
+  };
+}
+
+function buildBuiltinPalettes(
+  stops: Record<BuiltinStopKey, readonly RGB[]>,
+): Record<BuiltinStopKey, RGB[]> {
+  const entries = Object.entries(stops) as [BuiltinStopKey, readonly RGB[]][];
+  return Object.fromEntries(
+    entries.map(([key, s]) => [key, createPaletteLutFromStops(s)]),
+  ) as Record<BuiltinStopKey, RGB[]>;
+}
+
+const d3Palettes = buildD3Palettes();
+
+const PALETTES_SRGB: Record<ColorScheme, RGB[]> = {
+  ...buildBuiltinPalettes(BUILTIN_STOP_PALETTES),
+  ...d3Palettes,
+};
+
+const PALETTES_P3: Record<ColorScheme, RGB[]> = {
+  ...buildBuiltinPalettes(BUILTIN_STOP_PALETTES_P3),
+  ...d3Palettes,
+};
+
+function getPalettes(wideGamut: boolean): Record<ColorScheme, RGB[]> {
+  return wideGamut ? PALETTES_P3 : PALETTES_SRGB;
+}
 
 /**
  * Convert a Float64Array of smooth iteration counts into RGBA pixel data.
@@ -256,14 +340,21 @@ export function mapToColors(
   maxIter: number,
   scheme: ColorScheme,
   cyclePeriod = 256,
+  wideGamut = false,
 ): Uint8ClampedArray {
   const len = iterations.length;
   const rgba = new Uint8ClampedArray(len * 4);
+  const palette = getPalettes(wideGamut)[scheme];
 
   for (let i = 0; i < len; i++) {
     const iter = iterations[i] ?? maxIter;
     const offset = i * 4;
-    const color = colorFromSmoothIteration(iter, maxIter, scheme, cyclePeriod);
+    if (iter >= maxIter) {
+      rgba[offset + 3] = 255;
+      continue;
+    }
+    const t = (iter % cyclePeriod) / cyclePeriod;
+    const color = interpolatePalette(palette, t);
     rgba[offset] = color[0];
     rgba[offset + 1] = color[1];
     rgba[offset + 2] = color[2];
@@ -278,12 +369,13 @@ export function colorFromSmoothIteration(
   maxIter: number,
   scheme: ColorScheme,
   cyclePeriod = 256,
+  wideGamut = false,
 ): RGB {
   if (iter >= maxIter) {
     return [0, 0, 0];
   }
 
-  const palette = PALETTES[scheme];
+  const palette = getPalettes(wideGamut)[scheme];
   const t = (iter % cyclePeriod) / cyclePeriod;
   return interpolatePalette(palette, t);
 }
@@ -350,13 +442,179 @@ export const COLOR_SCHEME_NAMES: Record<ColorScheme, string> = {
   ylorrd: "YlOrRd",
 };
 
-export function getSwatchColors(scheme: ColorScheme): string[] {
+/**
+ * Float-based palette type for HDR rendering. Values may exceed 1.0 for
+ * highlights that render brighter than SDR white on HDR displays.
+ */
+export type RGBFloat = readonly [number, number, number];
+
+/**
+ * Build a float-based LUT from 0–255 integer stops, normalizing to [0, 1]
+ * range and optionally applying an HDR boost curve to bright stops.
+ */
+function createFloatLutFromStops(
+  stops: readonly RGB[],
+  hdrBoost: number,
+): RGBFloat[] {
+  const lut: RGBFloat[] = [];
+  for (let i = 0; i < LUT_SIZE; i++) {
+    const t = i / (LUT_SIZE - 1);
+    const [r, g, b] = interpolatePalette(stops, t);
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const luminance = 0.2126 * rn + 0.7152 * gn + 0.0722 * bn;
+    const boost = 1 + (hdrBoost - 1) * luminance * luminance;
+    lut.push([rn * boost, gn * boost, bn * boost]);
+  }
+  return lut;
+}
+
+function createFloatLutFromInterpolator(
+  interpolator: (t: number) => string,
+  hdrBoost: number,
+): RGBFloat[] {
+  const lut: RGBFloat[] = [];
+  for (let i = 0; i < LUT_SIZE; i++) {
+    const t = i / (LUT_SIZE - 1);
+    const [r, g, b] = rgbStringToTriplet(interpolator(t));
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const luminance = 0.2126 * rn + 0.7152 * gn + 0.0722 * bn;
+    const boost = 1 + (hdrBoost - 1) * luminance * luminance;
+    lut.push([rn * boost, gn * boost, bn * boost]);
+  }
+  return lut;
+}
+
+const HDR_BOOST = 2.0;
+
+const PALETTES_HDR: Record<ColorScheme, RGBFloat[]> = {
+  ...(Object.fromEntries(
+    (
+      Object.entries(BUILTIN_STOP_PALETTES_P3) as [
+        BuiltinStopKey,
+        readonly RGB[],
+      ][]
+    ).map(([key, stops]) => [key, createFloatLutFromStops(stops, HDR_BOOST)]),
+  ) as Record<BuiltinStopKey, RGBFloat[]>),
+  rainbow: createFloatLutFromInterpolator(interpolateRainbow, HDR_BOOST),
+  sinebow: createFloatLutFromInterpolator(interpolateSinebow, HDR_BOOST),
+  brbg: createFloatLutFromInterpolator(interpolateBrBG, HDR_BOOST),
+  prgn: createFloatLutFromInterpolator(interpolatePRGn, HDR_BOOST),
+  piyg: createFloatLutFromInterpolator(interpolatePiYG, HDR_BOOST),
+  puor: createFloatLutFromInterpolator(interpolatePuOr, HDR_BOOST),
+  rdbu: createFloatLutFromInterpolator(interpolateRdBu, HDR_BOOST),
+  rdgy: createFloatLutFromInterpolator(interpolateRdGy, HDR_BOOST),
+  rdylbu: createFloatLutFromInterpolator(interpolateRdYlBu, HDR_BOOST),
+  rdylgn: createFloatLutFromInterpolator(interpolateRdYlGn, HDR_BOOST),
+  spectral: createFloatLutFromInterpolator(interpolateSpectral, HDR_BOOST),
+  blues: createFloatLutFromInterpolator(interpolateBlues, HDR_BOOST),
+  bugn: createFloatLutFromInterpolator(interpolateBuGn, HDR_BOOST),
+  bupu: createFloatLutFromInterpolator(interpolateBuPu, HDR_BOOST),
+  cividis: createFloatLutFromInterpolator(interpolateCividis, HDR_BOOST),
+  cool: createFloatLutFromInterpolator(interpolateCool, HDR_BOOST),
+  "cubehelix-default": createFloatLutFromInterpolator(
+    interpolateCubehelixDefault,
+    HDR_BOOST,
+  ),
+  gnbu: createFloatLutFromInterpolator(interpolateGnBu, HDR_BOOST),
+  greens: createFloatLutFromInterpolator(interpolateGreens, HDR_BOOST),
+  greys: createFloatLutFromInterpolator(interpolateGreys, HDR_BOOST),
+  inferno: createFloatLutFromInterpolator(interpolateInferno, HDR_BOOST),
+  magma: createFloatLutFromInterpolator(interpolateMagma, HDR_BOOST),
+  orrd: createFloatLutFromInterpolator(interpolateOrRd, HDR_BOOST),
+  oranges: createFloatLutFromInterpolator(interpolateOranges, HDR_BOOST),
+  plasma: createFloatLutFromInterpolator(interpolatePlasma, HDR_BOOST),
+  pubu: createFloatLutFromInterpolator(interpolatePuBu, HDR_BOOST),
+  pubugn: createFloatLutFromInterpolator(interpolatePuBuGn, HDR_BOOST),
+  purd: createFloatLutFromInterpolator(interpolatePuRd, HDR_BOOST),
+  purples: createFloatLutFromInterpolator(interpolatePurples, HDR_BOOST),
+  rdpu: createFloatLutFromInterpolator(interpolateRdPu, HDR_BOOST),
+  reds: createFloatLutFromInterpolator(interpolateReds, HDR_BOOST),
+  turbo: createFloatLutFromInterpolator(interpolateTurbo, HDR_BOOST),
+  viridis: createFloatLutFromInterpolator(interpolateViridis, HDR_BOOST),
+  warm: createFloatLutFromInterpolator(interpolateWarm, HDR_BOOST),
+  ylgn: createFloatLutFromInterpolator(interpolateYlGn, HDR_BOOST),
+  ylgnbu: createFloatLutFromInterpolator(interpolateYlGnBu, HDR_BOOST),
+  ylorbr: createFloatLutFromInterpolator(interpolateYlOrBr, HDR_BOOST),
+  ylorrd: createFloatLutFromInterpolator(interpolateYlOrRd, HDR_BOOST),
+};
+
+function interpolateFloat(a: RGBFloat, b: RGBFloat, t: number): RGBFloat {
+  return [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t,
+  ];
+}
+
+function interpolateFloatPalette(
+  lut: readonly RGBFloat[],
+  t: number,
+): RGBFloat {
+  if (lut.length === 0) return [0, 0, 0];
+  if (lut.length === 1) return lut[0] ?? [0, 0, 0];
+  const ct = Math.max(0, Math.min(1, t));
+  const segCount = lut.length - 1;
+  const seg = ct * segCount;
+  const idx = Math.min(Math.floor(seg), segCount - 1);
+  const localT = seg - idx;
+  const start = lut[idx] ?? [0, 0, 0];
+  const end = lut[idx + 1] ?? start;
+  return interpolateFloat(start, end, localT);
+}
+
+/**
+ * Map smooth iteration counts to Float32 RGBA for HDR rendering.
+ * Values may exceed 1.0 — bright palette stops are boosted above SDR white.
+ */
+export function mapToColorsHDR(
+  iterations: Float64Array,
+  maxIter: number,
+  scheme: ColorScheme,
+  cyclePeriod = 256,
+): Float32Array {
+  const len = iterations.length;
+  const rgba = new Float32Array(len * 4);
+  const palette = PALETTES_HDR[scheme];
+
+  for (let i = 0; i < len; i++) {
+    const iter = iterations[i] ?? maxIter;
+    const offset = i * 4;
+    if (iter >= maxIter) {
+      rgba[offset + 3] = 1;
+      continue;
+    }
+    const t = (iter % cyclePeriod) / cyclePeriod;
+    const color = interpolateFloatPalette(palette, t);
+    rgba[offset] = color[0];
+    rgba[offset + 1] = color[1];
+    rgba[offset + 2] = color[2];
+    rgba[offset + 3] = 1;
+  }
+
+  return rgba;
+}
+
+export function getSwatchColors(
+  scheme: ColorScheme,
+  wideGamut = false,
+): string[] {
   const swatches: string[] = [];
+  const palette = getPalettes(wideGamut)[scheme];
 
   for (let index = 0; index < SWATCH_SAMPLE_COUNT; index++) {
     const t = index / (SWATCH_SAMPLE_COUNT - 1);
-    const [r, g, b] = interpolatePalette(PALETTES[scheme], t);
-    swatches.push(`rgb(${r}, ${g}, ${b})`);
+    const [r, g, b] = interpolatePalette(palette, t);
+    if (wideGamut) {
+      swatches.push(
+        `color(display-p3 ${(r / 255).toFixed(4)} ${(g / 255).toFixed(4)} ${(b / 255).toFixed(4)})`,
+      );
+    } else {
+      swatches.push(`rgb(${r}, ${g}, ${b})`);
+    }
   }
 
   return swatches;

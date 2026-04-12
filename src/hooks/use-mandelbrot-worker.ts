@@ -7,6 +7,7 @@ import type {
 } from "@/lib/mandelbrot/types";
 import { resolveAntialiasSamples } from "@/lib/mandelbrot/compute";
 import { useChunkRenderer } from "@/hooks/use-chunk-renderer";
+import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
 
 /**
  * Number of Web Workers in the rendering pool.
@@ -52,8 +53,11 @@ const WORKER_COUNT =
  */
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  wideGamutRef: React.RefObject<boolean>,
+  glPainterRef?: React.RefObject<WebGLPainter | null>,
 ) {
   const workersRef = useRef<Worker[]>([]);
+  const hdrActive = !!glPainterRef;
   const {
     requestIdRef,
     progress,
@@ -61,7 +65,7 @@ export function useMandelbrotWorker(
     resetForNewRender,
     cancelBase,
     cancelPendingRaf,
-  } = useChunkRenderer(canvasRef);
+  } = useChunkRenderer(canvasRef, wideGamutRef, glPainterRef);
 
   // ── Worker pool lifecycle ──────────────────────────────────────────
   //
@@ -148,6 +152,8 @@ export function useMandelbrotWorker(
           maxIter: view.maxIter,
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
+          wideGamut: wideGamutRef.current,
+          hdr: hdrActive,
           workerIndex: i,
           workerCount: workers.length,
         };

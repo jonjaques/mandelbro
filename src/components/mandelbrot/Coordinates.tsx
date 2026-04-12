@@ -5,9 +5,14 @@ import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 interface CoordinatesProps {
   view: ViewState;
   onRegisterActivity: (cb: () => void) => void;
+  wideGamut: boolean;
 }
 
-export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
+export function Coordinates({
+  view,
+  onRegisterActivity,
+  wideGamut,
+}: CoordinatesProps) {
   const [visible, setVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,6 +74,14 @@ export function Coordinates({ view, onRegisterActivity }: CoordinatesProps) {
         <div className="text-[10px] text-amber-400/70 mt-0.5 flex items-center gap-1">
           <span className="inline-block w-1 h-1 rounded-full bg-amber-400/70" />
           Precision mode · {Math.floor(-Math.log10(view.zoom))}+ digits
+        </div>
+      )}
+      {wideGamut && (
+        <div className="text-[10px] mt-0.5 flex items-center gap-1">
+          <span className="inline-block w-1 h-1 rounded-full bg-gradient-to-r from-fuchsia-400 to-cyan-400" />
+          <span className="bg-gradient-to-r from-fuchsia-400/70 to-cyan-400/70 bg-clip-text text-transparent">
+            P3 Wide Gamut
+          </span>
         </div>
       )}
     </div>

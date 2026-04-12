@@ -37,7 +37,11 @@
  * and ensures all regions of the image progress simultaneously.
  */
 import { computeBand, computePixelSample } from "./compute";
-import { colorFromSmoothIteration, mapToColors } from "./colors";
+import {
+  colorFromSmoothIteration,
+  mapToColors,
+  mapToColorsHDR,
+} from "./colors";
 import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
   AntialiasSamples,
@@ -78,6 +82,8 @@ function processRequest(req: RenderRequest) {
     maxIter,
     colorScheme,
     antialiasSamples,
+    wideGamut,
+    hdr,
   } = req;
 
   const bandHeightStep = getBandHeight(maxIter, antialiasSamples);
@@ -110,49 +116,48 @@ function processRequest(req: RenderRequest) {
     // Last band may be shorter than the target band size if height isn't evenly divisible
     const bandHeight = Math.min(bandHeightStep, height - y);
 
-    const rgba =
-      antialiasSamples === 1
-        ? mapToColors(
-            computeBand(
-              width,
-              height,
-              y,
-              bandHeight,
-              centerX,
-              centerY,
-              zoom,
-              maxIter,
-            ),
-            maxIter,
-            colorScheme,
-          )
-        : computeSupersampledBand(
-            width,
-            height,
-            y,
-            bandHeight,
-            centerX,
-            centerY,
-            zoom,
-            maxIter,
-            colorScheme,
-            antialiasSamples,
-          );
+    const iterData = computeBand(
+      width,
+      height,
+      y,
+      bandHeight,
+      centerX,
+      centerY,
+      zoom,
+      maxIter,
+    );
 
-    // Step 3: Transfer the RGBA buffer to the main thread.
-    // The second argument `[buffer]` is the Transferable list — this moves
-    // ownership of the ArrayBuffer to the main thread with zero-copy semantics.
-    // After this call, `rgba.buffer` is "detached" and can no longer be used
-    // in this worker (not that we need it).
+    let rgba: Uint8ClampedArray | Float32Array;
+    if (hdr && antialiasSamples === 1) {
+      rgba = mapToColorsHDR(iterData, maxIter, colorScheme);
+    } else if (antialiasSamples === 1) {
+      rgba = mapToColors(iterData, maxIter, colorScheme, 256, wideGamut);
+    } else {
+      rgba = computeSupersampledBand(
+        width,
+        height,
+        y,
+        bandHeight,
+        centerX,
+        centerY,
+        zoom,
+        maxIter,
+        colorScheme,
+        antialiasSamples,
+        wideGamut,
+      );
+    }
+
     const buffer = rgba.buffer as ArrayBuffer;
 
     const chunk: ChunkResult = {
       type: "chunk",
       requestId: req.requestId,
       width,
-      y, // absolute y position in the full canvas
+      y,
       height: bandHeight,
       buffer,
+      ...(hdr && antialiasSamples === 1 ? { hdr: true } : {}),
     };
 
     workerSelf.postMessage(chunk, [buffer]);
@@ -190,6 +195,7 @@ function computeSupersampledBand(
   maxIter: number,
   colorScheme: RenderRequest["colorScheme"],
   samples: AntialiasSamples,
+  wideGamut?: boolean,
 ): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(width * bandHeight * 4);
   const aspectRatio = width / fullHeight;
@@ -218,7 +224,13 @@ function computeSupersampledBand(
         const x0 = xMin + (px + 0.5 + offsetX) * pixelWidth;
         const y0 = yMin + (py + 0.5 + offsetY) * pixelHeight;
         const iter = computePixelSample(x0, y0, maxIter);
-        const color = colorFromSmoothIteration(iter, maxIter, colorScheme);
+        const color = colorFromSmoothIteration(
+          iter,
+          maxIter,
+          colorScheme,
+          256,
+          wideGamut,
+        );
         red += color[0];
         green += color[1];
         blue += color[2];

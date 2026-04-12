@@ -11,6 +11,7 @@ import type {
 import { resolveAntialiasSamples } from "@/lib/mandelbrot/compute";
 import { requiredPrecision } from "@/lib/mandelbrot/bigfloat-utils";
 import { useChunkRenderer } from "@/hooks/use-chunk-renderer";
+import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
 
 /**
  * Perturbation workers are more CPU-intensive per pixel than the standard
@@ -37,9 +38,12 @@ const PERTURBATION_WORKER_COUNT =
  */
 export function usePerturbationRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  wideGamutRef: React.RefObject<boolean>,
+  glPainterRef?: React.RefObject<WebGLPainter | null>,
 ) {
   const refWorkerRef = useRef<Worker | null>(null);
   const pertWorkersRef = useRef<Worker[]>([]);
+  const hdrActive = !!glPainterRef;
   const {
     requestIdRef,
     progress,
@@ -49,7 +53,7 @@ export function usePerturbationRenderer(
     setChunkProgress,
     cancelBase,
     cancelPendingRaf,
-  } = useChunkRenderer(canvasRef);
+  } = useChunkRenderer(canvasRef, wideGamutRef, glPainterRef);
 
   // Reference orbit cache: reuse when center hasn't changed
   const cachedOrbitRef = useRef<{
@@ -129,6 +133,8 @@ export function usePerturbationRenderer(
           maxIter: view.maxIter,
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
+          wideGamut: wideGamutRef.current,
+          hdr: hdrActive,
           refOffsetRe: orbit.refOffsetRe,
           refOffsetIm: orbit.refOffsetIm,
           workerIndex: i,

@@ -39,6 +39,12 @@ import { trackEvent } from "@/lib/analytics";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 import {
+  detectWideGamutSupport,
+  getWideGamutPreference,
+  setWideGamutPreference,
+} from "@/lib/mandelbrot/hdr";
+import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
+import {
   DEFAULT_VIEW,
   flushHashState,
   stripHpFieldsWhenShallow,
@@ -68,18 +74,27 @@ export function MandelbrotExplorer() {
   useViewportHeight();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Authoritative view state — ref (not state) for synchronous access
-  // in high-frequency event handlers that would have stale closure issues
-  // with React state.
   const viewRef = useRef(DEFAULT_VIEW);
-  // Canvas dimensions in device pixels (set by ResizeObserver in MandelbrotCanvas)
   const sizeRef = useRef({ width: 0, height: 0 });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saveFavoriteOpen, setSaveFavoriteOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
-  // Mirror of viewRef as React state, driving UI re-renders
   const [viewForUI, setViewForUI] = useState(DEFAULT_VIEW);
+
+  // Wide gamut (display-p3) state
+  const wideGamutSupported = detectWideGamutSupport();
+  const [wideGamut, setWideGamut] = useState(getWideGamutPreference);
+  const wideGamutRef = useRef(wideGamut);
+  useEffect(() => {
+    wideGamutRef.current = wideGamut;
+  }, [wideGamut]);
+
+  // WebGL2 HDR painter — currently null (2D canvas path). When activated in
+  // a future HDR toggle, createWebGLPainter() initializes this and the chunk
+  // renderer switches from putImageData to WebGL2 texture upload.
+  const _glPainterRef = useRef<WebGLPainter | null>(null);
+  void _glPainterRef;
 
   const {
     presets,
@@ -93,12 +108,12 @@ export function MandelbrotExplorer() {
     render: stdRender,
     cancelRender: stdCancel,
     progress: stdProgress,
-  } = useMandelbrotWorker(canvasRef);
+  } = useMandelbrotWorker(canvasRef, wideGamutRef);
   const {
     render: pertRender,
     cancelRender: pertCancel,
     progress: pertProgress,
-  } = usePerturbationRenderer(canvasRef);
+  } = usePerturbationRenderer(canvasRef, wideGamutRef);
 
   const [activeRenderer, setActiveRenderer] = useState<
     "standard" | "perturbation"
@@ -198,6 +213,7 @@ export function MandelbrotExplorer() {
     onViewChange: handleViewChange,
     getView,
     onInteractionStart: cancelRender,
+    wideGamutRef,
   });
 
   // Called by MandelbrotCanvas when the viewport resizes (window resize, DPR change)
@@ -227,6 +243,16 @@ export function MandelbrotExplorer() {
       addFavorite(viewStateToFavorite(viewRef.current, name));
     },
     [addFavorite],
+  );
+
+  const handleWideGamutChange = useCallback(
+    (enabled: boolean) => {
+      setWideGamut(enabled);
+      setWideGamutPreference(enabled);
+      trackEvent("wide_gamut_toggle", { enabled });
+      triggerRender(viewRef.current);
+    },
+    [triggerRender],
   );
 
   const handleNavigateToFavorite = useCallback(
@@ -273,6 +299,9 @@ export function MandelbrotExplorer() {
             removeFavorite(id);
           }}
           onRenameFavorite={renameFavorite}
+          wideGamut={wideGamut}
+          wideGamutSupported={wideGamutSupported}
+          onWideGamutChange={handleWideGamutChange}
         />
         <SaveFavoriteDialog
           open={saveFavoriteOpen}
@@ -280,7 +309,11 @@ export function MandelbrotExplorer() {
           onSave={handleSaveFavorite}
         />
         <ReferenceDialog open={referenceOpen} onOpenChange={setReferenceOpen} />
-        <Coordinates view={viewForUI} onRegisterActivity={onActivity} />
+        <Coordinates
+          view={viewForUI}
+          onRegisterActivity={onActivity}
+          wideGamut={wideGamut}
+        />
         <DeepZoomBanner
           active={activeRenderer === "perturbation"}
           zoom={viewForUI.zoom}

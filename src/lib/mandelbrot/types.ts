@@ -81,6 +81,10 @@ export interface RenderRequest {
   maxIter: number;
   colorScheme: ColorScheme;
   antialiasSamples: AntialiasSamples;
+  /** Use P3 wide-gamut palette LUTs instead of sRGB */
+  wideGamut?: boolean;
+  /** Produce Float32 HDR output instead of Uint8 */
+  hdr?: boolean;
   /** Index of this worker in the pool (0-based) */
   workerIndex?: number;
   /** Total number of workers in the pool */
@@ -112,6 +116,8 @@ export interface ChunkResult {
   y: number;
   height: number;
   buffer: ArrayBuffer;
+  /** When true, buffer contains Float32Array (4 floats/pixel) instead of Uint8 (4 bytes/pixel) */
+  hdr?: boolean;
 }
 
 /** Sent by a worker when it has finished processing all of its assigned bands. */
@@ -205,6 +211,10 @@ export interface PerturbationRenderRequest {
   maxIter: number;
   colorScheme: ColorScheme;
   antialiasSamples: AntialiasSamples;
+  /** Use P3 wide-gamut palette LUTs instead of sRGB */
+  wideGamut?: boolean;
+  /** Produce Float32 HDR output instead of Uint8 */
+  hdr?: boolean;
   /** Offset of reference point from view center (complex-plane coords) */
   refOffsetRe: number;
   refOffsetIm: number;

@@ -11,6 +11,7 @@ import {
   make as bfMake,
   toString as bfToString,
 } from "@/lib/mandelbrot/bigfloat-utils";
+import { getContext2D } from "@/lib/mandelbrot/hdr";
 
 const DRAG_RENDER_DEBOUNCE_MS = 60;
 const WHEEL_RENDER_DEBOUNCE_MS = 140;
@@ -52,6 +53,7 @@ interface InteractionCallbacks {
   onViewChange: (view: ViewState, commitRender: boolean) => void;
   getView: () => ViewState;
   onInteractionStart: () => void;
+  wideGamutRef: React.RefObject<boolean>;
 }
 
 interface TouchGestureState {
@@ -103,6 +105,7 @@ export function useInteraction(
     onViewChange: commitViewChange,
     getView,
     onInteractionStart,
+    wideGamutRef,
   }: InteractionCallbacks,
 ) {
   const isDragging = useRef(false);
@@ -187,22 +190,14 @@ export function useInteraction(
       //
       // The full render (scheduled via debounce) will later fill in the
       // correct fractal data for the newly visible regions.
-      const ctx = canvas.getContext("2d", { alpha: false });
+      const ctx = getContext2D(canvas, wideGamutRef.current);
       if (ctx) {
-        // Convert CSS pixels to device pixels (canvas buffer coordinates)
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const dxPx = Math.round(dxCss * dpr);
         const dyPx = Math.round(dyCss * dpr);
 
-        // Self-blit: shift the entire canvas content by (dxPx, dyPx)
         ctx.drawImage(canvas, dxPx, dyPx);
 
-        // Fill exposed strips with black. Which edges are exposed depends
-        // on the drag direction:
-        //   - Drag right (dxPx > 0): left strip exposed
-        //   - Drag left  (dxPx < 0): right strip exposed
-        //   - Drag down  (dyPx > 0): top strip exposed
-        //   - Drag up    (dyPx < 0): bottom strip exposed
         ctx.fillStyle = "#000";
         if (dxPx > 0) ctx.fillRect(0, 0, dxPx, canvas.height);
         else if (dxPx < 0)
@@ -264,7 +259,7 @@ export function useInteraction(
 
       if (!wheelGesture.current) {
         onInteractionStart();
-        const snapshot = snapshotCanvas(canvas);
+        const snapshot = snapshotCanvas(canvas, wideGamutRef.current);
         if (!snapshot) return;
         wheelGesture.current = {
           startView: view,
@@ -306,10 +301,7 @@ export function useInteraction(
 
       commitViewChange(newView, false);
 
-      // Cursor-centered preview: scale snapshot around cursor position.
-      // This avoids using double-precision center coordinates which
-      // lose accuracy at deep zoom.
-      const ctx = canvas.getContext("2d", { alpha: false });
+      const ctx = getContext2D(canvas, wideGamutRef.current);
       if (ctx) {
         const {
           snapshot,
@@ -387,7 +379,7 @@ export function useInteraction(
     const startTouchGesture = (touches: TouchList) => {
       clearScheduledRender();
       onInteractionStart();
-      const snapshot = snapshotCanvas(canvas);
+      const snapshot = snapshotCanvas(canvas, wideGamutRef.current);
       if (!snapshot) return;
 
       const startView = getView();
@@ -477,6 +469,7 @@ export function useInteraction(
           gesture.startView,
           newView,
           rect,
+          wideGamutRef.current,
         );
         commitViewChange(newView, false);
         return;
@@ -534,6 +527,7 @@ export function useInteraction(
         gesture.startView,
         newView,
         rect,
+        wideGamutRef.current,
       );
       commitViewChange(newView, false);
     };
@@ -657,6 +651,7 @@ export function useInteraction(
     getView,
     onInteractionStart,
     scheduleFullRender,
+    wideGamutRef,
   ]);
 
   return { onActivity };

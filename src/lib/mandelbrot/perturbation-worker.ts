@@ -6,7 +6,7 @@
  * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set#Perturbation_theory_and_series_approximation
  */
 import { perturbationBand } from "./perturbation";
-import { mapToColors, zoomColorCyclePeriod } from "./colors";
+import { mapToColors, mapToColorsHDR, zoomColorCyclePeriod } from "./colors";
 import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
   PerturbationWorkerIn,
@@ -39,6 +39,8 @@ function processRequest(req: PerturbationRenderRequest) {
     maxIter,
     colorScheme,
     antialiasSamples,
+    wideGamut,
+    hdr,
     refOffsetRe,
     refOffsetIm,
     saCoeffAre,
@@ -90,12 +92,20 @@ function processRequest(req: PerturbationRenderRequest) {
       saCoeffCim,
     );
 
-    const rgba = mapToColors(
-      iterations,
-      maxIter,
-      colorScheme,
-      zoomColorCyclePeriod(zoom),
-    );
+    const rgba = hdr
+      ? mapToColorsHDR(
+          iterations,
+          maxIter,
+          colorScheme,
+          zoomColorCyclePeriod(zoom),
+        )
+      : mapToColors(
+          iterations,
+          maxIter,
+          colorScheme,
+          zoomColorCyclePeriod(zoom),
+          wideGamut,
+        );
     const buffer = rgba.buffer as ArrayBuffer;
 
     const chunk: ChunkResult = {
@@ -105,6 +115,7 @@ function processRequest(req: PerturbationRenderRequest) {
       y,
       height: bandHeight,
       buffer,
+      ...(hdr ? { hdr: true } : {}),
     };
 
     workerSelf.postMessage(chunk, [buffer]);
