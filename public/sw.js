@@ -1,9 +1,9 @@
-const CACHE_NAME = "mandelbro-v1";
-const STATIC_ASSETS = ["/", "/favicon.svg"];
+const CACHE_NAME = "mandelbro-v2";
+const PRECACHE = ["/", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)),
   );
   self.skipWaiting();
 });
@@ -25,14 +25,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-
-  // Cache API only supports GET — let non-GET requests (POST, etc.) pass through
   if (request.method !== "GET") return;
 
-  // Network-first for navigation requests
+  // Network-first for navigation; bypass HTTP cache to guarantee fresh HTML
+  // after deployments (prevents stale HTML referencing old asset hashes).
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-cache" })
         .then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
@@ -43,7 +42,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Hashed build assets (_astro/*) are immutable — the content hash in the
+  // filename means the browser and CDN edge cache handle freshness and
+  // performance. Caching them in the SW risks serving stale references
+  // across deployments, so let the browser handle them directly.
+  if (request.url.includes("/_astro/")) return;
+
+  // Cache-first for remaining static assets (favicon, manifest, fonts, icons)
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
