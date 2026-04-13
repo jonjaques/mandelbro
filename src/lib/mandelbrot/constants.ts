@@ -28,3 +28,16 @@ export const BASE_BAND_HEIGHT = 32;
 
 /** Cap on iterations for BigFloat reference orbit computation. */
 export const MAX_SAFE_ITERATIONS = 10000;
+
+/* ── SEO / meta copy ─────────────────────────────────────────────── */
+
+/** Page title — used by the layout, OG tags, and Twitter cards. */
+export const SITE_TITLE =
+  "Mandelbro — Explore the Mandelbrot Set | Infinite Fractal Zoom in Your Browser";
+
+/**
+ * Page description — used by the layout `<meta name="description">`,
+ * OG description, Twitter description, and JSON-LD.
+ */
+export const SITE_DESCRIPTION =
+  "Zoom endlessly into the Mandelbrot set right in your browser. Mandelbro uses perturbation theory and arbitrary-precision math to render fractal detail far beyond what ordinary viewers can reach — then lets you share any location with a link.";

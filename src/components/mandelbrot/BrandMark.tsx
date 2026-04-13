@@ -47,6 +47,10 @@ export function BrandMark({ canvasRef }: BrandMarkProps) {
         }}
       >
         mandelbro
+        <span className="sr-only">
+          {" "}
+          — Infinite Fractal Zoom in Your Browser
+        </span>
       </h1>
     </div>
   );

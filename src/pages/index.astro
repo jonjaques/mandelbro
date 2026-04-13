@@ -1,12 +1,10 @@
 ---
 import { MandelbrotExplorer } from "@/components/mandelbrot/MandelbrotExplorer";
 import MainLayout from "@/layouts/main.astro";
-
-const description =
-  "Immersive Mandelbrot set explorer with arbitrary-precision deep zoom powered by perturbation theory. Explore fractal structures at 10^50× magnification and beyond — share any location via URL.";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
 ---
 
-<MainLayout title="Mandelbro" description={description}>
+<MainLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
   <MandelbrotExplorer client:load />
   <script is:inline>
     (() => {

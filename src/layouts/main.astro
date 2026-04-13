@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
 
 interface Props {
   title?: string;
@@ -9,8 +10,8 @@ interface Props {
 }
 
 const {
-  title = "Mandelbro",
-  description = "Immersive Mandelbrot set explorer with arbitrary-precision deep zoom powered by perturbation theory. Explore fractal structures at 10^50× magnification and beyond — share any location via URL.",
+  title = SITE_TITLE,
+  description = SITE_DESCRIPTION,
   image = "/preview.jpg",
   noIndex = false,
 } = Astro.props;
@@ -44,6 +45,11 @@ const gaScript = hasAnalytics
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="description" content={description} />
+    <meta
+      name="keywords"
+      content="mandelbrot set, fractal explorer, deep zoom, perturbation theory, series approximation, arbitrary precision, fractal viewer, mandelbrot zoom, online fractal, interactive fractal, fractal generator, math visualization, complex numbers, fractal art, PWA"
+    />
+    <meta name="author" content="Jon Jaques" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -77,8 +83,12 @@ const gaScript = hasAnalytics
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Mandelbro" />
     <meta property="og:url" content={canonicalUrl.toString()} />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content={imageUrl.toString()} />
-    <meta property="og:image:alt" content={description} />
+    <meta
+      property="og:image:alt"
+      content="Mandelbro — an interactive Mandelbrot set fractal explorer with deep zoom"
+    />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -87,21 +97,96 @@ const gaScript = hasAnalytics
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl.toString()} />
+    <meta
+      name="twitter:image:alt"
+      content="Mandelbro — an interactive Mandelbrot set fractal explorer with deep zoom"
+    />
 
     <script
       is:inline
       type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        name: title,
-        url: canonicalUrl.toString(),
-        description,
-        applicationCategory: "EducationalApplication",
-        operatingSystem: "Any",
-        browserRequirements: "Requires JavaScript and Web Workers",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      })}
+      set:html={JSON.stringify([
+        {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Mandelbro",
+          alternateName: "Mandelbro Fractal Explorer",
+          url: canonicalUrl.toString(),
+          description,
+          applicationCategory: "EducationalApplication",
+          applicationSubCategory: "Mathematics Visualization",
+          operatingSystem: "Any",
+          browserRequirements:
+            "Requires a modern browser with JavaScript and Web Workers",
+          softwareVersion: "1.0",
+          image: imageUrl.toString(),
+          screenshot: imageUrl.toString(),
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          featureList: [
+            "Arbitrary-precision deep zoom past 10^50× magnification",
+            "Perturbation theory rendering with series approximation",
+            "Multi-threaded Web Worker parallel rendering",
+            "7 smooth-gradient color palettes",
+            "Shareable deep-zoom URLs",
+            "Installable progressive web app with offline support",
+            "Touch-native with pinch-to-zoom and drag-to-pan",
+            "Cardioid and period-2 bulb optimization",
+            "Brent cycle detection for interior orbits",
+            "Fullscreen immersive interface",
+          ],
+          author: {
+            "@type": "Person",
+            name: "Jon Jaques",
+            url: "https://github.com/jonjaques",
+          },
+          sourceOrganization: {
+            "@type": "Person",
+            name: "Jon Jaques",
+            url: "https://github.com/jonjaques",
+          },
+          isAccessibleForFree: true,
+          license: "https://opensource.org/licenses/MIT",
+          inLanguage: "en",
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "How deep can Mandelbro zoom into the Mandelbrot set?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Mandelbro uses arbitrary-precision arithmetic with perturbation theory and series approximation to zoom past 10^50× magnification — far beyond the 10^14× limit of standard double-precision renderers. You can explore miniature Mandelbrot copies and spiral formations at extreme depths, all in your browser.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Is Mandelbro free to use?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Mandelbro is completely free, open-source (MIT license), and runs entirely in your browser with no downloads, sign-ups, or server-side processing required. You can even install it as a PWA for offline use.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is perturbation theory in Mandelbrot rendering?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Perturbation theory computes one high-precision reference orbit and then derives each pixel as a small delta from that orbit using fast double-precision math. Combined with series approximation, this makes deep zooming orders of magnitude faster than computing every pixel at full precision.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Can I share a specific Mandelbrot location?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Mandelbro encodes the exact view coordinates and zoom level in the URL hash. Copy the URL to share any location — the recipient sees exactly what you see, even at extreme zoom depths.",
+              },
+            },
+          ],
+        },
+      ])}
     />
 
     {

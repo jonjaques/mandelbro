@@ -1,7 +1,7 @@
 {
   "name": "Mandelbro",
   "short_name": "Mandelbro",
-  "description": "Immersive Mandelbrot set explorer with arbitrary-precision deep zoom. Explore fractal structures at 10^50× magnification and beyond — all in your browser.",
+  "description": "Zoom endlessly into the Mandelbrot set right in your browser. Perturbation theory and arbitrary-precision math reveal fractal detail far beyond ordinary viewers. Share any location with a link.",
   "id": "/",
   "scope": "/",
   "start_url": "/",
