@@ -1,0 +1,282 @@
+---
+import MainLayout from "@/layouts/main.astro";
+import {
+  ABOUT_TITLE,
+  ABOUT_DESCRIPTION,
+  BRAND_NAME,
+} from "@/lib/mandelbrot/constants";
+import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
+import {
+  PRESET_LANDING_PAGES,
+  type PresetLandingPage,
+} from "@/lib/mandelbrot/preset-pages";
+
+const siteBase = Astro.site ?? Astro.url;
+const canonicalUrl = new URL("/about", siteBase);
+
+const authorEntity = {
+  "@type": "Person" as const,
+  name: AUTHOR_NAME,
+  url: AUTHOR_URL,
+};
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: ABOUT_TITLE,
+    description: ABOUT_DESCRIPTION,
+    url: canonicalUrl.toString(),
+    author: authorEntity,
+    publisher: authorEntity,
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl.toString() },
+    about: [
+      {
+        "@type": "Thing",
+        name: "Mandelbrot set",
+        sameAs: "https://en.wikipedia.org/wiki/Mandelbrot_set",
+      },
+      {
+        "@type": "Thing",
+        name: "Fractal",
+        sameAs: "https://en.wikipedia.org/wiki/Fractal",
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: "How to explore the Mandelbrot set in your browser",
+    description:
+      "Step-by-step instructions for exploring the Mandelbrot set with Mandelbro, a free browser-based fractal renderer.",
+    totalTime: "PT2M",
+    step: [
+      {
+        "@type": "HowToStep",
+        name: "Open Mandelbro",
+        text: "Open https://mandelbro.jonjaques.com/ in any modern browser. No install or sign-up is required.",
+        url: "https://mandelbro.jonjaques.com/",
+      },
+      {
+        "@type": "HowToStep",
+        name: "Pick a starting location",
+        text: "Tap the Favorites button (★) and choose a preset location like Seahorse Valley, Elephant Valley, or Lightning Bolt.",
+      },
+      {
+        "@type": "HowToStep",
+        name: "Zoom in",
+        text: "Scroll the mouse wheel, pinch on a touch screen, or double-click to zoom toward the cursor. Drag to pan.",
+      },
+      {
+        "@type": "HowToStep",
+        name: "Adjust quality",
+        text: "Open Settings (⚙) to raise the iteration count for sharper boundaries, change the color palette, or toggle anti-aliasing.",
+      },
+      {
+        "@type": "HowToStep",
+        name: "Share the view",
+        text: "Tap the Share button to copy a URL that encodes your exact view, including coordinates and zoom level.",
+      },
+    ],
+  },
+];
+---
+
+<MainLayout
+  title={ABOUT_TITLE}
+  description={ABOUT_DESCRIPTION}
+  scrollable
+  canonicalPath="/about"
+>
+  <script
+    is:inline
+    type="application/ld+json"
+    set:html={JSON.stringify(jsonLd)}
+  />
+
+  <div class="mx-auto max-w-2xl px-6 py-16 sm:py-24">
+    <header class="mb-12">
+      <a
+        href="/"
+        class="mb-6 inline-flex items-center gap-1.5 text-sm text-sky-300/80 transition-colors hover:text-sky-200"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="m15 18-6-6 6-6"></path>
+        </svg>
+         Back to Explorer
+      </a>
+      <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+        What Is the Mandelbrot Set?
+      </h1>
+      <p class="mt-4 text-base leading-relaxed text-white/60">
+        A plain-English guide to the most famous fractal in mathematics — and
+        how {BRAND_NAME} renders it in your browser at depths far beyond what
+        ordinary viewers can reach.
+      </p>
+    </header>
+
+    <main
+      class="prose prose-invert max-w-none text-white/80 [&_a]:text-sky-300/90 [&_a]:underline [&_a]:decoration-sky-500/40 [&_a]:underline-offset-2 hover:[&_a]:text-sky-200 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-white [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-white [&_p]:mt-4 [&_p]:leading-relaxed [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mt-1"
+    >
+      <h2>A 60-second definition</h2>
+      <p>
+        The <strong>Mandelbrot set</strong> is the set of complex numbers
+        <em>c</em> for which the iteration <em>z<sub>n+1</sub> = z<sub>n</sub><sup
+            >2</sup
+          > + c</em
+        > (starting from <em>z<sub>0</sub> = 0</em>) does not run off to
+        infinity. Plot every point in the complex plane, color it by how
+        quickly it escapes, and you get an image of staggering beauty: a
+        cardioid-shaped main body, a row of bulbs, antennae, and an
+        infinitely intricate fractal boundary.
+      </p>
+      <p>
+        The set was first computed and visualized by IBM mathematician
+        <a
+          href="https://en.wikipedia.org/wiki/Benoit_Mandelbrot"
+          target="_blank"
+          rel="noopener noreferrer">Benoît Mandelbrot</a
+        > in 1980, building on earlier work by Pierre Fatou and Gaston Julia. It
+        is now the most famous example of a <strong>fractal</strong> — a shape
+        whose detail repeats at every scale.
+      </p>
+
+      <h2>Why people get obsessed</h2>
+      <p>
+        The Mandelbrot set is defined by one of the simplest equations in all
+        of mathematics, yet its boundary is infinitely complex. Zoom in
+        anywhere on the edge and you will eventually find:
+      </p>
+      <ul>
+        <li>
+          <strong>Self-similar spirals</strong> — seahorse tails, elephant
+          trunks, double helices, and starfish-like radial structures
+        </li>
+        <li>
+          <strong>Minibrots</strong> — perfect miniature copies of the entire
+          Mandelbrot set, hidden at every depth
+        </li>
+        <li>
+          <strong>Dendrites</strong> — branching filaments that connect bulbs
+          like circuit traces
+        </li>
+        <li>
+          <strong>Color cascades</strong> — bands of escape iterations that,
+          when colored smoothly, produce some of the most striking imagery in
+          generative art
+        </li>
+      </ul>
+      <p>
+        Mathematicians have proven that the boundary has Hausdorff dimension
+        2: it is so wiggly that it nearly fills the plane.
+      </p>
+
+      <h2>How {BRAND_NAME} renders it</h2>
+      <p>
+        Computing one pixel of the Mandelbrot set means iterating
+        <em>z² + c</em> a few hundred or few thousand times and checking
+        whether the result has escaped a bounded radius. Naïve renderers do
+        this independently for every pixel using IEEE 754 double-precision
+        floating point — and run out of digits at about 16 decimal places. In
+        Mandelbrot terms that is roughly <strong>10<sup>14</sup>×</strong>
+        magnification: any deeper and adjacent pixels round to the same value.
+      </p>
+      <p>
+        {BRAND_NAME} crosses that wall using <strong>perturbation theory</strong
+        >. Instead of iterating every pixel at high precision, it computes one
+        high-precision <em>reference orbit</em> at the view center and then
+        derives every other pixel as a fast double-precision <em>delta</em> from
+        that orbit. Combined with <strong>series approximation</strong> —
+        which lets early iterations be skipped entirely — this technique
+        lets the renderer keep producing crisp images past
+        <strong>10<sup>50</sup>×</strong> magnification, all in a browser tab.
+      </p>
+      <p>
+        For the curious, full algorithm references and source citations live
+        on the <a href="/references">References &amp; Algorithms</a> page.
+      </p>
+
+      <h2>Famous places to visit</h2>
+      <p>
+        The Mandelbrot set has thousands of named regions. {BRAND_NAME} ships
+        with a handful of presets that take you straight to the classics:
+      </p>
+      <ul>
+        {
+          PRESET_LANDING_PAGES.map((page: PresetLandingPage) => (
+            <li>
+              <a href={page.path}>{page.name}</a> — {page.shortSummary}
+            </li>
+          ))
+        }
+      </ul>
+
+      <h2>How to explore</h2>
+      <ol class="mt-3 list-decimal pl-6 marker:text-white/40">
+        <li class="mt-1">
+          Open the <a href="/">explorer</a> and pick a preset, or just start
+          from the default view.
+        </li>
+        <li class="mt-1">
+          Drag to pan, scroll or pinch to zoom, double-click or double-tap to
+          zoom toward a point.
+        </li>
+        <li class="mt-1">
+          Open Settings (⚙) to raise the iteration count for sharper boundary
+          detail, swap the color palette, or toggle anti-aliasing.
+        </li>
+        <li class="mt-1">
+          Tap Share to copy a URL that encodes your exact view — including the
+          coordinates and zoom level — at full precision.
+        </li>
+      </ol>
+
+      <h2>FAQ</h2>
+      <h3>Is {BRAND_NAME} free?</h3>
+      <p>
+        Yes — completely free, open source under the MIT license, and runs
+        entirely in your browser. The full source lives on
+        <a href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer"
+          >GitHub</a
+        >.
+      </p>
+      <h3>Does it work offline?</h3>
+      <p>
+        Yes. {BRAND_NAME} is an installable progressive web app. Once cached,
+        it will keep rendering even without a network connection.
+      </p>
+      <h3>Why is my deep zoom blurry on another viewer?</h3>
+      <p>
+        Most browser-based Mandelbrot viewers stop resolving detail at about
+        10<sup>14</sup>× magnification because they use only double-precision
+        arithmetic. {BRAND_NAME} switches to an arbitrary-precision pipeline
+        below that threshold so deep zooms stay sharp.
+      </p>
+    </main>
+
+    <footer class="mt-16 border-t border-white/10 pt-8">
+      <p class="text-sm text-white/40">
+        <a
+          href="/"
+          class="text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
+          >{BRAND_NAME}</a
+        > is open source. <a
+          href={SOURCE_CODE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
+          >View source on GitHub</a
+        >.
+      </p>
+    </footer>
+  </div>
+</MainLayout>

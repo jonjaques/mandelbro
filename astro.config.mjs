@@ -27,6 +27,25 @@ export default defineConfig({
         plugins: ["babel-plugin-react-compiler"],
       },
     }),
-    sitemap(),
+    sitemap({
+      // Homepage is the canonical app entry; about + per-location landing
+      // pages carry the long-tail keyword content, so they get a slight
+      // priority boost over the technical references page.
+      serialize(item) {
+        const url = new URL(item.url);
+        const path = url.pathname;
+        if (path === "/" || path === "") {
+          return { ...item, priority: 1.0, changefreq: "weekly" };
+        }
+        if (path === "/about" || path === "/about/") {
+          return { ...item, priority: 0.9, changefreq: "monthly" };
+        }
+        if (path === "/references" || path === "/references/") {
+          return { ...item, priority: 0.6, changefreq: "monthly" };
+        }
+        // Per-preset landing pages.
+        return { ...item, priority: 0.8, changefreq: "monthly" };
+      },
+    }),
   ],
 });

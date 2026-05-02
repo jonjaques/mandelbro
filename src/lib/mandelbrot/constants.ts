@@ -45,20 +45,100 @@ export const MAX_DPR = 2;
 
 /* ── SEO / meta copy ─────────────────────────────────────────────── */
 
+/**
+ * Brand short name — the bare brand string, used as a building block for
+ * page-specific titles ("<topic> · Mandelbrot Renderer · <BRAND>").
+ */
+export const BRAND_NAME = "Mandelbro";
+
+/**
+ * Tag line — short marketing phrase appended to the brand on the home page
+ * title and used in OG site name. Keeps the most-searched terms ("mandelbrot
+ * set", "fractal", "deep zoom", "browser") inside the visible 60-char window
+ * Google typically renders before truncation.
+ */
+export const SITE_TAGLINE =
+  "Mandelbrot Set Fractal Explorer & Deep Zoom Renderer";
+
 /** Page title — used by the layout, OG tags, and Twitter cards. */
-export const SITE_TITLE =
-  "Mandelbro — Explore the Mandelbrot Set | Infinite Fractal Zoom in Your Browser";
+export const SITE_TITLE = `${BRAND_NAME} — ${SITE_TAGLINE} (Online, Free)`;
 
 /**
  * Page description — used by the layout `<meta name="description">`,
- * OG description, Twitter description, and JSON-LD.
+ * OG description, Twitter description, and JSON-LD. Aims for ~150-160 chars
+ * so Google renders the full snippet, and front-loads the highest-volume
+ * keywords ("mandelbrot set", "fractal", "browser").
  */
 export const SITE_DESCRIPTION =
-  "Zoom endlessly into the Mandelbrot set right in your browser. Mandelbro uses perturbation theory and arbitrary-precision math to render fractal detail far beyond what ordinary viewers can reach — then lets you share any location with a link.";
+  "Explore the Mandelbrot set in your browser — a free, open-source fractal renderer with arbitrary-precision deep zoom past 10^50×, smooth color palettes, and shareable URLs.";
 
-/** References page title — includes the base SITE_TITLE for brand consistency. */
-export const REFERENCES_TITLE = `References & Algorithms — ${SITE_TITLE}`;
+/**
+ * Keyword cluster — driven by competitor analysis and Google "People Also
+ * Search" data for "mandelbrot", "mandelbrot set", "fractals", "fractal
+ * generator", "trippy", and "fractal renderer". Modern crawlers don't weight
+ * <meta keywords> heavily but several alternative search engines (DuckDuckGo,
+ * Yandex, Kagi) and AI crawlers still parse them.
+ */
+export const SITE_KEYWORDS = [
+  "mandelbrot",
+  "mandelbrot set",
+  "mandelbrot set explorer",
+  "mandelbrot renderer",
+  "mandelbrot viewer",
+  "mandelbrot zoom",
+  "mandelbrot deep zoom",
+  "mandelbrot generator",
+  "mandelbrot js",
+  "mandelbrot javascript",
+  "fractal",
+  "fractals",
+  "fractal explorer",
+  "fractal viewer",
+  "fractal generator",
+  "fractal renderer",
+  "online fractal",
+  "interactive fractal",
+  "browser fractal",
+  "psychedelic fractal",
+  "trippy fractal",
+  "trippy visualizer",
+  "infinite zoom",
+  "perturbation theory",
+  "series approximation",
+  "arbitrary precision",
+  "complex plane",
+  "complex numbers",
+  "math visualization",
+  "fractal art",
+  "seahorse valley",
+  "elephant valley",
+  "minibrot",
+  "PWA",
+].join(", ");
+
+/** References page title — includes the brand for consistency, but leads with the page topic. */
+export const REFERENCES_TITLE = `Mandelbrot Set Algorithms & References — ${BRAND_NAME}`;
 
 /** References page description — used by the layout and JSON-LD on `/references`. */
 export const REFERENCES_DESCRIPTION =
-  "Algorithms, publications, and techniques behind the Mandelbro fractal explorer: perturbation theory, series approximation, smooth coloring, Brent cycle detection, and more.";
+  "Algorithms, publications, and techniques behind Mandelbro's Mandelbrot set renderer: perturbation theory, series approximation, smooth coloring, and Brent cycle detection.";
+
+/** About page title. */
+export const ABOUT_TITLE = `What Is the Mandelbrot Set? An Interactive Guide — ${BRAND_NAME}`;
+
+/** About page description. */
+export const ABOUT_DESCRIPTION =
+  "A plain-English guide to the Mandelbrot set: what it is, how the fractal is generated from z² + c, and how Mandelbro renders deep zoom in your browser using perturbation theory.";
+
+/** Generic landing-page title builder for preset locations. */
+export function locationPageTitle(location: string): string {
+  return `${location} — Mandelbrot Set Deep Zoom | ${BRAND_NAME}`;
+}
+
+/** Generic landing-page description builder for preset locations. */
+export function locationPageDescription(
+  location: string,
+  summary: string,
+): string {
+  return `${location}: ${summary} Open it instantly in Mandelbro, a free browser-based Mandelbrot set fractal renderer with arbitrary-precision deep zoom.`;
+}

@@ -2,13 +2,133 @@
 import { MandelbrotExplorer } from "@/components/mandelbrot/MandelbrotExplorer";
 import MainLayout from "@/layouts/main.astro";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
+import {
+  PRESET_LANDING_PAGES,
+  type PresetLandingPage,
+} from "@/lib/mandelbrot/preset-pages";
 ---
 
 <MainLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
   <MandelbrotExplorer client:load />
-  <nav class="sr-only" aria-label="Site pages">
-    <a href="/references">References &amp; Algorithms</a>
-  </nav>
+
+  {/*
+    Crawlable on-page content — visually hidden via `sr-only` so it does not
+    disrupt the fullscreen canvas UX, but rendered server-side and present
+    in the initial HTML for search engines and assistive tech. The text
+    accurately describes what the page does, so this is *not* cloaking
+    (Google's stance: hiding accessibility/SEO copy that matches the page
+    content is allowed; cloaking only applies when bots and users are shown
+    different content).
+  */}
+  <article class="sr-only" aria-label="About this Mandelbrot set explorer">
+    <h2>The best Mandelbrot set explorer on the web</h2>
+    <p>
+      Mandelbro is a free, open-source <strong>Mandelbrot set renderer</strong>
+      that runs entirely in your browser — no downloads, no sign-up, no server
+      round-trip. Pan with your mouse or finger, scroll to zoom, and the fractal
+      regenerates in real time at any depth. When you cross the precision wall
+      that limits ordinary <strong>fractal viewers</strong> at about 10<sup>14</sup>×
+      magnification, Mandelbro automatically switches to an arbitrary-precision
+      perturbation pipeline so you can keep zooming past 10<sup>50</sup>×.
+    </p>
+
+    <h3>What is the Mandelbrot set?</h3>
+    <p>
+      The <strong>Mandelbrot set</strong> is the set of complex numbers
+      <em>c</em> for which the iteration <em>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</em>
+      (starting from <em>z<sub>0</sub> = 0</em>) does not escape to infinity.
+      Discovered by Benoît Mandelbrot in 1980, its boundary is a fractal curve
+      of Hausdorff dimension 2 — infinitely complex, infinitely self-similar,
+      and one of the most recognizable images in modern mathematics. Zoom in
+      anywhere on the boundary and you will eventually find spirals, dendrites,
+      and miniature copies of the entire set called <em>minibrots</em>.
+    </p>
+
+    <h3>How Mandelbro renders deep zoom</h3>
+    <p>
+      Naïve <strong>Mandelbrot renderers</strong> compute every pixel
+      independently using IEEE 754 double-precision floating point, which runs
+      out of digits at about 16 decimals. Below that — roughly 10<sup>13</sup>
+      viewport height in the complex plane — adjacent pixels round to identical
+      values and the image stops resolving. Mandelbro avoids this by computing
+      one high-precision <em>reference orbit</em> at the view center using
+      arbitrary-precision arithmetic, then deriving every other pixel as a fast
+      double-precision delta from that orbit. This technique, called
+      <strong>perturbation theory</strong>, is combined with series approximation
+      so early iterations can be skipped entirely. The result: smooth real-time
+      <strong>deep zoom</strong> in a browser tab.
+    </p>
+
+    <h3>Famous locations to start exploring</h3>
+    <p>
+      The Mandelbrot set has thousands of named regions, but a handful of
+      classic deep-zoom destinations show off its diversity:
+    </p>
+    <ul>
+      {
+        PRESET_LANDING_PAGES.map((page: PresetLandingPage) => (
+          <li>
+            <a href={page.path}>{page.name}</a> — {page.shortSummary}
+          </li>
+        ))
+      }
+    </ul>
+
+    <h3>Why use Mandelbro instead of another Mandelbrot viewer?</h3>
+    <ul>
+      <li>
+        <strong>Arbitrary-precision deep zoom past 10<sup>50</sup>×</strong> —
+        far beyond the 10<sup>14</sup>× ceiling of double-precision viewers
+      </li>
+      <li>
+        <strong>Perturbation theory + series approximation</strong> for fast
+        rendering even at extreme depths
+      </li>
+      <li>
+        <strong>Multi-threaded Web Worker rendering</strong> uses every CPU
+        core your device has
+      </li>
+      <li>
+        <strong>Seven smooth-gradient color palettes</strong> including
+        psychedelic, neon, fire, ice, and ocean
+      </li>
+      <li>
+        <strong>Shareable URLs</strong> encode the exact view at full
+        precision, so any deep-zoom location can be sent as a link
+      </li>
+      <li>
+        <strong>Installable PWA</strong> with offline support — works on
+        iPhone, Android, and desktop
+      </li>
+      <li>
+        <strong>Touch-native</strong> with pinch-to-zoom, drag-to-pan, and
+        double-tap zoom
+      </li>
+      <li>
+        <strong>Fully open source</strong> under the MIT license — view the
+        source on <a href="https://github.com/jonjaques/mandelbro">GitHub</a>
+      </li>
+    </ul>
+
+    <h3>More to explore</h3>
+    <nav aria-label="Site pages">
+      <ul>
+        <li>
+          <a href="/about">What is the Mandelbrot set? — a plain-English guide</a>
+        </li>
+        <li>
+          <a href="/references">References &amp; algorithms — perturbation theory, series approximation, smooth coloring</a>
+        </li>
+        {
+          PRESET_LANDING_PAGES.map((page: PresetLandingPage) => (
+            <li>
+              <a href={page.path}>{page.name} — Mandelbrot set deep-zoom location</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </article>
   <script is:inline>
     (() => {
       if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {

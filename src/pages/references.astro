@@ -7,6 +7,10 @@ import {
 } from "@/lib/mandelbrot/constants";
 import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
 import { explorerHrefFromReferencesReturn } from "@/lib/mandelbrot/references-return";
+import {
+  PRESET_LANDING_PAGES,
+  type PresetLandingPage,
+} from "@/lib/mandelbrot/preset-pages";
 
 const siteBase = Astro.site ?? Astro.url;
 
@@ -116,6 +120,34 @@ const jsonLd = {
         }
       </ol>
     </main>
+
+    <section class="mt-16 border-t border-white/10 pt-8">
+      <h2 class="text-base font-semibold tracking-tight text-white">
+        More on Mandelbro
+      </h2>
+      <ul class="mt-4 flex flex-col gap-2.5 border-l border-white/15 pl-4">
+        <li>
+          <a
+            href="/about"
+            class="text-sm text-sky-300/90 underline decoration-sky-500/40 underline-offset-2 transition-colors hover:text-sky-200 hover:decoration-sky-300/70"
+            >What is the Mandelbrot set? — a plain-English guide</a
+          >
+        </li>
+        {
+          PRESET_LANDING_PAGES.map((p: PresetLandingPage) => (
+            <li>
+              <a
+                href={p.path}
+                class="text-sm text-sky-300/90 underline decoration-sky-500/40 underline-offset-2 transition-colors hover:text-sky-200 hover:decoration-sky-300/70"
+              >
+                {p.name}
+              </a>{" "}
+              <span class="text-sm text-white/50">— {p.shortSummary}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
 
     <footer class="mt-16 border-t border-white/10 pt-8">
       <p class="text-sm text-white/40">

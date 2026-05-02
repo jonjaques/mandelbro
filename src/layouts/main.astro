@@ -1,7 +1,12 @@
 ---
 import "../styles/global.css";
-import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
-import { AUTHOR_NAME, AUTHOR_URL } from "@/lib/site-config";
+import {
+  BRAND_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+} from "@/lib/mandelbrot/constants";
+import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
 
 interface Props {
   title?: string;
@@ -59,10 +64,7 @@ const gaScript = hasAnalytics
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="description" content={description} />
-    <meta
-      name="keywords"
-      content="mandelbrot set, fractal explorer, deep zoom, perturbation theory, series approximation, arbitrary precision, fractal viewer, mandelbrot zoom, online fractal, interactive fractal, fractal generator, math visualization, complex numbers, fractal art, PWA"
-    />
+    <meta name="keywords" content={SITE_KEYWORDS} />
     <meta name="author" content={AUTHOR_NAME} />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#000000" />
@@ -95,7 +97,7 @@ const gaScript = hasAnalytics
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Mandelbro" />
+    <meta property="og:site_name" content={BRAND_NAME} />
     <meta property="og:url" content={canonicalUrl.toString()} />
     <meta property="og:locale" content="en_US" />
     <meta property="og:image" content={imageUrl.toString()} />
@@ -124,11 +126,18 @@ const gaScript = hasAnalytics
           "@context": "https://schema.org",
           "@type": "WebApplication",
           name: "Mandelbro",
-          alternateName: "Mandelbro Fractal Explorer",
+          alternateName: [
+            "Mandelbro Fractal Explorer",
+            "Mandelbrot Set Explorer",
+            "Mandelbrot Renderer",
+          ],
           url: canonicalUrl.toString(),
+          sameAs: [SOURCE_CODE_URL],
           description,
           applicationCategory: "EducationalApplication",
           applicationSubCategory: "Mathematics Visualization",
+          keywords:
+            "mandelbrot set, fractal, fractal explorer, fractal renderer, deep zoom, perturbation theory, browser, javascript, online, free",
           operatingSystem: "Any",
           browserRequirements:
             "Requires a modern browser with JavaScript and Web Workers",
@@ -149,15 +158,29 @@ const gaScript = hasAnalytics
             "Fullscreen immersive interface",
           ],
           author: authorEntity,
+          creator: authorEntity,
           sourceOrganization: authorEntity,
           isAccessibleForFree: true,
           license: "https://opensource.org/licenses/MIT",
           inLanguage: "en",
+          about: [
+            { "@type": "Thing", name: "Mandelbrot set", sameAs: "https://en.wikipedia.org/wiki/Mandelbrot_set" },
+            { "@type": "Thing", name: "Fractal", sameAs: "https://en.wikipedia.org/wiki/Fractal" },
+            { "@type": "Thing", name: "Complex dynamics", sameAs: "https://en.wikipedia.org/wiki/Complex_dynamics" },
+          ],
         },
         {
           "@context": "https://schema.org",
           "@type": "FAQPage",
           mainEntity: [
+            {
+              "@type": "Question",
+              name: "What is the Mandelbrot set?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "The Mandelbrot set is the set of complex numbers c for which the iteration z → z² + c (starting at z = 0) stays bounded forever. Discovered by Benoît Mandelbrot in 1980, its boundary is a fractal of infinite detail — every zoom reveals new spirals, miniature copies of the whole set, and self-similar structure.",
+              },
+            },
             {
               "@type": "Question",
               name: "How deep can Mandelbro zoom into the Mandelbrot set?",
@@ -188,6 +211,22 @@ const gaScript = hasAnalytics
               acceptedAnswer: {
                 "@type": "Answer",
                 text: "Yes. Mandelbro encodes the exact view coordinates and zoom level in the URL hash. Copy the URL to share any location — the recipient sees exactly what you see, even at extreme zoom depths.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What are Seahorse Valley and Elephant Valley?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Seahorse Valley (around c ≈ −0.75 + 0.1i) and Elephant Valley (around c ≈ 0.27 + 0.006i) are two of the most famous regions of the Mandelbrot set. The valleys sit between the main cardioid and the period-2 bulb and contain endless seahorse-like or trunk-and-tusk spirals. Mandelbro ships both as preset locations.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Is Mandelbro a good fractal renderer for mobile?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Mandelbro is a touch-native progressive web app: pinch to zoom, drag to pan, double-tap to zoom in. It runs without an app-store install and works offline once cached.",
               },
             },
           ],
