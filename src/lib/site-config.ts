@@ -12,6 +12,16 @@ export const PRODUCTION_URL = `https://${PRODUCTION_HOSTNAME}`;
 export const PAGES_DOMAIN = "mandelbro.pages.dev";
 export const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
 
+export const MIT_LICENSE_URL = "https://opensource.org/licenses/MIT";
+
+export const WIKIPEDIA_MANDELBROT_SET_URL =
+  "https://en.wikipedia.org/wiki/Mandelbrot_set";
+
+export const WIKIPEDIA_FRACTAL_URL = "https://en.wikipedia.org/wiki/Fractal";
+
+export const WIKIPEDIA_COMPLEX_DYNAMICS_URL =
+  "https://en.wikipedia.org/wiki/Complex_dynamics";
+
 export const AUTHOR_NAME = "Jon Jaques";
 export const AUTHOR_URL = "https://github.com/jonjaques";
 

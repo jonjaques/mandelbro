@@ -2,11 +2,38 @@
 import "../styles/global.css";
 import {
   BRAND_NAME,
-  SITE_TITLE,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
+  SITE_TITLE,
 } from "@/lib/mandelbrot/constants";
-import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
+import {
+  ANALYTICS_GTAG_LOADER_BASE,
+  analyticsInlineSnippet,
+  APPLE_MOBILE_WEB_APP_CAPABLE,
+  APPLE_STATUS_BAR_STYLE,
+  APPLE_TOUCH_ICONS,
+  ASSET_ICON_SVG_PATH,
+  ASSET_WEB_MANIFEST_PATH,
+  DEFAULT_PREVIEW_IMAGE_PATH,
+  FONT_PRECONNECT_GOOGLE,
+  FONT_PRECONNECT_GSTATIC,
+  FONT_STYLESHEET_GOOGLE,
+  FONT_STYLESHEET_MACULA,
+  HTML_DOCUMENT_LANG,
+  mainLayoutStructuredData,
+  META_ROBOTS_NOINDEX,
+  META_THEME_COLOR,
+  META_VIEWPORT,
+  MOBILE_WEB_APP_CAPABLE,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_MIME_JPEG,
+  OG_IMAGE_WIDTH,
+  OG_LOCALE,
+  OG_SOCIAL_CARD_IMAGE_ALT,
+  OG_TYPE_WEBSITE,
+  TWITTER_CARD_LARGE_IMAGE,
+} from "@/lib/mandelbrot/main-layout-metadata";
+import { AUTHOR_NAME, AUTHOR_URL } from "@/lib/site-config";
 
 interface Props {
   title?: string;
@@ -25,7 +52,7 @@ interface Props {
 const {
   title = SITE_TITLE,
   description = SITE_DESCRIPTION,
-  image = "/preview.jpg",
+  image = DEFAULT_PREVIEW_IMAGE_PATH,
   noIndex = false,
   scrollable = false,
   canonicalPath,
@@ -45,193 +72,76 @@ const authorEntity = { "@type": "Person" as const, name: AUTHOR_NAME, url: AUTHO
 const gaKey = import.meta.env.PUBLIC_GA_ID;
 const hasAnalytics =
   import.meta.env.PROD && typeof gaKey === "string" && gaKey.length > 0;
-const gaScript = hasAnalytics
-  ? [
-      "window.dataLayer = window.dataLayer || [];",
-      "function gtag(){dataLayer.push(arguments)}",
-      "gtag('js', new Date());",
-      `gtag('config', '${gaKey}');`,
-    ].join("")
-  : "";
+const gaScript = hasAnalytics ? analyticsInlineSnippet(gaKey) : "";
+
+const structuredData = mainLayoutStructuredData({
+  canonicalUrl: canonicalUrl.toString(),
+  description,
+  imageUrl: imageUrl.toString(),
+  authorEntity,
+});
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang={HTML_DOCUMENT_LANG} class="dark">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
+    <meta name="viewport" content={META_VIEWPORT} />
     <meta name="description" content={description} />
     <meta name="keywords" content={SITE_KEYWORDS} />
     <meta name="author" content={AUTHOR_NAME} />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#000000" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content={META_THEME_COLOR} />
+    <meta name="mobile-web-app-capable" content={MOBILE_WEB_APP_CAPABLE} />
+    <meta name="apple-mobile-web-app-capable" content={APPLE_MOBILE_WEB_APP_CAPABLE} />
     <meta name="apple-mobile-web-app-title" content={title} />
     <meta
       name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
+      content={APPLE_STATUS_BAR_STYLE}
     />
-    {noIndex && <meta name="robots" content="noindex, nofollow" />}
+    {noIndex && <meta name="robots" content={META_ROBOTS_NOINDEX} />}
 
     <link rel="canonical" href={canonicalUrl.toString()} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/appicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/appicon-180.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/appicon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/appicon-512.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link href="https://fonts.cdnfonts.com/css/macula" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href={ASSET_ICON_SVG_PATH} />
+    <link rel="manifest" href={ASSET_WEB_MANIFEST_PATH} />
+    {
+      APPLE_TOUCH_ICONS.map((entry) =>
+        "sizes" in entry ? (
+          <link rel="apple-touch-icon" sizes={entry.sizes} href={entry.href} />
+        ) : (
+          <link rel="apple-touch-icon" href={entry.href} />
+        ),
+      )
+    }
+    <link rel="preconnect" href={FONT_PRECONNECT_GOOGLE} />
+    <link rel="preconnect" href={FONT_PRECONNECT_GSTATIC} crossorigin />
+    <link href={FONT_STYLESHEET_GOOGLE} rel="stylesheet" />
+    <link href={FONT_STYLESHEET_MACULA} rel="stylesheet" />
 
     <title>{title}</title>
 
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={OG_TYPE_WEBSITE} />
     <meta property="og:site_name" content={BRAND_NAME} />
     <meta property="og:url" content={canonicalUrl.toString()} />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content={OG_LOCALE} />
     <meta property="og:image" content={imageUrl.toString()} />
-    <meta
-      property="og:image:alt"
-      content="Mandelbro — an interactive Mandelbrot set fractal explorer with deep zoom"
-    />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:alt" content={OG_SOCIAL_CARD_IMAGE_ALT} />
+    <meta property="og:image:width" content={OG_IMAGE_WIDTH} />
+    <meta property="og:image:height" content={OG_IMAGE_HEIGHT} />
+    <meta property="og:image:type" content={OG_IMAGE_MIME_JPEG} />
 
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content={TWITTER_CARD_LARGE_IMAGE} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl.toString()} />
-    <meta
-      name="twitter:image:alt"
-      content="Mandelbro — an interactive Mandelbrot set fractal explorer with deep zoom"
-    />
+    <meta name="twitter:image:alt" content={OG_SOCIAL_CARD_IMAGE_ALT} />
 
     <script
       is:inline
       type="application/ld+json"
-      set:html={JSON.stringify([
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "Mandelbro",
-          alternateName: [
-            "Mandelbro Fractal Explorer",
-            "Mandelbrot Set Explorer",
-            "Mandelbrot Renderer",
-          ],
-          url: canonicalUrl.toString(),
-          sameAs: [SOURCE_CODE_URL],
-          description,
-          applicationCategory: "EducationalApplication",
-          applicationSubCategory: "Mathematics Visualization",
-          keywords:
-            "mandelbrot set, fractal, fractal explorer, fractal renderer, deep zoom, perturbation theory, browser, javascript, online, free",
-          operatingSystem: "Any",
-          browserRequirements:
-            "Requires a modern browser with JavaScript and Web Workers",
-          softwareVersion: "1.0",
-          image: imageUrl.toString(),
-          screenshot: imageUrl.toString(),
-          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-          featureList: [
-            "Arbitrary-precision deep zoom past 10^50× magnification",
-            "Perturbation theory rendering with series approximation",
-            "Multi-threaded Web Worker parallel rendering",
-            "7 smooth-gradient color palettes",
-            "Shareable deep-zoom URLs",
-            "Installable progressive web app with offline support",
-            "Touch-native with pinch-to-zoom and drag-to-pan",
-            "Cardioid and period-2 bulb optimization",
-            "Brent cycle detection for interior orbits",
-            "Fullscreen immersive interface",
-          ],
-          author: authorEntity,
-          creator: authorEntity,
-          sourceOrganization: authorEntity,
-          isAccessibleForFree: true,
-          license: "https://opensource.org/licenses/MIT",
-          inLanguage: "en",
-          about: [
-            { "@type": "Thing", name: "Mandelbrot set", sameAs: "https://en.wikipedia.org/wiki/Mandelbrot_set" },
-            { "@type": "Thing", name: "Fractal", sameAs: "https://en.wikipedia.org/wiki/Fractal" },
-            { "@type": "Thing", name: "Complex dynamics", sameAs: "https://en.wikipedia.org/wiki/Complex_dynamics" },
-          ],
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            {
-              "@type": "Question",
-              name: "What is the Mandelbrot set?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "The Mandelbrot set is the set of complex numbers c for which the iteration z → z² + c (starting at z = 0) stays bounded forever. Discovered by Benoît Mandelbrot in 1980, its boundary is a fractal of infinite detail — every zoom reveals new spirals, miniature copies of the whole set, and self-similar structure.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "How deep can Mandelbro zoom into the Mandelbrot set?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Mandelbro uses arbitrary-precision arithmetic with perturbation theory and series approximation to zoom past 10^50× magnification — far beyond the 10^14× limit of standard double-precision renderers. You can explore miniature Mandelbrot copies and spiral formations at extreme depths, all in your browser.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Is Mandelbro free to use?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes. Mandelbro is completely free, open-source (MIT license), and runs entirely in your browser with no downloads, sign-ups, or server-side processing required. You can even install it as a PWA for offline use.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "What is perturbation theory in Mandelbrot rendering?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Perturbation theory computes one high-precision reference orbit and then derives each pixel as a small delta from that orbit using fast double-precision math. Combined with series approximation, this makes deep zooming orders of magnitude faster than computing every pixel at full precision.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Can I share a specific Mandelbrot location?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes. Mandelbro encodes the exact view coordinates and zoom level in the URL hash. Copy the URL to share any location — the recipient sees exactly what you see, even at extreme zoom depths.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "What are Seahorse Valley and Elephant Valley?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Seahorse Valley (around c ≈ −0.75 + 0.1i) and Elephant Valley (around c ≈ 0.27 + 0.006i) are two of the most famous regions of the Mandelbrot set. The valleys sit between the main cardioid and the period-2 bulb and contain endless seahorse-like or trunk-and-tusk spirals. Mandelbro ships both as preset locations.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Is Mandelbro a good fractal renderer for mobile?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes. Mandelbro is a touch-native progressive web app: pinch to zoom, drag to pan, double-tap to zoom in. It runs without an app-store install and works offline once cached.",
-              },
-            },
-          ],
-        },
-      ])}
+      set:html={JSON.stringify(structuredData)}
     />
 
     {
@@ -239,7 +149,7 @@ const gaScript = hasAnalytics
         <script
           is:inline
           async
-          src={`https://www.googletagmanager.com/gtag/js?id=${gaKey}`}
+          src={`${ANALYTICS_GTAG_LOADER_BASE}?id=${gaKey}`}
         />
       )
     }
