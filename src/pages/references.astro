@@ -6,8 +6,12 @@ import {
   REFERENCES_DESCRIPTION,
 } from "@/lib/mandelbrot/constants";
 import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
+import { explorerHrefFromReferencesReturn } from "@/lib/mandelbrot/references-return";
 
 const siteBase = Astro.site ?? Astro.url;
+
+/** Static fallback; `?return=` is applied client-side (build has no query string). */
+const explorerHomeHref = explorerHrefFromReferencesReturn(null);
 const canonicalUrl = new URL("/references", siteBase);
 
 const authorEntity = {
@@ -37,7 +41,12 @@ const jsonLd = {
 };
 ---
 
-<MainLayout title={REFERENCES_TITLE} description={REFERENCES_DESCRIPTION} scrollable>
+<MainLayout
+  title={REFERENCES_TITLE}
+  description={REFERENCES_DESCRIPTION}
+  scrollable
+  canonicalPath="/references"
+>
   <script
     is:inline
     type="application/ld+json"
@@ -47,7 +56,8 @@ const jsonLd = {
   <div class="mx-auto max-w-2xl px-6 py-16 sm:py-24">
     <header class="mb-12">
       <a
-        href="/"
+        href={explorerHomeHref}
+        data-explorer-home-from-return
         class="mb-6 inline-flex items-center gap-1.5 text-sm text-sky-300/80 transition-colors hover:text-sky-200"
       >
         <svg
@@ -110,7 +120,8 @@ const jsonLd = {
     <footer class="mt-16 border-t border-white/10 pt-8">
       <p class="text-sm text-white/40">
         <a
-          href="/"
+          href={explorerHomeHref}
+          data-explorer-home-from-return
           class="text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
           >Mandelbro</a
         > is open source. <a
@@ -123,4 +134,22 @@ const jsonLd = {
       </p>
     </footer>
   </div>
+
+  <script>
+    import {
+      REFERENCES_EXPLORER_RETURN_QUERY,
+      explorerHrefFromReferencesReturn,
+    } from "@/lib/mandelbrot/references-return";
+
+    const href = explorerHrefFromReferencesReturn(
+      new URLSearchParams(window.location.search).get(
+        REFERENCES_EXPLORER_RETURN_QUERY,
+      ),
+    );
+    document.querySelectorAll("[data-explorer-home-from-return]").forEach((el) => {
+      if (el instanceof HTMLAnchorElement) {
+        el.href = href;
+      }
+    });
+  </script>
 </MainLayout>

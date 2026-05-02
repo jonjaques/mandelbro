@@ -2,6 +2,7 @@
  * Controlled Dialog: shadcn composition + scrollable body pattern
  * (https://ui.shadcn.com/docs/components/dialog#scrollable-content).
  */
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { REFERENCE_SECTIONS } from "@/lib/mandelbrot/references";
+import { referencesHrefWithExplorerFragment } from "@/lib/mandelbrot/references-return";
 
 interface ReferenceDialogProps {
   open: boolean;
@@ -17,6 +19,16 @@ interface ReferenceDialogProps {
 }
 
 export function ReferenceDialog({ open, onOpenChange }: ReferenceDialogProps) {
+  const fullReferencesHref = useMemo(() => {
+    if (!open || typeof window === "undefined") {
+      return "/references";
+    }
+    const fragment = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : "";
+    return referencesHrefWithExplorerFragment(fragment);
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass text-white border-white/8 sm:max-w-xl">
@@ -58,7 +70,7 @@ export function ReferenceDialog({ open, onOpenChange }: ReferenceDialogProps) {
 
           <div className="mt-8 border-t border-white/10 pt-4">
             <a
-              href="/references"
+              href={fullReferencesHref}
               className="text-sm text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
             >
               View full references page

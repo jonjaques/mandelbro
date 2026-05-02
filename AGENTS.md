@@ -42,6 +42,10 @@ No test framework is currently configured.
 
 **Astro 5 + React 19** hybrid static site using **Tailwind CSS v4** and **shadcn/ui** components (new-york style). Astro provides the zero-JS static shell; a single React island (`client:load`) runs the entire explorer.
 
+### React Compiler & ESLint
+
+React 19 client code runs through **`babel-plugin-react-compiler`** by way of **`astro.config.mjs`** (`@astrojs/react` → `babel.plugins`). ESLint uses **`eslint-plugin-react-hooks`** flat preset **`recommended-latest`** in **`eslint.config.mjs`**—that includes Rules of React checks used by the compiler; do **not** add **`eslint-plugin-react-compiler`** (deprecated). After toolchain upgrades run **`yarn lint`** and **`yarn build`**; confirm the explorer chunk still carries compiler-assisted output (typically **`useMemoCache`** appearing in hashed **`dist/_astro/*.js`**). In development, [**React DevTools**](https://react.dev/learn/react-compiler/installation#check-react-devtools) shows a Memo badge on optimized components.
+
 ### Dual Component Model
 
 - **Astro components** (`.astro`) — server-rendered, zero JS by default. Used for pages and layouts.
