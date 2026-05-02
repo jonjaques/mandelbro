@@ -32,6 +32,10 @@ import {
   autoIterations,
   resolveAntialiasSamples,
 } from "@/lib/mandelbrot/compute";
+import {
+  MAX_SAFE_ITERATIONS,
+  MIN_SAFE_ITERATIONS,
+} from "@/lib/mandelbrot/constants";
 import { formatCoord, formatZoom } from "@/lib/mandelbrot/format";
 import type { Favorite } from "@/lib/mandelbrot/favorites";
 import { cn } from "@/lib/utils";
@@ -262,9 +266,9 @@ export function SettingsPanel({
                 </div>
                 <Slider
                   value={[view.maxIter]}
-                  min={50}
-                  max={10000}
-                  step={50}
+                  min={MIN_SAFE_ITERATIONS}
+                  max={MAX_SAFE_ITERATIONS}
+                  step={MIN_SAFE_ITERATIONS}
                   onValueCommit={([val]) => {
                     if (val === undefined) return;
                     trackEvent("iterations_change", { value: val });
@@ -275,8 +279,8 @@ export function SettingsPanel({
                   }}
                 />
                 <div className="flex justify-between text-[10px] text-white/30">
-                  <span>50</span>
-                  <span>10000</span>
+                  <span>{MIN_SAFE_ITERATIONS}</span>
+                  <span>{MAX_SAFE_ITERATIONS}</span>
                 </div>
               </div>
 

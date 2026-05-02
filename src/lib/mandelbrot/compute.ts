@@ -1,6 +1,9 @@
 import type { AntialiasMode, AntialiasSamples } from "./types";
-import { BAILOUT, DEFAULT_ZOOM } from "./constants";
+import { BAILOUT, DEFAULT_ZOOM, MAX_SAFE_ITERATIONS } from "./constants";
 import { smoothColor } from "./worker-utils";
+
+const AUTO_BASE_ITERATIONS = 200;
+const AUTO_ITERATIONS_PER_OCTAVE = 50;
 
 /**
  * Auto-calculate iteration count based on zoom depth.
@@ -10,22 +13,29 @@ import { smoothColor } from "./worker-utils";
  * boundary escape very slowly, and with too few iterations they'll be
  * misclassified as interior (black) instead of exterior (colored).
  *
- * The formula: 200 + 50 × log₂(3.5 / zoom), clamped to [200, 10000].
+ * Formula: 200 + 50 × log₂(DEFAULT_ZOOM / zoom), clamped to
+ * [200, MAX_SAFE_ITERATIONS].
  *   - Default view (zoom=3.5): 200 iterations
  *   - 1,000× zoom:            ~700 iterations
  *   - 10^14× zoom:            ~2550 iterations (standard pipeline limit)
  *   - 10^50× zoom:            ~8750 iterations (perturbation pipeline)
- *   - 10^100× zoom:           capped at 10,000
+ *   - Beyond:                 capped at `MAX_SAFE_ITERATIONS`
  *
- * The 10,000 cap balances detail against compute cost. In the perturbation
- * pipeline, each pixel iterates up to maxIter times, and the reference
- * orbit computation (BigFloat arithmetic) is also bounded by this limit.
- * The reference orbit worker additionally caps at MAX_SAFE_ITERATIONS
- * (10,000) to bound BigFloat computation time.
+ * The cap balances detail against compute cost. In the perturbation pipeline,
+ * each pixel iterates up to `maxIter` times and the BigFloat reference orbit
+ * is bounded by the same constant.
  */
 export function autoIterations(zoom: number): number {
   const depth = Math.max(0, Math.log2(DEFAULT_ZOOM / zoom));
-  return Math.round(Math.min(10000, Math.max(200, 200 + 50 * depth)));
+  return Math.round(
+    Math.min(
+      MAX_SAFE_ITERATIONS,
+      Math.max(
+        AUTO_BASE_ITERATIONS,
+        AUTO_BASE_ITERATIONS + AUTO_ITERATIONS_PER_OCTAVE * depth,
+      ),
+    ),
+  );
 }
 
 /**
@@ -63,7 +73,7 @@ export function resolveAntialiasSamples(
  * Together these two regions cover roughly 25% of the visible area at the
  * default zoom level, so this check saves significant computation.
  */
-export function isInCardioid(x0: number, y0: number): boolean {
+function isInCardioid(x0: number, y0: number): boolean {
   // Main cardioid: the big heart-shaped region
   const q = (x0 - 0.25) * (x0 - 0.25) + y0 * y0;
   if (q * (q + (x0 - 0.25)) <= 0.25 * y0 * y0) return true;
@@ -92,11 +102,7 @@ export function isInCardioid(x0: number, y0: number): boolean {
  *   maxIter if it didn't), and the final magnitude squared of z. Both are
  *   needed for smooth coloring.
  */
-export function escapeTime(
-  x0: number,
-  y0: number,
-  maxIter: number,
-): [number, number] {
+function escapeTime(x0: number, y0: number, maxIter: number): [number, number] {
   let x = 0; // Real part of z
   let y = 0; // Imaginary part of z
   let x2 = 0; // x² (cached to avoid recomputing)

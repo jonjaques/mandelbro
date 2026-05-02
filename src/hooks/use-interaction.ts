@@ -11,7 +11,9 @@ import {
   make as bfMake,
   toString as bfToString,
 } from "@/lib/mandelbrot/bigfloat-utils";
-import { getContext2D } from "@/lib/mandelbrot/hdr";
+import { getContext2D } from "@/lib/mandelbrot/wide-gamut";
+import { MAX_DPR } from "@/lib/mandelbrot/constants";
+import { coordToString } from "@/lib/mandelbrot/format";
 
 const DRAG_RENDER_DEBOUNCE_MS = 60;
 const WHEEL_RENDER_DEBOUNCE_MS = 140;
@@ -34,8 +36,8 @@ function applyHpDelta(
     view.centerYHp != null;
   if (!needsHp) return {};
 
-  const baseX = view.centerXHp ?? view.centerX.toPrecision(15);
-  const baseY = view.centerYHp ?? view.centerY.toPrecision(15);
+  const baseX = coordToString(view.centerX, view.centerXHp);
+  const baseY = coordToString(view.centerY, view.centerYHp);
 
   return {
     centerXHp: bfToString(bfAdd(bfMake(baseX), bfMake(dxComplex))),
@@ -192,7 +194,7 @@ export function useInteraction(
       // correct fractal data for the newly visible regions.
       const ctx = getContext2D(canvas, wideGamutRef.current);
       if (ctx) {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
         const dxPx = Math.round(dxCss * dpr);
         const dyPx = Math.round(dyCss * dpr);
 
@@ -255,7 +257,7 @@ export function useInteraction(
       const rect = canvas.getBoundingClientRect();
       const view = getView();
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
 
       if (!wheelGesture.current) {
         onInteractionStart();

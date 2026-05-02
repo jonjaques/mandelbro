@@ -1,5 +1,5 @@
 import type { ViewState } from "@/lib/mandelbrot/types";
-import { getContext2D } from "@/lib/mandelbrot/hdr";
+import { getContext2D } from "@/lib/mandelbrot/wide-gamut";
 
 /**
  * Copy the current canvas pixels into an offscreen buffer for gesture previews.

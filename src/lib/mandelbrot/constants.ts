@@ -26,8 +26,22 @@ export const DEFAULT_ZOOM = 3.5;
 /** Baseline height of each horizontal band in pixels before adaptive reduction. */
 export const BASE_BAND_HEIGHT = 32;
 
-/** Cap on iterations for BigFloat reference orbit computation. */
+/** Lower bound on user-selectable / URL-deserialized iteration count. */
+export const MIN_SAFE_ITERATIONS = 50;
+
+/**
+ * Cap on iterations for BigFloat reference orbit computation. Also the upper
+ * bound on user-selectable / URL-deserialized iteration count.
+ */
 export const MAX_SAFE_ITERATIONS = 10000;
+
+/**
+ * Maximum device pixel ratio used by canvas buffers and luminance sampling.
+ * On 3x+ displays the extra resolution is barely perceptible while costing
+ * 2.25× more memory and compute compared to 2x. Capping at 2 keeps Retina
+ * sharpness without paying for invisible detail.
+ */
+export const MAX_DPR = 2;
 
 /* ── SEO / meta copy ─────────────────────────────────────────────── */
 

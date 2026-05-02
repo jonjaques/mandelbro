@@ -10,8 +10,8 @@ import type {
 } from "@/lib/mandelbrot/types";
 import { resolveAntialiasSamples } from "@/lib/mandelbrot/compute";
 import { requiredPrecision } from "@/lib/mandelbrot/bigfloat-utils";
+import { viewCenterStrings } from "@/lib/mandelbrot/format";
 import { useChunkRenderer } from "@/hooks/use-chunk-renderer";
-import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
 
 /**
  * Perturbation workers are more CPU-intensive per pixel than the standard
@@ -28,6 +28,35 @@ const PERTURBATION_WORKER_COUNT =
       );
 
 /**
+ * Series-approximation coefficient field names, shared between
+ * `ReferenceOrbitComplete` and `PerturbationRenderRequest`. The orbit worker
+ * always emits these as a group (all six set, or none), so we copy them as a
+ * group and skip them entirely when SA was not requested.
+ */
+const SA_COEFF_KEYS = [
+  "saCoeffAre",
+  "saCoeffAim",
+  "saCoeffBre",
+  "saCoeffBim",
+  "saCoeffCre",
+  "saCoeffCim",
+] as const;
+
+type SACoefficients = Partial<
+  Pick<PerturbationRenderRequest, (typeof SA_COEFF_KEYS)[number]>
+>;
+
+function packSACoefficients(orbit: ReferenceOrbitComplete): SACoefficients {
+  if (orbit.saCoeffAre == null) return {};
+  const out: SACoefficients = {};
+  for (const key of SA_COEFF_KEYS) {
+    const value = orbit[key];
+    if (value != null) out[key] = value;
+  }
+  return out;
+}
+
+/**
  * Two-phase **perturbation** render: one `reference-orbit-worker` (BigFloat
  * c_ref + optional SA coeffs), then a pool of `perturbation-worker`s that share
  * the same orbit buffers. Matches `useMandelbrotWorker`'s outward API so
@@ -39,11 +68,9 @@ const PERTURBATION_WORKER_COUNT =
 export function usePerturbationRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   wideGamutRef: React.RefObject<boolean>,
-  glPainterRef?: React.RefObject<WebGLPainter | null>,
 ) {
   const refWorkerRef = useRef<Worker | null>(null);
   const pertWorkersRef = useRef<Worker[]>([]);
-  const hdrActive = !!glPainterRef;
   const {
     requestIdRef,
     progress,
@@ -53,7 +80,7 @@ export function usePerturbationRenderer(
     setChunkProgress,
     cancelBase,
     cancelPendingRaf,
-  } = useChunkRenderer(canvasRef, wideGamutRef, glPainterRef);
+  } = useChunkRenderer(canvasRef, wideGamutRef);
 
   // Reference orbit cache: reuse when center hasn't changed
   const cachedOrbitRef = useRef<{
@@ -134,17 +161,11 @@ export function usePerturbationRenderer(
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
           wideGamut: wideGamutRef.current,
-          hdr: hdrActive,
           refOffsetRe: orbit.refOffsetRe,
           refOffsetIm: orbit.refOffsetIm,
           workerIndex: i,
           workerCount: workers.length,
-          ...(orbit.saCoeffAre != null ? { saCoeffAre: orbit.saCoeffAre } : {}),
-          ...(orbit.saCoeffAim != null ? { saCoeffAim: orbit.saCoeffAim } : {}),
-          ...(orbit.saCoeffBre != null ? { saCoeffBre: orbit.saCoeffBre } : {}),
-          ...(orbit.saCoeffBim != null ? { saCoeffBim: orbit.saCoeffBim } : {}),
-          ...(orbit.saCoeffCre != null ? { saCoeffCre: orbit.saCoeffCre } : {}),
-          ...(orbit.saCoeffCim != null ? { saCoeffCim: orbit.saCoeffCim } : {}),
+          ...packSACoefficients(orbit),
         };
 
         worker.postMessage(request);
@@ -162,8 +183,7 @@ export function usePerturbationRenderer(
       clearChunkQueueAndPixelCounters();
       setChunkProgress(0);
 
-      const centerReStr = view.centerXHp ?? view.centerX.toPrecision(15);
-      const centerImStr = view.centerYHp ?? view.centerY.toPrecision(15);
+      const [centerReStr, centerImStr] = viewCenterStrings(view);
       const centerKey = `${centerReStr}|${centerImStr}|${view.maxIter}|${width}x${height}`;
 
       const cached = cachedOrbitRef.current;

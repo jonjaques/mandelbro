@@ -10,15 +10,16 @@ import {
   type IBigFloat,
 } from "bigfloat-esnext";
 
+import { BAILOUT } from "./constants";
+import { PRECISION_THRESHOLD } from "./types";
+
 export type { IBigFloat } from "bigfloat-esnext";
 export { add, mul, make, string as bfToString };
-
-import { BAILOUT } from "./constants";
 
 const ZERO = make(0);
 const BAILOUT_BF = make(BAILOUT);
 
-export { ZERO, BAILOUT_BF };
+export { ZERO };
 
 /**
  * Decimal digits for the **reference-orbit** BigFloat iteration at this zoom.
@@ -31,7 +32,7 @@ export { ZERO, BAILOUT_BF };
  * @see https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set
  */
 export function requiredPrecision(zoom: number): number {
-  if (zoom >= 1e-13) return 16;
+  if (zoom >= PRECISION_THRESHOLD) return 16;
   return Math.ceil(-Math.log10(zoom)) + 10;
 }
 
@@ -62,10 +63,6 @@ export function truncateToPrecision(bf: IBigFloat, digits: number): IBigFloat {
 
 export function toDouble(bf: IBigFloat): number {
   return bfNumber(bf);
-}
-
-export function fromString(s: string): IBigFloat {
-  return make(s);
 }
 
 export function toString(bf: IBigFloat): string {

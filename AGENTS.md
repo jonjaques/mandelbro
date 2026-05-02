@@ -15,7 +15,8 @@ Every technical decision serves one UX principle: **the user should never wait f
 - **Bibliography & algorithms** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS` (curated links and short summaries). The in-app **Reference** dialog and the server-rendered `/references` page both read the same data. Use it when you need authoritative context for perturbation theory, series approximation, Brent cycle detection, smooth coloring, or plotting shortcuts instead of guessing from memory.
 - **Shared numeric literals & SEO copy** — `src/lib/mandelbrot/constants.ts` (`BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS`, `SITE_TITLE`, `SITE_DESCRIPTION`, `REFERENCES_TITLE`, `REFERENCES_DESCRIPTION`, …). Workers and math modules import numeric constants from here; Astro layouts and pages import SEO copy so page titles, descriptions, and JSON-LD are never duplicated.
 - **Worker-only helpers** — `src/lib/mandelbrot/worker-utils.ts` (`smoothColor`, `getBandHeight`, `WorkerContext`). Standard, perturbation, and reference workers share this; `compute.ts` / `perturbation.ts` re-export `smoothColor` where a public surface is needed.
-- **Coordinate / zoom display strings** — `src/lib/mandelbrot/format.ts` (`formatCoord`, `formatZoom`, `formatMagnification`) for HUD, settings, and favorites.
+- **Coordinate / zoom display strings** — `src/lib/mandelbrot/format.ts` (`formatCoord`, `formatZoom`, `formatMagnification`, `formatMagnificationExponent`, `magnification`) for HUD, settings, favorites, and the deep-zoom banner. Also exposes `coordToString` / `viewCenterStrings` (the canonical `centerXHp ?? centerX.toPrecision(15)` resolution) consumed by URL serialization, perturbation orbit cache keys, and BigFloat delta application.
+- **Wide-gamut (display-p3) detection & canvas helpers** — `src/lib/mandelbrot/wide-gamut.ts` (`detectWideGamutSupport`, `getWideGamutPreference`, `setWideGamutPreference`, `getContext2D`, `imageDataSettings`). All `getContext("2d")` calls go through `getContext2D` so the P3 switch stays in one place.
 - **Touch pinch/pan preview (canvas only)** — `src/lib/mandelbrot/canvas-preview.ts` (`snapshotCanvas`, `drawViewPreview`); consumed by `use-interaction.ts`.
 - **Chunk queue + rAF painting + pixel progress** — `src/hooks/use-chunk-renderer.ts`; composed by `use-mandelbrot-worker.ts` and `use-perturbation-renderer.ts` (standard progress 0–100%, perturbation phase 2 maps pixels to 10–100% via `progressOffset` / `progressScale`).
 - **Clipboard UX** — `src/hooks/use-clipboard-feedback.ts` for share / coordinate copy feedback in toolbar and settings.
@@ -69,9 +70,10 @@ No test framework is currently configured.
   - `use-canvas-luminance.ts`, `use-favorites.ts`, `use-viewport-height.ts` — Supporting hooks
 - `src/lib/mandelbrot/` — Core computation library (worker-safe unless noted)
   - `types.ts` — `ViewState`, `PRECISION_THRESHOLD`, render/message unions, color scheme types
-  - `constants.ts` — Single source for `BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS` (imported by compute, perturbation, reference orbit, workers, `bigfloat-utils`)
+  - `constants.ts` — Single source for `BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS`, `MIN_SAFE_ITERATIONS`, `MAX_DPR` (imported by compute, perturbation, reference orbit, workers, `bigfloat-utils`, canvas/luminance/interaction hooks)
   - `worker-utils.ts` — `smoothColor`, `getBandHeight`, `WorkerContext` shared by worker modules
-  - `format.ts` — URL/HUD-facing coordinate and magnification string formatters
+  - `format.ts` — URL/HUD-facing coordinate and magnification string formatters; `coordToString` / `viewCenterStrings` resolve `centerXHp ?? centerX.toPrecision(15)` once for URL serialization, perturbation orbit cache keys, and BigFloat delta math
+  - `wide-gamut.ts` — `display-p3` feature detection, persisted user preference, and shared `getContext2D` / `imageDataSettings` so all 2D canvas creation routes through one place
   - `canvas-preview.ts` — `snapshotCanvas`, `drawViewPreview` for touch (and wheel snapshot source)
   - `references.ts` — Curated `REFERENCE_SECTIONS` for the Reference dialog and for human/agent lookup
   - `colors.ts` — Palettes, swatches, `mapToColors()` for workers

@@ -42,8 +42,7 @@ import {
   detectWideGamutSupport,
   getWideGamutPreference,
   setWideGamutPreference,
-} from "@/lib/mandelbrot/hdr";
-import type { WebGLPainter } from "@/lib/mandelbrot/webgl-painter";
+} from "@/lib/mandelbrot/wide-gamut";
 import {
   DEFAULT_VIEW,
   flushHashState,
@@ -89,12 +88,6 @@ export function MandelbrotExplorer() {
   useEffect(() => {
     wideGamutRef.current = wideGamut;
   }, [wideGamut]);
-
-  // WebGL2 HDR painter — currently null (2D canvas path). When activated in
-  // a future HDR toggle, createWebGLPainter() initializes this and the chunk
-  // renderer switches from putImageData to WebGL2 texture upload.
-  const _glPainterRef = useRef<WebGLPainter | null>(null);
-  void _glPainterRef;
 
   const {
     presets,

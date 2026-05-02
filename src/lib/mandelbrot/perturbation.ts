@@ -112,7 +112,7 @@ export function perturbationEscapeTime(
  *
  * @see Same Wikipedia section as file header (series approximation).
  */
-export function seriesApproximationSkip(
+function seriesApproximationSkip(
   saAre: Float64Array,
   saAim: Float64Array,
   saBre: Float64Array,

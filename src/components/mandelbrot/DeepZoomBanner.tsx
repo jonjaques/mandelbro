@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  formatMagnificationExponent,
+  magnification,
+} from "@/lib/mandelbrot/format";
 
 interface DeepZoomBannerProps {
   active: boolean;
   zoom: number;
-}
-
-function zoomDepthLabel(zoom: number): string {
-  const mag = 3.5 / zoom;
-  const exp = Math.floor(Math.log10(mag));
-  return `10^${exp}×`;
 }
 
 /**
@@ -32,8 +30,7 @@ export function DeepZoomBanner({ active, zoom }: DeepZoomBannerProps) {
       return;
     }
 
-    const mag = 3.5 / zoom;
-    const currentExp = Math.floor(Math.log10(mag));
+    const currentExp = Math.floor(Math.log10(magnification(zoom)));
 
     const justEntered = !prevActiveRef.current;
     const crossedMilestone = currentExp > lastMilestoneRef.current;
@@ -82,7 +79,7 @@ export function DeepZoomBanner({ active, zoom }: DeepZoomBannerProps) {
           Precision mode
           <span className="mx-1.5 text-white/30">&middot;</span>
           <span className="font-mono tabular-nums text-amber-400/80">
-            {zoomDepthLabel(zoom)}
+            {formatMagnificationExponent(zoom)}
           </span>
           <span className="mx-1.5 text-white/30">&middot;</span>
           Rendering may be slower

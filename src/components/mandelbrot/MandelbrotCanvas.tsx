@@ -7,7 +7,7 @@
  * 1. **DPR (Device Pixel Ratio) scaling**: On high-DPI displays (Retina, etc.),
  *    CSS pixels and device pixels aren't 1:1. A 100×100 CSS element on a 2x
  *    display has 200×200 physical pixels. We scale the canvas buffer to match
- *    (up to MAX_DPR=2) so the fractal is rendered at the display's native
+ *    (capped by `MAX_DPR`) so the fractal is rendered at the display's native
  *    resolution, not blurry CSS resolution.
  *
  * 2. **Resize tracking**: Uses ResizeObserver to detect viewport changes
@@ -18,18 +18,11 @@
  * data comes from the Web Workers via useMandelbrotWorker.
  */
 import { forwardRef, useEffect, useRef } from "react";
+import { MAX_DPR } from "@/lib/mandelbrot/constants";
 
 interface MandelbrotCanvasProps {
   onResize: (width: number, height: number) => void;
 }
-
-/**
- * Cap device pixel ratio at 2x. On 3x+ displays (some phones), the extra
- * pixels are barely perceptible but cost 2.25x more memory and compute
- * compared to 2x. This is a pragmatic trade-off: 2x is "Retina quality"
- * and 3x would mean computing 3× the pixels for marginal visual benefit.
- */
-const MAX_DPR = 2;
 
 export const MandelbrotCanvas = forwardRef<
   HTMLCanvasElement,

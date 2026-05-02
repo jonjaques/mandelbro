@@ -28,10 +28,16 @@ import {
   type ViewState,
 } from "./types";
 import { autoIterations } from "./compute";
+import {
+  DEFAULT_ZOOM,
+  MAX_SAFE_ITERATIONS,
+  MIN_SAFE_ITERATIONS,
+} from "./constants";
+import { coordToString } from "./format";
 
 /**
  * The default "home" view: the classic Mandelbrot set overview.
- * Center at (-0.5, 0) with zoom=3.5 frames the entire set with padding.
+ * Center at (-0.5, 0) with zoom=DEFAULT_ZOOM frames the entire set with padding.
  * The slight offset from the origin (centerX = -0.5 instead of 0) is because
  * the Mandelbrot set is not symmetric about the imaginary axis — it extends
  * roughly from Re=-2.5 to Re=1, so -0.5 is roughly the visual center.
@@ -39,8 +45,8 @@ import { autoIterations } from "./compute";
 export const DEFAULT_VIEW: ViewState = {
   centerX: -0.5,
   centerY: 0,
-  zoom: 3.5,
-  maxIter: autoIterations(3.5),
+  zoom: DEFAULT_ZOOM,
+  maxIter: autoIterations(DEFAULT_ZOOM),
   colorScheme: "classic",
   antialias: "auto",
 };
@@ -64,8 +70,8 @@ const VALID_ANTIALIAS_SAMPLES = new Set<AntialiasSamples>(ANTIALIAS_SAMPLES);
  */
 export function serializeToHash(state: ViewState): string {
   const params = new URLSearchParams();
-  params.set("x", state.centerXHp ?? state.centerX.toPrecision(15));
-  params.set("y", state.centerYHp ?? state.centerY.toPrecision(15));
+  params.set("x", coordToString(state.centerX, state.centerXHp));
+  params.set("y", coordToString(state.centerY, state.centerYHp));
   params.set("z", state.zoomHp ?? state.zoom.toPrecision(10));
   params.set("i", String(state.maxIter));
   params.set("c", state.colorScheme);
@@ -76,7 +82,7 @@ export function serializeToHash(state: ViewState): string {
 /**
  * Parse a URL hash string back into a ViewState.
  * Returns null if the hash is empty, malformed, or contains invalid values.
- * Iteration count is clamped to [50, 10000] for safety.
+ * Iteration count is clamped to `[MIN_SAFE_ITERATIONS, MAX_SAFE_ITERATIONS]`.
  *
  * Past `PRECISION_THRESHOLD`, coordinate strings longer than 16 chars
  * (x/y) or 11 chars (z) are preserved as high-precision strings in the Hp
@@ -132,7 +138,10 @@ export function deserializeFromHash(hash: string): ViewState | null {
           zoomHp: zStr ?? undefined,
         }
       : {}),
-    maxIter: Math.max(50, Math.min(10000, Math.round(i))),
+    maxIter: Math.max(
+      MIN_SAFE_ITERATIONS,
+      Math.min(MAX_SAFE_ITERATIONS, Math.round(i)),
+    ),
     colorScheme: c,
     antialias: aa,
   };

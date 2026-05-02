@@ -24,15 +24,7 @@ function saveUserFavorites(favorites: Favorite[]): void {
   }
 }
 
-export interface UseFavoritesReturn {
-  presets: Favorite[];
-  userFavorites: Favorite[];
-  addFavorite: (favorite: Favorite) => void;
-  removeFavorite: (id: string) => void;
-  renameFavorite: (id: string, name: string) => void;
-}
-
-export function useFavorites(): UseFavoritesReturn {
+export function useFavorites() {
   const [userFavorites, setUserFavorites] =
     useState<Favorite[]>(loadUserFavorites);
 

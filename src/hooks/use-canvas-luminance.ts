@@ -21,9 +21,7 @@
  */
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-
-/** Cap device pixel ratio to match MandelbrotCanvas (avoids 3x+ oversampling) */
-const MAX_DPR = 2;
+import { MAX_DPR } from "@/lib/mandelbrot/constants";
 
 /** How often to re-sample the canvas, in milliseconds */
 const DEFAULT_INTERVAL_MS = 300;

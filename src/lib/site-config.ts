@@ -11,12 +11,11 @@ export const PRODUCTION_HOSTNAME = "mandelbro.jonjaques.com";
 export const PRODUCTION_URL = `https://${PRODUCTION_HOSTNAME}`;
 export const PAGES_DOMAIN = "mandelbro.pages.dev";
 export const SOURCE_CODE_URL = "https://github.com/jonjaques/mandelbro";
-export const WIKIPEDIA_URL = "https://en.wikipedia.org/wiki/Mandelbrot_set";
 
 export const AUTHOR_NAME = "Jon Jaques";
 export const AUTHOR_URL = "https://github.com/jonjaques";
 
-export function isProductionHost(): boolean {
+function isProductionHost(): boolean {
   return (
     typeof window !== "undefined" &&
     window.location.hostname === PRODUCTION_HOSTNAME

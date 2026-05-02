@@ -37,11 +37,7 @@
  * and ensures all regions of the image progress simultaneously.
  */
 import { computeBand, computePixelSample } from "./compute";
-import {
-  colorFromSmoothIteration,
-  mapToColors,
-  mapToColorsHDR,
-} from "./colors";
+import { colorFromSmoothIteration, mapToColors } from "./colors";
 import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
   AntialiasSamples,
@@ -83,7 +79,6 @@ function processRequest(req: RenderRequest) {
     colorScheme,
     antialiasSamples,
     wideGamut,
-    hdr,
   } = req;
 
   const bandHeightStep = getBandHeight(maxIter, antialiasSamples);
@@ -127,26 +122,22 @@ function processRequest(req: RenderRequest) {
       maxIter,
     );
 
-    let rgba: Uint8ClampedArray | Float32Array;
-    if (hdr && antialiasSamples === 1) {
-      rgba = mapToColorsHDR(iterData, maxIter, colorScheme);
-    } else if (antialiasSamples === 1) {
-      rgba = mapToColors(iterData, maxIter, colorScheme, 256, wideGamut);
-    } else {
-      rgba = computeSupersampledBand(
-        width,
-        height,
-        y,
-        bandHeight,
-        centerX,
-        centerY,
-        zoom,
-        maxIter,
-        colorScheme,
-        antialiasSamples,
-        wideGamut,
-      );
-    }
+    const rgba: Uint8ClampedArray =
+      antialiasSamples === 1
+        ? mapToColors(iterData, maxIter, colorScheme, 256, wideGamut)
+        : computeSupersampledBand(
+            width,
+            height,
+            y,
+            bandHeight,
+            centerX,
+            centerY,
+            zoom,
+            maxIter,
+            colorScheme,
+            antialiasSamples,
+            wideGamut,
+          );
 
     const buffer = rgba.buffer as ArrayBuffer;
 
@@ -157,7 +148,6 @@ function processRequest(req: RenderRequest) {
       y,
       height: bandHeight,
       buffer,
-      ...(hdr && antialiasSamples === 1 ? { hdr: true } : {}),
     };
 
     workerSelf.postMessage(chunk, [buffer]);
