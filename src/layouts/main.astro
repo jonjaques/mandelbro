@@ -1,12 +1,15 @@
 ---
 import "../styles/global.css";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
+import { AUTHOR_NAME, AUTHOR_URL } from "@/lib/site-config";
 
 interface Props {
   title?: string;
   description?: string;
   image?: string;
   noIndex?: boolean;
+  /** When true, html/body allow normal scrolling instead of fullscreen overflow:hidden. */
+  scrollable?: boolean;
 }
 
 const {
@@ -14,6 +17,7 @@ const {
   description = SITE_DESCRIPTION,
   image = "/preview.jpg",
   noIndex = false,
+  scrollable = false,
 } = Astro.props;
 
 const siteBase = Astro.site ?? Astro.url;
@@ -22,6 +26,8 @@ const canonicalUrl = new URL(
   siteBase,
 );
 const imageUrl = new URL(image, siteBase);
+
+const authorEntity = { "@type": "Person" as const, name: AUTHOR_NAME, url: AUTHOR_URL };
 
 const gaKey = import.meta.env.PUBLIC_GA_ID;
 const hasAnalytics =
@@ -49,7 +55,7 @@ const gaScript = hasAnalytics
       name="keywords"
       content="mandelbrot set, fractal explorer, deep zoom, perturbation theory, series approximation, arbitrary precision, fractal viewer, mandelbrot zoom, online fractal, interactive fractal, fractal generator, math visualization, complex numbers, fractal art, PWA"
     />
-    <meta name="author" content="Jon Jaques" />
+    <meta name="author" content={AUTHOR_NAME} />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -134,16 +140,8 @@ const gaScript = hasAnalytics
             "Brent cycle detection for interior orbits",
             "Fullscreen immersive interface",
           ],
-          author: {
-            "@type": "Person",
-            name: "Jon Jaques",
-            url: "https://github.com/jonjaques",
-          },
-          sourceOrganization: {
-            "@type": "Person",
-            name: "Jon Jaques",
-            url: "https://github.com/jonjaques",
-          },
+          author: authorEntity,
+          sourceOrganization: authorEntity,
           isAccessibleForFree: true,
           license: "https://opensource.org/licenses/MIT",
           inLanguage: "en",
@@ -200,7 +198,7 @@ const gaScript = hasAnalytics
     }
     {hasAnalytics && <script is:inline set:html={gaScript} />}
   </head>
-  <body>
+  <body class:list={[scrollable && "scrollable"]}>
     <slot />
   </body>
 </html>

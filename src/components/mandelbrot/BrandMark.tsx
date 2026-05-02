@@ -33,8 +33,8 @@ export function BrandMark({ canvasRef }: BrandMarkProps) {
       ref={brandRef}
       className="fixed z-40 pointer-events-none select-none px-3 py-2"
       style={{
-        top: "calc(1rem + var(--safe-area-top))",
-        left: "calc(1rem + var(--safe-area-left))",
+        top: "calc(1rem + max(var(--safe-area-top), var(--titlebar-area-height)))",
+        left: "calc(1rem + max(var(--safe-area-left), var(--titlebar-safe-left)))",
       }}
     >
       <h1

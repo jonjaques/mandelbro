@@ -1,0 +1,126 @@
+---
+import MainLayout from "@/layouts/main.astro";
+import { REFERENCE_SECTIONS } from "@/lib/mandelbrot/references";
+import {
+  REFERENCES_TITLE,
+  REFERENCES_DESCRIPTION,
+} from "@/lib/mandelbrot/constants";
+import { AUTHOR_NAME, AUTHOR_URL, SOURCE_CODE_URL } from "@/lib/site-config";
+
+const siteBase = Astro.site ?? Astro.url;
+const canonicalUrl = new URL("/references", siteBase);
+
+const authorEntity = {
+  "@type": "Person" as const,
+  name: AUTHOR_NAME,
+  url: AUTHOR_URL,
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: REFERENCES_TITLE,
+  description: REFERENCES_DESCRIPTION,
+  url: canonicalUrl.toString(),
+  author: authorEntity,
+  publisher: authorEntity,
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": canonicalUrl.toString(),
+  },
+  about: REFERENCE_SECTIONS.map((section) => ({
+    "@type": "Thing",
+    name: section.heading,
+    description: section.summary,
+    sameAs: section.links.map((l) => l.href),
+  })),
+};
+---
+
+<MainLayout title={REFERENCES_TITLE} description={REFERENCES_DESCRIPTION} scrollable>
+  <script
+    is:inline
+    type="application/ld+json"
+    set:html={JSON.stringify(jsonLd)}
+  />
+
+  <div class="mx-auto max-w-2xl px-6 py-16 sm:py-24">
+    <header class="mb-12">
+      <a
+        href="/"
+        class="mb-6 inline-flex items-center gap-1.5 text-sm text-sky-300/80 transition-colors hover:text-sky-200"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="m15 18-6-6 6-6"></path>
+        </svg>
+         Back to Explorer
+      </a>
+      <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+        References &amp; Algorithms
+      </h1>
+      <p class="mt-4 text-base leading-relaxed text-white/60">
+        Mandelbro is built on decades of research in fractal mathematics and
+        computational optimization. These are the algorithms, publications, and
+        techniques that make real-time deep zoom possible in the browser.
+      </p>
+    </header>
+
+    <main>
+      <ol class="flex flex-col gap-10">
+        {
+          REFERENCE_SECTIONS.map((section) => (
+            <li class="group">
+              <article>
+                <h2 class="mb-2 text-lg font-semibold tracking-wide text-white">
+                  {section.heading}
+                </h2>
+                <p class="mb-4 text-sm leading-relaxed text-white/70">
+                  {section.summary}
+                </p>
+                <ul class="flex flex-col gap-2.5 border-l border-white/15 pl-4">
+                  {section.links.map((link) => (
+                    <li>
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sm text-sky-300/90 underline decoration-sky-500/40 underline-offset-2 transition-colors hover:text-sky-200 hover:decoration-sky-300/70"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </li>
+          ))
+        }
+      </ol>
+    </main>
+
+    <footer class="mt-16 border-t border-white/10 pt-8">
+      <p class="text-sm text-white/40">
+        <a
+          href="/"
+          class="text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
+          >Mandelbro</a
+        > is open source. <a
+          href={SOURCE_CODE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
+          >View source on GitHub</a
+        >.
+      </p>
+    </footer>
+  </div>
+</MainLayout>

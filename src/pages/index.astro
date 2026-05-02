@@ -6,6 +6,9 @@ import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/mandelbrot/constants";
 
 <MainLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
   <MandelbrotExplorer client:load />
+  <nav class="sr-only" aria-label="Site pages">
+    <a href="/references">References &amp; Algorithms</a>
+  </nav>
   <script is:inline>
     (() => {
       if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {

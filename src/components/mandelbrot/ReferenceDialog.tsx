@@ -55,6 +55,15 @@ export function ReferenceDialog({ open, onOpenChange }: ReferenceDialogProps) {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 border-t border-white/10 pt-4">
+            <a
+              href="/references"
+              className="text-sm text-white/50 underline underline-offset-2 transition-colors hover:text-white/70"
+            >
+              View full references page
+            </a>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -17,11 +17,11 @@ interface FavoritesListProps {
 function MiniSwatch({ scheme }: { scheme: Favorite["colorScheme"] }) {
   const colors = getSwatchColors(scheme);
   return (
-    <div className="flex gap-px shrink-0">
+    <div className="flex shrink-0 gap-px">
       {colors.map((color, i) => (
         <div
           key={i}
-          className="w-1.5 h-1.5 rounded-full"
+          className="h-1.5 w-1.5 rounded-full"
           style={{ backgroundColor: color }}
         />
       ))}
@@ -64,15 +64,15 @@ function FavoriteItem({
   }, [favorite.name]);
 
   return (
-    <div className="group flex items-center gap-2 rounded-md hover:bg-white/5 transition-colors px-2 py-1.5">
+    <div className="group flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 transition-colors hover:border-white/6 hover:bg-white/4">
       <button
         type="button"
-        className="flex-1 min-w-0 flex items-center gap-2 text-left"
+        className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
         onClick={() => {
           onNavigate(favorite);
         }}
       >
-        <MapPin className="size-3.5 text-white/40 shrink-0" />
+        <MapPin className="mt-0.5 size-3.5 shrink-0 text-white/35" />
         <div className="min-w-0 flex-1">
           {editing ? (
             <div className="flex items-center gap-1">
@@ -89,12 +89,12 @@ function FavoriteItem({
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
-                className="h-6 text-xs bg-white/10 border-white/8 text-white px-1.5 py-0"
+                className="h-6 border-white/8 bg-white/10 px-1.5 py-0 text-xs text-white"
               />
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-5 text-green-400 hover:text-green-300 shrink-0"
+                className="size-5 shrink-0 text-green-400 hover:text-green-300"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleConfirmEdit();
@@ -105,7 +105,7 @@ function FavoriteItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-5 text-white/40 hover:text-white shrink-0"
+                className="size-5 shrink-0 text-white/40 hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCancelEdit();
@@ -116,14 +116,23 @@ function FavoriteItem({
             </div>
           ) : (
             <>
-              <span className="text-xs text-white/80 block truncate">
-                {favorite.name}
-              </span>
-              <span className="text-[10px] text-white/30 flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="block truncate text-[13px] leading-5 text-white/85">
+                  {favorite.name}
+                </span>
+                {favorite.isPreset && (
+                  <span className="rounded-full border border-white/8 bg-white/4 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.14em] text-white/35">
+                    Preset
+                  </span>
+                )}
+              </div>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-4 text-white/35">
                 <MiniSwatch scheme={favorite.colorScheme} />
-                {COLOR_SCHEME_NAMES[favorite.colorScheme]}
-                {" · "}
-                {formatMagnification(favorite.zoom)}
+                <span>{COLOR_SCHEME_NAMES[favorite.colorScheme]}</span>
+                <span className="text-white/20">•</span>
+                <span className="font-mono tabular-nums">
+                  {formatMagnification(favorite.zoom)}
+                </span>
               </span>
             </>
           )}
@@ -131,12 +140,12 @@ function FavoriteItem({
       </button>
 
       {!editing && !favorite.isPreset && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           {onRename && (
             <Button
               variant="ghost"
               size="icon"
-              className="size-6 text-white/30 hover:text-white hover:bg-white/10"
+              className="size-6 text-white/30 hover:bg-white/10 hover:text-white"
               onClick={(e) => {
                 e.stopPropagation();
                 handleStartEdit();
@@ -149,7 +158,7 @@ function FavoriteItem({
             <Button
               variant="ghost"
               size="icon"
-              className="size-6 text-white/30 hover:text-red-400 hover:bg-white/10"
+              className="size-6 text-white/30 hover:bg-white/10 hover:text-red-400"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(favorite.id);
@@ -164,6 +173,19 @@ function FavoriteItem({
   );
 }
 
+function GroupHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="flex items-center justify-between px-1 pb-1">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">
+        {label}
+      </p>
+      <span className="rounded-full border border-white/8 bg-white/4 px-1.5 py-0.5 text-[10px] text-white/35">
+        {count}
+      </span>
+    </div>
+  );
+}
+
 export function FavoritesList({
   presets,
   userFavorites,
@@ -174,10 +196,8 @@ export function FavoritesList({
   return (
     <div className="space-y-3">
       {userFavorites.length > 0 && (
-        <div className="space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-white/30 px-2">
-            Saved
-          </p>
+        <div className="space-y-1">
+          <GroupHeader label="Saved" count={userFavorites.length} />
           {userFavorites.map((fav) => (
             <FavoriteItem
               key={fav.id}
@@ -190,10 +210,8 @@ export function FavoritesList({
         </div>
       )}
 
-      <div className="space-y-0.5">
-        <p className="text-[10px] uppercase tracking-wider text-white/30 px-2">
-          Points of Interest
-        </p>
+      <div className="space-y-1">
+        <GroupHeader label="Points of Interest" count={presets.length} />
         {presets.map((fav) => (
           <FavoriteItem key={fav.id} favorite={fav} onNavigate={onNavigate} />
         ))}

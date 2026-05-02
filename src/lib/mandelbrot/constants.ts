@@ -41,3 +41,10 @@ export const SITE_TITLE =
  */
 export const SITE_DESCRIPTION =
   "Zoom endlessly into the Mandelbrot set right in your browser. Mandelbro uses perturbation theory and arbitrary-precision math to render fractal detail far beyond what ordinary viewers can reach — then lets you share any location with a link.";
+
+/** References page title — includes the base SITE_TITLE for brand consistency. */
+export const REFERENCES_TITLE = `References & Algorithms — ${SITE_TITLE}`;
+
+/** References page description — used by the layout and JSON-LD on `/references`. */
+export const REFERENCES_DESCRIPTION =
+  "Algorithms, publications, and techniques behind the Mandelbro fractal explorer: perturbation theory, series approximation, smooth coloring, Brent cycle detection, and more.";

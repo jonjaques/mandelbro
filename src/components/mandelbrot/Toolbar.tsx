@@ -90,20 +90,14 @@ export function Toolbar({
 
     handleChange();
     document.addEventListener("fullscreenchange", handleChange);
-    document.addEventListener(
-      "webkitfullscreenchange",
-      handleChange as EventListener,
-    );
+    document.addEventListener("webkitfullscreenchange", handleChange);
     standaloneMedia.addEventListener("change", handleChange);
     fullscreenMedia.addEventListener("change", handleChange);
     window.addEventListener("pageshow", handleChange);
 
     return () => {
       document.removeEventListener("fullscreenchange", handleChange);
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        handleChange as EventListener,
-      );
+      document.removeEventListener("webkitfullscreenchange", handleChange);
       standaloneMedia.removeEventListener("change", handleChange);
       fullscreenMedia.removeEventListener("change", handleChange);
       window.removeEventListener("pageshow", handleChange);
@@ -165,8 +159,9 @@ export function Toolbar({
     <div
       className="fixed z-50 glass rounded-lg flex flex-col"
       style={{
-        top: "calc(1rem + var(--safe-area-top))",
-        right: "calc(1rem + var(--safe-area-right))",
+        top: "calc(1rem + max(var(--safe-area-top), var(--titlebar-area-height)))",
+        right:
+          "calc(1rem + max(var(--safe-area-right), var(--titlebar-safe-right)))",
       }}
     >
       <Tooltip>

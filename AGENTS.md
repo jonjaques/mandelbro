@@ -12,14 +12,14 @@ Every technical decision serves one UX principle: **the user should never wait f
 
 ## Canonical sources (read these first when changing code)
 
-- **Bibliography & algorithms** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS` (curated links and short summaries). The in-app **Reference** dialog reads the same data. Use it when you need authoritative context for perturbation theory, series approximation, Brent cycle detection, smooth coloring, or plotting shortcuts instead of guessing from memory.
-- **Shared numeric literals** — `src/lib/mandelbrot/constants.ts` (`BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS`, …). Workers and math modules import from here so bailout, default zoom, band height, and iteration caps are not duplicated.
+- **Bibliography & algorithms** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS` (curated links and short summaries). The in-app **Reference** dialog and the server-rendered `/references` page both read the same data. Use it when you need authoritative context for perturbation theory, series approximation, Brent cycle detection, smooth coloring, or plotting shortcuts instead of guessing from memory.
+- **Shared numeric literals & SEO copy** — `src/lib/mandelbrot/constants.ts` (`BAILOUT`, `LOG2`, `DEFAULT_ZOOM`, `BASE_BAND_HEIGHT`, `MAX_SAFE_ITERATIONS`, `SITE_TITLE`, `SITE_DESCRIPTION`, `REFERENCES_TITLE`, `REFERENCES_DESCRIPTION`, …). Workers and math modules import numeric constants from here; Astro layouts and pages import SEO copy so page titles, descriptions, and JSON-LD are never duplicated.
 - **Worker-only helpers** — `src/lib/mandelbrot/worker-utils.ts` (`smoothColor`, `getBandHeight`, `WorkerContext`). Standard, perturbation, and reference workers share this; `compute.ts` / `perturbation.ts` re-export `smoothColor` where a public surface is needed.
 - **Coordinate / zoom display strings** — `src/lib/mandelbrot/format.ts` (`formatCoord`, `formatZoom`, `formatMagnification`) for HUD, settings, and favorites.
 - **Touch pinch/pan preview (canvas only)** — `src/lib/mandelbrot/canvas-preview.ts` (`snapshotCanvas`, `drawViewPreview`); consumed by `use-interaction.ts`.
 - **Chunk queue + rAF painting + pixel progress** — `src/hooks/use-chunk-renderer.ts`; composed by `use-mandelbrot-worker.ts` and `use-perturbation-renderer.ts` (standard progress 0–100%, perturbation phase 2 maps pixels to 10–100% via `progressOffset` / `progressScale`).
 - **Clipboard UX** — `src/hooks/use-clipboard-feedback.ts` for share / coordinate copy feedback in toolbar and settings.
-- **Site identity & URLs** — `src/lib/site-config.ts` (`PRODUCTION_HOSTNAME`, `PRODUCTION_URL`, `PAGES_DOMAIN`, `SOURCE_CODE_URL`, `WIKIPEDIA_URL`, `getCompareUrl`, `isPreviewDeployment`). All external-facing URLs live here; Toolbar, settings, and sharing code import from this file. `astro.config.mjs` reads `CF_PAGES_URL` for the same production-vs-preview logic at build time.
+- **Site identity & URLs** — `src/lib/site-config.ts` (`PRODUCTION_HOSTNAME`, `PRODUCTION_URL`, `PAGES_DOMAIN`, `SOURCE_CODE_URL`, `WIKIPEDIA_URL`, `AUTHOR_NAME`, `AUTHOR_URL`, `getCompareUrl`, `isPreviewDeployment`). All external-facing URLs and author identity live here; Toolbar, settings, layouts, JSON-LD, and sharing code import from this file. `astro.config.mjs` reads `CF_PAGES_URL` for the same production-vs-preview logic at build time.
 
 ## Build & Development Commands
 
@@ -48,7 +48,7 @@ No test framework is currently configured.
 
 ### Directory Layout
 
-- `src/pages/` — File-based routing (Astro pages); `index.astro` is the fullscreen dark app shell
+- `src/pages/` — File-based routing (Astro pages); `index.astro` is the fullscreen dark app shell; `references.astro` is a server-rendered content page for SEO
 - `src/layouts/` — Page layout templates
 - `src/components/mandelbrot/` — React components for the explorer UI
   - `MandelbrotExplorer.tsx` — Root orchestrator: wires together state, dual rendering pipelines, interaction, URL sync, UI overlays, and the `StrictMode` wrapper
@@ -517,13 +517,19 @@ All deployments share the same URL hash format (`#x=...&y=...&z=...`), so any ha
 
 A **Compare** button appears in the Toolbar on preview deployments only (detected at runtime via hostname). It opens the same coordinates on production in a new tab, letting users visually compare a feature branch against production.
 
-### Site identity — single source of truth
+### Site identity & copy — single source of truth
 
-`src/lib/site-config.ts` exports `PRODUCTION_HOSTNAME`, `PRODUCTION_URL`, `PAGES_DOMAIN`, `SOURCE_CODE_URL`, plus runtime helpers (`isProductionHost`, `isPreviewDeployment`, `getCompareUrl`). Toolbar, settings, and any future sharing/social features should import from there rather than hardcoding URLs.
+Every piece of text or metadata that appears in more than one place must be defined as a constant and imported — never duplicated as a string literal. The canonical locations are:
+
+- **URLs & author identity** → `src/lib/site-config.ts` (`PRODUCTION_URL`, `SOURCE_CODE_URL`, `AUTHOR_NAME`, `AUTHOR_URL`, …)
+- **Page titles & descriptions** → `src/lib/mandelbrot/constants.ts` (`SITE_TITLE`, `SITE_DESCRIPTION`, `REFERENCES_TITLE`, `REFERENCES_DESCRIPTION`, …)
+- **JSON-LD author / publisher objects** → Built from the constants above in each Astro page's frontmatter (never inline strings)
+
+When adding a new page or changing SEO copy, add or update the constant first, then import it everywhere it's needed. The same rule applies to any user-visible string that appears in multiple files (meta tags, OG tags, JSON-LD, UI copy).
 
 ## References & Literature
 
-**Single source of truth** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS`. The in-app **Reference** dialog renders the same data. When you need an authoritative link for an algorithm, look there first.
+**Single source of truth** — `src/lib/mandelbrot/references.ts` exports `REFERENCE_SECTIONS`. Both the React **Reference** dialog (client-side) and `src/pages/references.astro` (server-rendered for SEO) read the same data. When you need an authoritative link for an algorithm, look there first.
 
 ### Rules for agents
 
