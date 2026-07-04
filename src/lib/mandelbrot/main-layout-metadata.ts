@@ -6,10 +6,8 @@
 import { BRAND_NAME } from "@/lib/mandelbrot/constants";
 import {
   MIT_LICENSE_URL,
+  SITE_JSON_LD_ABOUT_THINGS,
   SOURCE_CODE_URL,
-  WIKIPEDIA_COMPLEX_DYNAMICS_URL,
-  WIKIPEDIA_FRACTAL_URL,
-  WIKIPEDIA_MANDELBROT_SET_URL,
 } from "@/lib/site-config";
 
 export const HTML_DOCUMENT_LANG = "en";
@@ -150,12 +148,6 @@ export const SITE_STRUCTURED_DATA_FAQ = [
     question: `Is ${BRAND_NAME} a good fractal renderer for mobile?`,
     answer: `Yes. ${BRAND_NAME} is a touch-native progressive web app: pinch to zoom, drag to pan, double-tap to zoom in. It runs without an app-store install and works offline once cached.`,
   },
-] as const;
-
-const SITE_JSON_LD_ABOUT_THINGS = [
-  { name: "Mandelbrot set", sameAs: WIKIPEDIA_MANDELBROT_SET_URL },
-  { name: "Fractal", sameAs: WIKIPEDIA_FRACTAL_URL },
-  { name: "Complex dynamics", sameAs: WIKIPEDIA_COMPLEX_DYNAMICS_URL },
 ] as const;
 
 export function mainLayoutStructuredData(payload: {

@@ -22,6 +22,13 @@ export const WIKIPEDIA_FRACTAL_URL = "https://en.wikipedia.org/wiki/Fractal";
 export const WIKIPEDIA_COMPLEX_DYNAMICS_URL =
   "https://en.wikipedia.org/wiki/Complex_dynamics";
 
+/** JSON-LD `Thing` refs for structured data (`main-layout-metadata`). */
+export const SITE_JSON_LD_ABOUT_THINGS = [
+  { name: "Mandelbrot set", sameAs: WIKIPEDIA_MANDELBROT_SET_URL },
+  { name: "Fractal", sameAs: WIKIPEDIA_FRACTAL_URL },
+  { name: "Complex dynamics", sameAs: WIKIPEDIA_COMPLEX_DYNAMICS_URL },
+] as const;
+
 export const AUTHOR_NAME = "Jon Jaques";
 export const AUTHOR_URL = "https://github.com/jonjaques";
 
