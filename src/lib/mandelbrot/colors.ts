@@ -40,6 +40,14 @@ import {
   interpolateYlOrRd,
 } from "d3-scale-chromatic";
 import type { ColorScheme } from "./types";
+import {
+  bytesToOklch,
+  maxChroma,
+  mixOklch,
+  oklchToBytes,
+  type Gamut,
+  type Oklch,
+} from "./oklch";
 
 export type RGB = readonly [number, number, number];
 
@@ -114,10 +122,10 @@ const BUILTIN_STOP_PALETTES: Record<BuiltinStopKey, readonly RGB[]> = {
  */
 const BUILTIN_STOP_PALETTES_P3: Record<BuiltinStopKey, readonly RGB[]> = {
   classic: [
-    [0, 0, 120], // Deeper blue — P3 blues are richer
-    [10, 100, 220], // Saturated azure, pushing blue primary
-    [220, 255, 255], // Vivid cyan highlight
-    [255, 150, 0], // Hotter orange — P3 red/orange extends further
+    [0, 0, 140], // Deeper blue — P3 blues are richer
+    [0, 90, 255], // Saturated azure riding the blue primary
+    [190, 255, 255], // Cyan highlight with real chroma (was near-white)
+    [255, 140, 0], // Hotter orange — P3 red/orange extends further
     [0, 2, 0],
   ],
   fire: [
@@ -143,10 +151,10 @@ const BUILTIN_STOP_PALETTES_P3: Record<BuiltinStopKey, readonly RGB[]> = {
     [220, 0, 255], // Vivid violet
   ],
   ice: [
-    [0, 0, 60], // Darker abyss
-    [30, 60, 180], // Deeper sapphire
-    [100, 170, 240], // Vivid sky
-    [190, 230, 255],
+    [0, 0, 80], // Darker abyss
+    [15, 50, 210], // Deeper sapphire
+    [60, 160, 255], // Electric sky, riding the blue/cyan edge
+    [150, 220, 255], // More chromatic glacial cyan
     [255, 255, 255],
   ],
   neon: [
@@ -304,13 +312,117 @@ const PALETTES_SRGB: Record<ColorScheme, RGB[]> = {
   ...d3Palettes,
 };
 
-const PALETTES_P3: Record<ColorScheme, RGB[]> = {
-  ...buildBuiltinPalettes(BUILTIN_STOP_PALETTES_P3),
-  ...d3Palettes,
-};
+/**
+ * Base chroma multiplier applied in wide-gamut mode (before the user's
+ * vibrance setting). Chosen to exceed the implicit saturation gain the old
+ * renderer got from reinterpreting sRGB bytes as P3 coordinates (~1.2×), so
+ * enabling P3 is a strict vibrancy upgrade. Chroma is clamped to the P3
+ * gamut surface per LUT entry, so overshoot just rides the boundary.
+ */
+const P3_CHROMA_BOOST = 1.35;
 
-function getPalettes(wideGamut: boolean): Record<ColorScheme, RGB[]> {
-  return wideGamut ? PALETTES_P3 : PALETTES_SRGB;
+/** Chroma multipliers this close to 1 in sRGB mode take the identity path. */
+const NEUTRAL_VIBRANCE_EPSILON = 1e-3;
+
+/**
+ * Boost chroma toward the gamut surface at constant lightness and hue: the
+ * most saturated displayable version of the color, short of changing what
+ * color it *is*.
+ */
+function vividBytes(color: Oklch, gamut: Gamut, chromaBoost: number): RGB {
+  const C = Math.min(color.C * chromaBoost, maxChroma(color.L, color.h, gamut));
+  return oklchToBytes({ ...color, C }, gamut);
+}
+
+/**
+ * Build a LUT by interpolating stops in OKLCH instead of encoded RGB.
+ *
+ * Straight RGB lerps between vivid stops cut through the dark, desaturated
+ * interior of the gamut (measured up to −56% chroma at segment midpoints for
+ * the psychedelic palette). Interpolating lightness/hue perceptually and then
+ * pushing chroma to the gamut surface keeps every entry vivid through the
+ * transitions.
+ */
+function createVividLutFromStops(
+  stops: readonly RGB[],
+  gamut: Gamut,
+  chromaBoost: number,
+): RGB[] {
+  const lchStops = stops.map((stop) => bytesToOklch(stop, gamut));
+  const segCount = lchStops.length - 1;
+  const lut: RGB[] = [];
+
+  for (let index = 0; index < LUT_SIZE; index++) {
+    const t = index / (LUT_SIZE - 1);
+    const seg = Math.min(Math.floor(t * segCount), segCount - 1);
+    const start = lchStops[seg];
+    const end = lchStops[seg + 1];
+    if (!start || !end) continue;
+    const mixed = mixOklch(start, end, t * segCount - seg);
+    lut.push(vividBytes(mixed, gamut, chromaBoost));
+  }
+
+  return lut;
+}
+
+/**
+ * Re-express an existing sRGB LUT (the D3 schemes, or any palette under a
+ * non-neutral vibrance) in the target gamut with scaled chroma. Unlike the
+ * old byte-reinterpretation trick this is hue-faithful: the color is decoded
+ * as the sRGB color it actually is, then made more vivid.
+ */
+function createVividLutFromSrgbLut(
+  baseLut: readonly RGB[],
+  gamut: Gamut,
+  chromaBoost: number,
+): RGB[] {
+  return baseLut.map((entry) =>
+    vividBytes(bytesToOklch(entry, "srgb"), gamut, chromaBoost),
+  );
+}
+
+function isBuiltinStopKey(scheme: ColorScheme): scheme is BuiltinStopKey {
+  return scheme in BUILTIN_STOP_PALETTES;
+}
+
+/**
+ * LUTs are built lazily per (scheme, gamut, boost) because vibrance is a
+ * continuous user setting. A build costs well under a millisecond; the cap
+ * just keeps slider scrubbing from accumulating stale LUTs forever.
+ */
+const paletteCache = new Map<string, RGB[]>();
+const PALETTE_CACHE_LIMIT = 64;
+
+function getPalette(
+  scheme: ColorScheme,
+  wideGamut: boolean,
+  vibrance: number,
+): RGB[] {
+  if (!wideGamut && Math.abs(vibrance - 1) < NEUTRAL_VIBRANCE_EPSILON) {
+    return PALETTES_SRGB[scheme];
+  }
+
+  const gamut: Gamut = wideGamut ? "display-p3" : "srgb";
+  const chromaBoost = wideGamut ? P3_CHROMA_BOOST * vibrance : vibrance;
+  const key = `${scheme}|${gamut}|${chromaBoost.toFixed(4)}`;
+
+  const cached = paletteCache.get(key);
+  if (cached) return cached;
+
+  const lut =
+    wideGamut && isBuiltinStopKey(scheme)
+      ? createVividLutFromStops(
+          BUILTIN_STOP_PALETTES_P3[scheme],
+          gamut,
+          chromaBoost,
+        )
+      : createVividLutFromSrgbLut(PALETTES_SRGB[scheme], gamut, chromaBoost);
+
+  if (paletteCache.size >= PALETTE_CACHE_LIMIT) {
+    paletteCache.clear();
+  }
+  paletteCache.set(key, lut);
+  return lut;
 }
 
 /**
@@ -335,10 +447,11 @@ export function mapToColors(
   scheme: ColorScheme,
   cyclePeriod = 256,
   wideGamut = false,
+  vibrance = 1,
 ): Uint8ClampedArray {
   const len = iterations.length;
   const rgba = new Uint8ClampedArray(len * 4);
-  const palette = getPalettes(wideGamut)[scheme];
+  const palette = getPalette(scheme, wideGamut, vibrance);
 
   for (let i = 0; i < len; i++) {
     const iter = iterations[i] ?? maxIter;
@@ -364,12 +477,13 @@ export function colorFromSmoothIteration(
   scheme: ColorScheme,
   cyclePeriod = 256,
   wideGamut = false,
+  vibrance = 1,
 ): RGB {
   if (iter >= maxIter) {
     return [0, 0, 0];
   }
 
-  const palette = getPalettes(wideGamut)[scheme];
+  const palette = getPalette(scheme, wideGamut, vibrance);
   const t = (iter % cyclePeriod) / cyclePeriod;
   return interpolatePalette(palette, t);
 }
@@ -439,9 +553,10 @@ export const COLOR_SCHEME_NAMES: Record<ColorScheme, string> = {
 export function getSwatchColors(
   scheme: ColorScheme,
   wideGamut = false,
+  vibrance = 1,
 ): string[] {
   const swatches: string[] = [];
-  const palette = getPalettes(wideGamut)[scheme];
+  const palette = getPalette(scheme, wideGamut, vibrance);
 
   for (let index = 0; index < SWATCH_SAMPLE_COUNT; index++) {
     const t = index / (SWATCH_SAMPLE_COUNT - 1);

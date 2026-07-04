@@ -34,7 +34,10 @@ import {
 } from "@/lib/mandelbrot/compute";
 import {
   MAX_SAFE_ITERATIONS,
+  MAX_VIBRANCE,
   MIN_SAFE_ITERATIONS,
+  MIN_VIBRANCE,
+  VIBRANCE_STEP,
 } from "@/lib/mandelbrot/constants";
 import { formatCoord, formatZoom } from "@/lib/mandelbrot/format";
 import type { Favorite } from "@/lib/mandelbrot/favorites";
@@ -56,6 +59,9 @@ interface SettingsPanelProps {
   wideGamut: boolean;
   wideGamutSupported: boolean;
   onWideGamutChange: (enabled: boolean) => void;
+  vibrance: number;
+  onVibranceChange: (value: number) => void;
+  onVibranceCommit: (value: number) => void;
 }
 
 const SCHEMES = COLOR_SCHEMES;
@@ -138,11 +144,13 @@ function CoordinateTile({ label, value }: { label: string; value: string }) {
 function ColorSwatch({
   scheme,
   wideGamut,
+  vibrance,
 }: {
   scheme: ColorScheme;
   wideGamut: boolean;
+  vibrance: number;
 }) {
-  const colors = getSwatchColors(scheme, wideGamut);
+  const colors = getSwatchColors(scheme, wideGamut, vibrance);
   return (
     <div className="flex gap-0.5">
       {colors.map((color, i) => (
@@ -171,6 +179,9 @@ export function SettingsPanel({
   wideGamut,
   wideGamutSupported,
   onWideGamutChange,
+  vibrance,
+  onVibranceChange,
+  onVibranceCommit,
 }: SettingsPanelProps) {
   const { copied: shareCopied, copy: copyShare } = useClipboardFeedback();
 
@@ -293,6 +304,7 @@ export function SettingsPanel({
                     <ColorSwatch
                       scheme={view.colorScheme}
                       wideGamut={wideGamut}
+                      vibrance={vibrance}
                     />
                   </div>
                   <Select
@@ -316,6 +328,7 @@ export function SettingsPanel({
                             <ColorSwatch
                               scheme={scheme}
                               wideGamut={wideGamut}
+                              vibrance={vibrance}
                             />
                             <span>{COLOR_SCHEME_NAMES[scheme]}</span>
                           </div>
@@ -398,6 +411,40 @@ export function SettingsPanel({
                   disabled={!wideGamutSupported}
                   className="data-[state=checked]:bg-linear-to-r data-[state=checked]:from-fuchsia-500 data-[state=checked]:to-cyan-500"
                 />
+              </div>
+
+              <div className="space-y-3 border-t border-white/8 pt-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-white/85">
+                      Vibrance
+                    </p>
+                    <p className="text-[11px] leading-4 text-white/35">
+                      Boost color saturation toward the gamut limit.
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs text-white/60 tabular-nums">
+                    {Math.round(vibrance * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[vibrance]}
+                  min={MIN_VIBRANCE}
+                  max={MAX_VIBRANCE}
+                  step={VIBRANCE_STEP}
+                  onValueChange={([val]) => {
+                    if (val === undefined) return;
+                    onVibranceChange(val);
+                  }}
+                  onValueCommit={([val]) => {
+                    if (val === undefined) return;
+                    onVibranceCommit(val);
+                  }}
+                />
+                <div className="flex justify-between text-[10px] text-white/30">
+                  <span>{Math.round(MIN_VIBRANCE * 100)}%</span>
+                  <span>{Math.round(MAX_VIBRANCE * 100)}%</span>
+                </div>
               </div>
             </SectionCard>
           </div>

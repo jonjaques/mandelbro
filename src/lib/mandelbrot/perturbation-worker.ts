@@ -40,6 +40,7 @@ function processRequest(req: PerturbationRenderRequest) {
     colorScheme,
     antialiasSamples,
     wideGamut,
+    vibrance,
     refOffsetRe,
     refOffsetIm,
     saCoeffAre,
@@ -97,6 +98,7 @@ function processRequest(req: PerturbationRenderRequest) {
       colorScheme,
       zoomColorCyclePeriod(zoom),
       wideGamut,
+      vibrance,
     );
     const buffer = rgba.buffer as ArrayBuffer;
 

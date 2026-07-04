@@ -83,6 +83,8 @@ export interface RenderRequest {
   antialiasSamples: AntialiasSamples;
   /** Use P3 wide-gamut palette LUTs instead of sRGB */
   wideGamut?: boolean;
+  /** Palette chroma multiplier (1 = neutral); see DEFAULT_VIBRANCE */
+  vibrance?: number;
   /** Index of this worker in the pool (0-based) */
   workerIndex?: number;
   /** Total number of workers in the pool */
@@ -208,6 +210,8 @@ export interface PerturbationRenderRequest {
   antialiasSamples: AntialiasSamples;
   /** Use P3 wide-gamut palette LUTs instead of sRGB */
   wideGamut?: boolean;
+  /** Palette chroma multiplier (1 = neutral); see DEFAULT_VIBRANCE */
+  vibrance?: number;
   /** Offset of reference point from view center (complex-plane coords) */
   refOffsetRe: number;
   refOffsetIm: number;

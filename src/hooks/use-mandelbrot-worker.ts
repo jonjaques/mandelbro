@@ -53,6 +53,7 @@ const WORKER_COUNT =
 export function useMandelbrotWorker(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   wideGamutRef: React.RefObject<boolean>,
+  vibranceRef: React.RefObject<number>,
 ) {
   const workersRef = useRef<Worker[]>([]);
   const {
@@ -150,6 +151,7 @@ export function useMandelbrotWorker(
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
           wideGamut: wideGamutRef.current,
+          vibrance: vibranceRef.current,
           workerIndex: i,
           workerCount: workers.length,
         };

@@ -7,6 +7,8 @@
  * interpreted as the P3 gamut — roughly 25% wider than sRGB.
  */
 
+import { DEFAULT_VIBRANCE, MAX_VIBRANCE, MIN_VIBRANCE } from "./constants";
+
 const STORAGE_KEY = "mandelbro-wide-gamut";
 
 let cachedSupport: boolean | null = null;
@@ -45,6 +47,33 @@ export function getWideGamutPreference(): boolean {
 export function setWideGamutPreference(enabled: boolean): void {
   try {
     localStorage.setItem(STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+const VIBRANCE_STORAGE_KEY = "mandelbro-vibrance";
+
+/** Read the persisted vibrance multiplier, clamped to the valid range. */
+export function getVibrancePreference(): number {
+  try {
+    const stored = localStorage.getItem(VIBRANCE_STORAGE_KEY);
+    if (stored !== null) {
+      const parsed = Number.parseFloat(stored);
+      if (Number.isFinite(parsed)) {
+        return Math.min(MAX_VIBRANCE, Math.max(MIN_VIBRANCE, parsed));
+      }
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+  return DEFAULT_VIBRANCE;
+}
+
+/** Persist the user's vibrance slider choice. */
+export function setVibrancePreference(vibrance: number): void {
+  try {
+    localStorage.setItem(VIBRANCE_STORAGE_KEY, String(vibrance));
   } catch {
     // localStorage may be unavailable
   }

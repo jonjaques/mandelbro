@@ -35,6 +35,18 @@ export const MIN_SAFE_ITERATIONS = 50;
  */
 export const MAX_SAFE_ITERATIONS = 10000;
 
+/* ── Vibrance (palette chroma scaling) ───────────────────────────── */
+
+/**
+ * Vibrance multiplies palette chroma in OKLCH before clamping to the active
+ * gamut. 1.0 is neutral: identical output to the pre-vibrance renderer in
+ * sRGB mode, and the default chroma boost in wide-gamut (P3) mode.
+ */
+export const DEFAULT_VIBRANCE = 1;
+export const MIN_VIBRANCE = 0.5;
+export const MAX_VIBRANCE = 2;
+export const VIBRANCE_STEP = 0.05;
+
 /**
  * Maximum device pixel ratio used by canvas buffers and luminance sampling.
  * On 3x+ displays the extra resolution is barely perceptible while costing

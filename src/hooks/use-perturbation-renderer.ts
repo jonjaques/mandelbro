@@ -68,6 +68,7 @@ function packSACoefficients(orbit: ReferenceOrbitComplete): SACoefficients {
 export function usePerturbationRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   wideGamutRef: React.RefObject<boolean>,
+  vibranceRef: React.RefObject<number>,
 ) {
   const refWorkerRef = useRef<Worker | null>(null);
   const pertWorkersRef = useRef<Worker[]>([]);
@@ -161,6 +162,7 @@ export function usePerturbationRenderer(
           colorScheme: view.colorScheme,
           antialiasSamples: resolveAntialiasSamples(view.antialias, view.zoom),
           wideGamut: wideGamutRef.current,
+          vibrance: vibranceRef.current,
           refOffsetRe: orbit.refOffsetRe,
           refOffsetIm: orbit.refOffsetIm,
           workerIndex: i,

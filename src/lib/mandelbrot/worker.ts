@@ -83,6 +83,7 @@ function processRequest(req: RenderRequest) {
     colorScheme,
     antialiasSamples,
     wideGamut,
+    vibrance,
   } = req;
 
   const bandHeightStep = getBandHeight(maxIter, antialiasSamples);
@@ -134,7 +135,14 @@ function processRequest(req: RenderRequest) {
 
     const rgba: Uint8ClampedArray =
       antialiasSamples === 1
-        ? mapToColors(iterData, maxIter, colorScheme, cyclePeriod, wideGamut)
+        ? mapToColors(
+            iterData,
+            maxIter,
+            colorScheme,
+            cyclePeriod,
+            wideGamut,
+            vibrance,
+          )
         : computeSupersampledBand(
             width,
             height,
@@ -148,6 +156,7 @@ function processRequest(req: RenderRequest) {
             antialiasSamples,
             cyclePeriod,
             wideGamut,
+            vibrance,
           );
 
     const buffer = rgba.buffer as ArrayBuffer;
@@ -198,6 +207,7 @@ function computeSupersampledBand(
   samples: AntialiasSamples,
   cyclePeriod: number,
   wideGamut?: boolean,
+  vibrance?: number,
 ): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(width * bandHeight * 4);
   const aspectRatio = width / fullHeight;
@@ -232,6 +242,7 @@ function computeSupersampledBand(
           colorScheme,
           cyclePeriod,
           wideGamut,
+          vibrance,
         );
         red += color[0];
         green += color[1];

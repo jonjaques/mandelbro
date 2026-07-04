@@ -40,7 +40,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PRECISION_THRESHOLD, type ViewState } from "@/lib/mandelbrot/types";
 import {
   detectWideGamutSupport,
+  getVibrancePreference,
   getWideGamutPreference,
+  setVibrancePreference,
   setWideGamutPreference,
 } from "@/lib/mandelbrot/wide-gamut";
 import {
@@ -89,6 +91,13 @@ export function MandelbrotExplorer() {
     wideGamutRef.current = wideGamut;
   }, [wideGamut]);
 
+  // Vibrance (palette chroma multiplier) state
+  const [vibrance, setVibrance] = useState(getVibrancePreference);
+  const vibranceRef = useRef(vibrance);
+  useEffect(() => {
+    vibranceRef.current = vibrance;
+  }, [vibrance]);
+
   const {
     presets,
     userFavorites,
@@ -101,12 +110,12 @@ export function MandelbrotExplorer() {
     render: stdRender,
     cancelRender: stdCancel,
     progress: stdProgress,
-  } = useMandelbrotWorker(canvasRef, wideGamutRef);
+  } = useMandelbrotWorker(canvasRef, wideGamutRef, vibranceRef);
   const {
     render: pertRender,
     cancelRender: pertCancel,
     progress: pertProgress,
-  } = usePerturbationRenderer(canvasRef, wideGamutRef);
+  } = usePerturbationRenderer(canvasRef, wideGamutRef, vibranceRef);
 
   const [activeRenderer, setActiveRenderer] = useState<
     "standard" | "perturbation"
@@ -248,6 +257,24 @@ export function MandelbrotExplorer() {
     [triggerRender],
   );
 
+  /** Live slider movement: update UI state only (swatches, label). */
+  const handleVibranceChange = useCallback((value: number) => {
+    setVibrance(value);
+    vibranceRef.current = value;
+  }, []);
+
+  /** Slider release: persist and re-render with the new palette. */
+  const handleVibranceCommit = useCallback(
+    (value: number) => {
+      setVibrance(value);
+      vibranceRef.current = value;
+      setVibrancePreference(value);
+      trackEvent("vibrance_change", { value });
+      triggerRender(viewRef.current);
+    },
+    [triggerRender],
+  );
+
   const handleNavigateToFavorite = useCallback(
     (favorite: Favorite) => {
       trackEvent("favorite_navigate", {
@@ -295,6 +322,9 @@ export function MandelbrotExplorer() {
           wideGamut={wideGamut}
           wideGamutSupported={wideGamutSupported}
           onWideGamutChange={handleWideGamutChange}
+          vibrance={vibrance}
+          onVibranceChange={handleVibranceChange}
+          onVibranceCommit={handleVibranceCommit}
         />
         <SaveFavoriteDialog
           open={saveFavoriteOpen}
