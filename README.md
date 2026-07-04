@@ -38,32 +38,32 @@ The transition is invisible — you keep zooming.
 
 **Algorithms & citations** — Curated links and summaries live in `src/lib/mandelbrot/references.ts` (same content as the in-app **Reference** dialog). Use that file when you need primary sources for perturbation, SA, cycle detection, or coloring.
 
-**Project guide for contributors and coding agents** — See **`AGENTS.md`** at the repo root for architecture, directory map, URL/hash rules, dual-pipeline behavior, quality gates (`yarn healthcheck`), and where shared constants (`constants.ts`) and worker helpers (`worker-utils.ts`) live so magic numbers are not duplicated.
+**Project guide for contributors and coding agents** — See **`AGENTS.md`** at the repo root for architecture, directory map, URL/hash rules, dual-pipeline behavior, quality gates (`bun run healthcheck`), and where shared constants (`constants.ts`) and worker helpers (`worker-utils.ts`) live so magic numbers are not duplicated.
 
 ## Development
 
 ```sh
-yarn install
-yarn dev
+bun i
+bun run dev
 ```
 
 ## Available Scripts
 
 ```sh
-yarn dev           # Start dev server with HMR
-yarn build         # Production build to /dist
-yarn preview       # Preview production build locally
-yarn lint          # ESLint (strict, type-aware) with zero warnings
-yarn lint:fix      # Auto-fix lint issues
-yarn format        # Prettier write across repo
-yarn format:check  # Verify formatting only
-yarn typecheck     # Astro + TypeScript project diagnostics
-yarn healthcheck   # lint + format:check + typecheck + build
+bun run dev           # Start dev server with HMR
+bun run build         # Production build to /dist
+bun run preview       # Preview production build locally
+bun run lint          # ESLint (strict, type-aware) with zero warnings
+bun run lint:fix      # Auto-fix lint issues
+bun run format        # Prettier write across repo
+bun run format:check  # Verify formatting only
+bun run typecheck     # Astro + TypeScript project diagnostics
+bun run healthcheck   # lint + format:check + typecheck + build
 ```
 
 ## Stack
 
-- **Astro 5** — Zero-JS static shell with React island hydration
+- **Astro 7** — Zero-JS static shell with React island hydration
 - **React 19** — Explorer UI with ref-first view state where it matters for input latency
 - **Tailwind CSS v4** — OKLCH color theme, glass-morphism utilities
 - **TypeScript** — Strict mode with defensive compiler flags

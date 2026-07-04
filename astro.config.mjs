@@ -19,6 +19,9 @@ export default defineConfig({
   site,
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: ["astro/toolbar"],
+    },
   },
 
   integrations: [

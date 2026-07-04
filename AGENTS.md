@@ -25,15 +25,15 @@ Every technical decision serves one UX principle: **the user should never wait f
 ## Build & Development Commands
 
 ```sh
-yarn dev          # Start dev server with HMR
-yarn build        # Production build to /dist
-yarn preview      # Preview production build locally
-yarn lint         # ESLint (strict, type-aware) with zero warnings allowed
-yarn lint:fix     # Auto-fix lint issues when possible
-yarn format       # Prettier write across repo
-yarn format:check # Verify formatting only
-yarn typecheck    # Astro + TypeScript project diagnostics
-yarn healthcheck  # lint + format:check + typecheck + build
+bun run dev          # Start dev server with HMR
+bun run build        # Production build to /dist
+bun run preview      # Preview production build locally
+bun run lint         # ESLint (strict, type-aware) with zero warnings allowed
+bun run lint:fix     # Auto-fix lint issues when possible
+bun run format       # Prettier write across repo
+bun run format:check # Verify formatting only
+bun run typecheck    # Astro + TypeScript project diagnostics
+bun run healthcheck  # lint + format:check + typecheck + build
 ```
 
 No test framework is currently configured.
@@ -44,7 +44,7 @@ No test framework is currently configured.
 
 ### React Compiler & ESLint
 
-React 19 client code runs through **`babel-plugin-react-compiler`** by way of **`astro.config.mjs`** (`@astrojs/react` → `babel.plugins`). ESLint uses **`eslint-plugin-react-hooks`** flat preset **`recommended-latest`** in **`eslint.config.mjs`**—that includes Rules of React checks used by the compiler; do **not** add **`eslint-plugin-react-compiler`** (deprecated). After toolchain upgrades run **`yarn lint`** and **`yarn build`**; confirm the explorer chunk still carries compiler-assisted output (typically **`useMemoCache`** appearing in hashed **`dist/_astro/*.js`**). In development, [**React DevTools**](https://react.dev/learn/react-compiler/installation#check-react-devtools) shows a Memo badge on optimized components.
+React 19 client code runs through **`babel-plugin-react-compiler`** by way of **`astro.config.mjs`** (`@astrojs/react` → `babel.plugins`). ESLint uses **`eslint-plugin-react-hooks`** flat preset **`recommended-latest`** in **`eslint.config.mjs`**—that includes Rules of React checks used by the compiler; do **not** add **`eslint-plugin-react-compiler`** (deprecated). After toolchain upgrades run **`bun run lint`** and **`bun run build`**; confirm the explorer chunk still carries compiler-assisted output (typically **`useMemoCache`** appearing in hashed **`dist/_astro/*.js`**). In development, [**React DevTools**](https://react.dev/learn/react-compiler/installation#check-react-devtools) shows a Memo badge on optimized components.
 
 ### Dual Component Model
 
@@ -63,7 +63,7 @@ React 19 client code runs through **`babel-plugin-react-compiler`** by way of **
   - `Coordinates.tsx` — Bottom-left HUD showing Re/Im/zoom with full-precision display for deep zoom; auto-hides after 3s of inactivity, reappears on interaction or view change; shows "Precision mode" badge with digit count when past the precision threshold
   - `DeepZoomBanner.tsx` — Top-center banner that appears when the perturbation pipeline activates; shows zoom depth milestones (e.g., "10^30×") and fades after 4s
   - `RenderProgress.tsx` — Bottom-right circular SVG progress indicator (stroke-dashoffset animation), appears with 300ms delay during renders; in perturbation mode, 0–10% reflects reference orbit computation, 10–100% reflects pixel rendering
-- `src/components/ui/` — shadcn/ui React components (generated via `yarn dlx shadcn` or `yarn shadcn` CLI)
+- `src/components/ui/` — shadcn/ui React components (generated via `bunx shadcn` CLI)
 - `src/hooks/` — React hooks (interaction + rendering orchestration)
   - `use-chunk-renderer.ts` — Shared chunk queue, `requestAnimationFrame` paint batching, `requestIdRef`, and progress math for both pipelines
   - `use-mandelbrot-worker.ts` — Standard worker pool + dispatch; uses `useChunkRenderer` (used when `zoom ≥ PRECISION_THRESHOLD`, i.e. ≥ 1e-13)
@@ -102,8 +102,8 @@ All source imports use `@/*` which maps to `./src/*` (configured in tsconfig.jso
 
 - TypeScript is configured for a **very strict** safety profile on top of `astro/tsconfigs/strict` (including `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`, `noUnusedParameters`, and other defensive compiler flags).
 - ESLint uses strict, type-aware flat config with TypeScript, React, React Hooks, and JSX a11y rules.
-- `yarn lint` enforces `--max-warnings=0`; warnings are treated as failures in normal workflow.
-- `yarn healthcheck` is the primary pre-PR/pre-merge command and should pass before shipping.
+- `bun run lint` enforces `--max-warnings=0`; warnings are treated as failures in normal workflow.
+- `bun run healthcheck` is the primary pre-PR/pre-merge command and should pass before shipping.
 
 ## React Entrypoint Policy
 
@@ -457,7 +457,7 @@ The **BrandMark** wordmark (`BrandMark.tsx`) picks light or dark text (and outli
 ## Adding shadcn/ui Components
 
 ```sh
-yarn shadcn add <component-name>
+bunx shadcn add <component-name>
 ```
 
 Configuration lives in `components.json`. Components are generated as TSX into `src/components/ui/`.

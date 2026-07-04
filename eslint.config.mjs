@@ -11,8 +11,6 @@ export default defineConfig(
     ignores: [
       "dist/**",
       ".astro/**",
-      ".yarn/**",
-      ".pnp.*",
       "node_modules/**",
       "public/**",
       "*.config.*",
