@@ -109,7 +109,18 @@ export function deserializeFromHash(hash: string): ViewState | null {
         ? "auto"
         : (Number(aaParam) as AntialiasSamples);
 
-  if (isNaN(x) || isNaN(y) || isNaN(z) || isNaN(i)) return null;
+  // isFinite (not just !isNaN): "1e999" parses to Infinity and would poison
+  // every downstream log/division. Zoom must also be strictly positive —
+  // z=0 or negative breaks autoIterations and the pixel-size math.
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(z) ||
+    !Number.isFinite(i) ||
+    z <= 0
+  ) {
+    return null;
+  }
   if (!VALID_SCHEMES.has(c)) return null;
   if (
     !VALID_ANTIALIAS_MODES.has(aa) &&

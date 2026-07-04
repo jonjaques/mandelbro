@@ -496,7 +496,7 @@ ViewState carries optional `centerXHp`, `centerYHp`, and `zoomHp` string fields 
 
 ### Glitch Handling
 
-When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). `GLITCH_THRESHOLD` in `perturbation.ts` (1e3) detects this. For v1, glitched pixels may render with inaccurate colors. Future work: automatic re-referencing near glitched regions.
+When `|delta| >> |X|`, the perturbation approximation breaks down (glitch). v1 does **not** detect this per iteration — the check (Pauldelbrot criterion) costs ~25% of the perturbation hot loop and the real fix is re-referencing anyway — so glitched pixels near mini-Mandelbrot copies may render with inaccurate colors. Future work: glitch detection plus automatic re-referencing near glitched regions.
 
 ### Known Limitations
 

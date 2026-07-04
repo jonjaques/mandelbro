@@ -23,8 +23,6 @@
 import { BAILOUT } from "./constants";
 import { smoothColor } from "./worker-utils";
 
-const GLITCH_THRESHOLD = 1e3;
-
 export function perturbationEscapeTime(
   refRe: Float64Array,
   refIm: Float64Array,
@@ -41,6 +39,11 @@ export function perturbationEscapeTime(
 
   const iterLimit = Math.min(refIterations, maxIter);
 
+  // NOTE: no per-iteration glitch detection (Pauldelbrot criterion,
+  // |delta| >> |X|) in v1 — checking it here costs ~25% of this hot loop and
+  // the proper fix is re-referencing / multi-reference anyway (see Wikipedia
+  // link in file header). Glitched pixels near mini-Mandelbrots may render
+  // with inaccurate colors until that lands.
   for (let n = startIter; n < iterLimit; n++) {
     const xn = refRe[n] ?? 0;
     const yn = refIm[n] ?? 0;
@@ -58,17 +61,6 @@ export function perturbationEscapeTime(
 
     if (zMag2 > BAILOUT) {
       return [n + 1, zMag2];
-    }
-
-    const dMag2 = dRe * dRe + dIm * dIm;
-    const refNextRe = refRe[n + 1] ?? 0;
-    const refNextIm = refIm[n + 1] ?? 0;
-    const refMag2 = refNextRe * refNextRe + refNextIm * refNextIm;
-    if (refMag2 > 0 && dMag2 > GLITCH_THRESHOLD * refMag2) {
-      // |delta| has blown up relative to |X|: first-order perturbation is
-      // unreliable (classic "glitch" artifact). v1 only flags this; a
-      // production fix is re-referencing / multi-reference (see Wikipedia link
-      // in file header).
     }
   }
 
@@ -107,12 +99,17 @@ export function perturbationEscapeTime(
  * depending only on the reference orbit. For tiny |epsilon| at deep zoom,
  * evaluating the series at n skips iterating 0..n-1 in the perturbation loop.
  *
- * Returns `[skipIter, deltaRe, deltaIm]` to resume `perturbationEscapeTime`
- * at iteration `skipIter` with the series-evaluated delta.
+ * Find the deepest iteration at which the truncated series is still accurate
+ * for **every** |ε| ≤ `maxDeltaMag`. Validity is monotonic in |ε| (the
+ * truncation-error ratio |C·ε³| / |A·ε| = |C/A|·|ε|² shrinks with |ε|), so a
+ * skip point proven safe for the largest ε in a band is safe for all of its
+ * pixels. This lets the scan run **once per band** — scalar magnitude math
+ * over the coefficient arrays — instead of three complex multiplies per
+ * iteration per pixel, which would cost more than the iterations it skips.
  *
  * @see Same Wikipedia section as file header (series approximation).
  */
-function seriesApproximationSkip(
+function findSASkipIteration(
   saAre: Float64Array,
   saAim: Float64Array,
   saBre: Float64Array,
@@ -120,56 +117,33 @@ function seriesApproximationSkip(
   saCre: Float64Array,
   saCim: Float64Array,
   refIterations: number,
-  deltaRe: number,
-  deltaIm: number,
-): [number, number, number] {
-  const d2Re = deltaRe * deltaRe - deltaIm * deltaIm;
-  const d2Im = 2 * deltaRe * deltaIm;
-  const d3Re = d2Re * deltaRe - d2Im * deltaIm;
-  const d3Im = d2Re * deltaIm + d2Im * deltaRe;
-
+  maxDeltaMag: number,
+): number {
+  const d1 = maxDeltaMag;
+  const d2 = d1 * d1;
+  const d3 = d2 * d1;
+  // Truncation-error budget: stop once the cubic term exceeds 1e-6 of the
+  // linear term (the dropped ε⁴ term is smaller still).
   const tolerance = 1e-6;
-  let bestN = 0;
-  let bestEpsRe = 0;
-  let bestEpsIm = 0;
+
+  let skipN = 0;
 
   for (let n = 1; n < refIterations; n++) {
-    const an_re = saAre[n] ?? 0;
-    const an_im = saAim[n] ?? 0;
-    const bn_re = saBre[n] ?? 0;
-    const bn_im = saBim[n] ?? 0;
-    const cn_re = saCre[n] ?? 0;
-    const cn_im = saCim[n] ?? 0;
+    const aMag = Math.hypot(saAre[n] ?? 0, saAim[n] ?? 0) * d1;
+    const cMag = Math.hypot(saCre[n] ?? 0, saCim[n] ?? 0) * d3;
 
-    const aTermRe = an_re * deltaRe - an_im * deltaIm;
-    const aTermIm = an_re * deltaIm + an_im * deltaRe;
+    if (aMag > 0 && cMag > aMag * tolerance) break;
 
-    const bTermRe = bn_re * d2Re - bn_im * d2Im;
-    const bTermIm = bn_re * d2Im + bn_im * d2Re;
+    // Guard against series blowup for near-escaped references: |delta| this
+    // large means the pixel escaped long before n, so skipping to n would
+    // jump past the bailout crossing.
+    const bMag = Math.hypot(saBre[n] ?? 0, saBim[n] ?? 0) * d2;
+    if (aMag + bMag + cMag > 1e5) break;
 
-    const cTermRe = cn_re * d3Re - cn_im * d3Im;
-    const cTermIm = cn_re * d3Im + cn_im * d3Re;
-
-    const cMag2 = cTermRe * cTermRe + cTermIm * cTermIm;
-    const aMag2 = aTermRe * aTermRe + aTermIm * aTermIm;
-
-    if (aMag2 > 0 && cMag2 > aMag2 * tolerance * tolerance) {
-      break;
-    }
-
-    const epsRe = aTermRe + bTermRe + cTermRe;
-    const epsIm = aTermIm + bTermIm + cTermIm;
-
-    if (epsRe * epsRe + epsIm * epsIm > 1e10) {
-      break;
-    }
-
-    bestN = n;
-    bestEpsRe = epsRe;
-    bestEpsIm = epsIm;
+    skipN = n;
   }
 
-  return [bestN, bestEpsRe, bestEpsIm];
+  return skipN;
 }
 
 export function perturbationBand(
@@ -204,31 +178,85 @@ export function perturbationBand(
     saCre != null &&
     saCim != null;
 
+  // ── Series-approximation setup (once per band) ──────────────────────
+  //
+  // The skip point is chosen conservatively using the largest |epsilon| in
+  // this band (attained at one of the band's four corners since epsilon is
+  // linear in px/py), so it is valid for every pixel. The six coefficients
+  // at the skip iteration are then hoisted out of the pixel loop; each pixel
+  // only pays one 3-term series evaluation instead of a full rescan.
+  let skipIter = 0;
+  let skipARe = 0;
+  let skipAIm = 0;
+  let skipBRe = 0;
+  let skipBIm = 0;
+  let skipCRe = 0;
+  let skipCIm = 0;
+
+  if (hasSA) {
+    const epsReLeft = (0.5 - width / 2) * pixelWidth - refOffsetRe;
+    const epsReRight = (width - 0.5 - width / 2) * pixelWidth - refOffsetRe;
+    const epsImTop =
+      (startY + 0.5 - fullHeight / 2) * pixelHeight - refOffsetIm;
+    const epsImBottom =
+      (startY + bandHeight - 0.5 - fullHeight / 2) * pixelHeight - refOffsetIm;
+    const maxDeltaMag = Math.hypot(
+      Math.max(Math.abs(epsReLeft), Math.abs(epsReRight)),
+      Math.max(Math.abs(epsImTop), Math.abs(epsImBottom)),
+    );
+
+    skipIter = findSASkipIteration(
+      saAre,
+      saAim,
+      saBre,
+      saBim,
+      saCre,
+      saCim,
+      refIterations,
+      maxDeltaMag,
+    );
+
+    if (skipIter > 0) {
+      skipARe = saAre[skipIter] ?? 0;
+      skipAIm = saAim[skipIter] ?? 0;
+      skipBRe = saBre[skipIter] ?? 0;
+      skipBIm = saBim[skipIter] ?? 0;
+      skipCRe = saCre[skipIter] ?? 0;
+      skipCIm = saCim[skipIter] ?? 0;
+    }
+  }
+
   for (let localY = 0; localY < bandHeight; localY++) {
     const py = startY + localY;
     // epsilon = pixel_offset_from_center - reference_offset_from_center
-    const epsIm = (py - fullHeight / 2) * pixelHeight - refOffsetIm;
+    // (+0.5 samples the pixel center — same midpoint convention as the
+    // standard pipeline and its supersampled path)
+    const epsIm = (py + 0.5 - fullHeight / 2) * pixelHeight - refOffsetIm;
     const rowOffset = localY * width;
 
     for (let px = 0; px < width; px++) {
-      const epsRe = (px - width / 2) * pixelWidth - refOffsetRe;
+      const epsRe = (px + 0.5 - width / 2) * pixelWidth - refOffsetRe;
 
-      let startIter = 0;
       let startDRe = 0;
       let startDIm = 0;
 
-      if (hasSA) {
-        [startIter, startDRe, startDIm] = seriesApproximationSkip(
-          saAre,
-          saAim,
-          saBre,
-          saBim,
-          saCre,
-          saCim,
-          refIterations,
-          epsRe,
-          epsIm,
-        );
+      if (skipIter > 0) {
+        // delta_skipIter = A·ε + B·ε² + C·ε³ (complex arithmetic)
+        const d2Re = epsRe * epsRe - epsIm * epsIm;
+        const d2Im = 2 * epsRe * epsIm;
+        const d3Re = d2Re * epsRe - d2Im * epsIm;
+        const d3Im = d2Re * epsIm + d2Im * epsRe;
+
+        startDRe =
+          skipARe * epsRe -
+          skipAIm * epsIm +
+          (skipBRe * d2Re - skipBIm * d2Im) +
+          (skipCRe * d3Re - skipCIm * d3Im);
+        startDIm =
+          skipARe * epsIm +
+          skipAIm * epsRe +
+          (skipBRe * d2Im + skipBIm * d2Re) +
+          (skipCRe * d3Im + skipCIm * d3Re);
       }
 
       const [iter, zMag2] = perturbationEscapeTime(
@@ -238,7 +266,7 @@ export function perturbationBand(
         epsRe,
         epsIm,
         maxIter,
-        startIter,
+        skipIter,
         startDRe,
         startDIm,
       );

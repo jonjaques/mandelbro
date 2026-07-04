@@ -37,7 +37,11 @@
  * and ensures all regions of the image progress simultaneously.
  */
 import { computeBand, computePixelSample } from "./compute";
-import { colorFromSmoothIteration, mapToColors } from "./colors";
+import {
+  colorFromSmoothIteration,
+  mapToColors,
+  zoomColorCyclePeriod,
+} from "./colors";
 import { getBandHeight, type WorkerContext } from "./worker-utils";
 import type {
   AntialiasSamples,
@@ -83,6 +87,12 @@ function processRequest(req: RenderRequest) {
 
   const bandHeightStep = getBandHeight(maxIter, antialiasSamples);
 
+  // Same zoom-dependent cycle period as the perturbation worker, so colors
+  // stay continuous when the render crosses PRECISION_THRESHOLD and the
+  // pipelines swap (a hardcoded 256 here would recolor the whole image at
+  // the boundary).
+  const cyclePeriod = zoomColorCyclePeriod(zoom);
+
   // Multi-worker round-robin: this worker starts at its assigned band and
   // skips ahead by workerCount bands each iteration.
   // With 4 workers: worker 0 → bands 0,4,8,...  worker 1 → bands 1,5,9,...
@@ -124,7 +134,7 @@ function processRequest(req: RenderRequest) {
 
     const rgba: Uint8ClampedArray =
       antialiasSamples === 1
-        ? mapToColors(iterData, maxIter, colorScheme, 256, wideGamut)
+        ? mapToColors(iterData, maxIter, colorScheme, cyclePeriod, wideGamut)
         : computeSupersampledBand(
             width,
             height,
@@ -136,6 +146,7 @@ function processRequest(req: RenderRequest) {
             maxIter,
             colorScheme,
             antialiasSamples,
+            cyclePeriod,
             wideGamut,
           );
 
@@ -185,6 +196,7 @@ function computeSupersampledBand(
   maxIter: number,
   colorScheme: RenderRequest["colorScheme"],
   samples: AntialiasSamples,
+  cyclePeriod: number,
   wideGamut?: boolean,
 ): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(width * bandHeight * 4);
@@ -218,7 +230,7 @@ function computeSupersampledBand(
           iter,
           maxIter,
           colorScheme,
-          256,
+          cyclePeriod,
           wideGamut,
         );
         red += color[0];

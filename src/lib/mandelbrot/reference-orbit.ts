@@ -95,7 +95,12 @@ export function computeReferenceOrbit(
   let tortIm = 0;
   let power = 1;
   let lambda = 0;
-  const cycleTolerance = 1e-12;
+  // Squared-distance threshold (distance 1e-12). Must be tight: a detected
+  // "cycle" freezes X_n and tiles it to maxIter, so any residual error here
+  // is injected into every subsequent perturbation delta. A loose tolerance
+  // (e.g. distance 1e-6) causes near-miss orbit points to be mistaken for
+  // true cycles, corrupting interior-centered deep zooms.
+  const cycleToleranceSq = 1e-24;
 
   let escaped = false;
   let cycleDetected = false;
@@ -117,7 +122,10 @@ export function computeReferenceOrbit(
     //   z_im' = 2 * z_re * z_im + c_im
     const zReSq = mul(zRe, zRe);
     const zImSq = mul(zIm, zIm);
-    const twoZReZIm = mul(mul(make(2), zRe), zIm);
+    // 2·(zRe·zIm) as a self-add: cheaper than a BigFloat multiply by a
+    // constant, and avoids allocating make(2) on every iteration.
+    const zReZIm = mul(zRe, zIm);
+    const twoZReZIm = add(zReZIm, zReZIm);
 
     let newZRe = add(sub(zReSq, zImSq), cRe);
     let newZIm = add(twoZReZIm, cIm);
@@ -202,9 +210,13 @@ export function computeReferenceOrbit(
     // to spot repetition; full precision is unnecessary and much slower.
     const dRe = newReD - tortRe;
     const dIm = newImD - tortIm;
-    if (dRe * dRe + dIm * dIm < cycleTolerance) {
+    if (dRe * dRe + dIm * dIm < cycleToleranceSq) {
       cycleDetected = true;
-      cyclePeriod = lambda;
+      // `lambda` is incremented *after* this comparison, so at match time it
+      // lags the step count by one: the tortoise was set to z_k, this value
+      // is z_{k+lambda+1}, hence period = lambda + 1 (a fixed point matches
+      // with lambda = 0 and has period 1).
+      cyclePeriod = lambda + 1;
       finalIter = n + 1;
       break;
     }

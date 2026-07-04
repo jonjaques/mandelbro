@@ -156,9 +156,9 @@ export function computePixelSample(
  *   └─────────────────┘               └─────────────────┘
  * ```
  *
- * For each pixel (px, py):
- *   x₀ = xMin + px × pixelWidth    (real component)
- *   y₀ = yMin + py × pixelHeight   (imaginary component)
+ * For each pixel (px, py), sampled at the pixel center:
+ *   x₀ = xMin + (px + ½) × pixelWidth    (real component)
+ *   y₀ = yMin + (py + ½) × pixelHeight   (imaginary component)
  *
  * Where:
  *   xMin = centerX - (zoom/2) × aspectRatio
@@ -194,13 +194,15 @@ export function computeBand(
   for (let localY = 0; localY < bandHeight; localY++) {
     // py is the absolute y position in the full canvas (not band-local)
     const py = startY + localY;
-    // Map pixel row to imaginary axis coordinate
-    const y0 = yMin + py * pixelHeight;
+    // Map pixel row to imaginary axis coordinate. The +0.5 samples the pixel
+    // *center* (midpoint convention) — this matches the supersampled path so
+    // toggling anti-aliasing doesn't shift the image by half a pixel.
+    const y0 = yMin + (py + 0.5) * pixelHeight;
     const rowOffset = localY * width;
 
     for (let px = 0; px < width; px++) {
-      // Map pixel column to real axis coordinate
-      const x0 = xMin + px * pixelWidth;
+      // Map pixel column to real axis coordinate (center of the pixel)
+      const x0 = xMin + (px + 0.5) * pixelWidth;
       result[rowOffset + px] = computePixelSample(x0, y0, maxIter);
     }
   }

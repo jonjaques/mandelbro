@@ -24,7 +24,9 @@ import type { AntialiasSamples } from "./types";
  */
 export function smoothColor(iterations: number, zMag2: number): number {
   if (zMag2 <= BAILOUT) return iterations;
-  return iterations + 1 - Math.log(Math.log(Math.sqrt(zMag2))) / LOG2;
+  // log(√m) ≡ ½·log(m), so the sqrt can be folded into a multiply —
+  // one less sqrt per escaped pixel in both pipelines' hot paths.
+  return iterations + 1 - Math.log(0.5 * Math.log(zMag2)) / LOG2;
 }
 
 /**
