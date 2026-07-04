@@ -52,13 +52,7 @@ const SWATCH_SAMPLE_COUNT = 5;
  * same runtime representation.
  */
 type BuiltinStopKey =
-  | "classic"
-  | "fire"
-  | "ocean"
-  | "grayscale"
-  | "psychedelic"
-  | "ice"
-  | "neon";
+  "classic" | "fire" | "ocean" | "grayscale" | "psychedelic" | "ice" | "neon";
 
 const BUILTIN_STOP_PALETTES: Record<BuiltinStopKey, readonly RGB[]> = {
   classic: [

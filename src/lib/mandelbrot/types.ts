@@ -192,8 +192,7 @@ export interface ReferenceOrbitComplete {
 
 export type ReferenceWorkerIn = ReferenceOrbitRequest | CancelRequest;
 export type ReferenceWorkerOut =
-  | ReferenceOrbitProgress
-  | ReferenceOrbitComplete;
+  ReferenceOrbitProgress | ReferenceOrbitComplete;
 
 export interface PerturbationRenderRequest {
   type: "perturbation-render";
